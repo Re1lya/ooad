@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1100" viewBox="0 0 1800 1100">
+<rect width="100%" height="100%" fill="white"/>
+<text x="900.0" y="55" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="30" font-weight="700" fill="#24354b" text-anchor="middle">RBAC1 角色继承与权限计算</text>
+<text x="900.0" y="87" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#60748c" text-anchor="middle">类和方法取自当前源码 · 实线标角色名为关联，虚线为依赖 · Service 位于中心</text>
+<polyline points="700,390 700,365 270,365 270,340" fill="none" stroke="#758aa4" stroke-width="2"/>
+<polyline points="275.21958640933474,350.8053652282321 270,340 264.78041359066526,350.8053652282321" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="690" y="392.5" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="15" font-weight="400" fill="#24354b" text-anchor="end">policy</text>
+<polyline points="900,390 900,320" fill="none" stroke="#758aa4" stroke-width="2"/>
+<polyline points="905.2195864093347,330.8053652282321 900,320 894.7804135906653,330.8053652282321" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="890" y="370.0" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="15" font-weight="400" fill="#24354b" text-anchor="end">hierarchy</text>
+<polyline points="620,520 505,520" fill="none" stroke="#758aa4" stroke-width="2"/>
+<polyline points="515.8053652282322,514.7804135906653 505,520 515.8053652282322,525.2195864093347" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="562.5" y="510" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="15" font-weight="400" fill="#24354b" text-anchor="middle">roles</text>
+<polyline points="1300,520 1180,520" fill="none" stroke="#758aa4" stroke-width="2"/>
+<polyline points="1190.8053652282322,514.7804135906653 1180,520 1190.8053652282322,525.2195864093347" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="1240.0" y="510" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="15" font-weight="400" fill="#24354b" text-anchor="middle">hierarchy</text>
+<polyline points="700,730 700,790 535,790 535,850" fill="none" stroke="#758aa4" stroke-width="2" stroke-dasharray="8 8"/>
+<polyline points="529.7804135906653,839.1946347717678 535,850 540.2195864093347,839.1946347717678" fill="none" stroke="#758aa4" stroke-width="2"/>
+<polyline points="1080,730 1080,790 1265,790 1265,850" fill="none" stroke="#758aa4" stroke-width="2" stroke-dasharray="8 8"/>
+<polyline points="1259.7804135906651,839.1946347717678 1265,850 1270.2195864093349,839.1946347717678" fill="none" stroke="#758aa4" stroke-width="2"/>
+<polyline points="770,930 1030,930" fill="none" stroke="#758aa4" stroke-width="2"/>
+<polyline points="1019.1946347717678,935.2195864093347 1030,930 1019.1946347717678,924.7804135906653" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="900.0" y="920" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="15" font-weight="400" fill="#24354b" text-anchor="middle">seniorRole</text>
+<polyline points="770,995 1030,995" fill="none" stroke="#758aa4" stroke-width="2"/>
+<polyline points="1019.1946347717678,1000.2195864093347 1030,995 1019.1946347717678,989.7804135906653" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="900.0" y="985" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="15" font-weight="400" fill="#24354b" text-anchor="middle">inheritedRole</text>
+<rect x="620" y="390" width="560" height="340" fill="#e9f0fa" stroke="#24354b" stroke-width="2"/>
+<text x="900.0" y="428" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="23" font-weight="700" fill="#24354b" text-anchor="middle">RoleHierarchyService</text>
+<polyline points="620,445 1180,445" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="634" y="474" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">- hierarchy: RoleHierarchyRepository</text>
+<text x="634" y="501" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">- roles: RoleRepository</text>
+<text x="634" y="528" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">- policy: RoleGraphUseCase</text>
+<polyline points="620,547 1180,547" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="634" y="577" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ inherit(Long, Long): void</text>
+<text x="634" y="604" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ remove(Long, Long): void</text>
+<text x="634" y="631" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ graph(): Map&lt;Long, List&lt;Role&gt;&gt;</text>
+<text x="634" y="658" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ resolve(Role, Map): List&lt;ResolvedRole&gt;</text>
+<rect x="580" y="130" width="640" height="190" fill="#f8fafc" stroke="#24354b" stroke-width="2"/>
+<text x="900.0" y="168" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="23" font-weight="700" fill="#24354b" text-anchor="middle">«interface» RoleHierarchyRepository</text>
+<polyline points="580,185 1220,185" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="594" y="214" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">—</text>
+<polyline points="580,233 1220,233" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="594" y="263" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ existsBySeniorRole_IdAndInheritedRole_Id(...)</text>
+<text x="594" y="290" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ deleteBySeniorRole_IdAndInheritedRole_Id(...)</text>
+<rect x="35" y="110" width="470" height="230" fill="#f8fafc" stroke="#24354b" stroke-width="2"/>
+<text x="270.0" y="148" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="23" font-weight="700" fill="#24354b" text-anchor="middle">«interface» RoleGraphUseCase</text>
+<polyline points="35,165 505,165" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="49" y="194" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">—</text>
+<polyline points="35,213 505,213" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="49" y="243" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ validate(Long, Long, Map): void</text>
+<text x="49" y="270" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ resolve(Node, Map): List&lt;Path&gt;</text>
+<rect x="35" y="425" width="470" height="220" fill="#f8fafc" stroke="#24354b" stroke-width="2"/>
+<text x="270.0" y="463" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="23" font-weight="700" fill="#24354b" text-anchor="middle">«interface» RoleRepository</text>
+<polyline points="35,480 505,480" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="49" y="509" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">—</text>
+<polyline points="35,528 505,528" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="49" y="558" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ lockHierarchyRoles(): List&lt;Role&gt;</text>
+<rect x="1300" y="390" width="465" height="250" fill="#f8fafc" stroke="#24354b" stroke-width="2"/>
+<text x="1532.5" y="428" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="23" font-weight="700" fill="#24354b" text-anchor="middle">AuthorizationService</text>
+<polyline points="1300,445 1765,445" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="1314" y="474" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">- hierarchy: RoleHierarchyService</text>
+<polyline points="1300,493 1765,493" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="1314" y="523" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ effective(Long): List&lt;Permission&gt;</text>
+<text x="1314" y="550" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ origins(Long): List&lt;PermissionOrigin&gt;</text>
+<text x="1314" y="577" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ roleOrigins(Long): List&lt;PermissionOrigin&gt;</text>
+<rect x="300" y="850" width="470" height="180" fill="#f8fafc" stroke="#24354b" stroke-width="2"/>
+<text x="535.0" y="888" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="23" font-weight="700" fill="#24354b" text-anchor="middle">RoleHierarchy</text>
+<polyline points="300,905 770,905" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="314" y="934" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">- seniorRole: Role</text>
+<text x="314" y="961" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">- inheritedRole: Role</text>
+<polyline points="300,980 770,980" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="314" y="1010" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ RoleHierarchy(Role, Role)</text>
+<rect x="1030" y="850" width="470" height="180" fill="#f8fafc" stroke="#24354b" stroke-width="2"/>
+<text x="1265.0" y="888" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="23" font-weight="700" fill="#24354b" text-anchor="middle">Role</text>
+<polyline points="1030,905 1500,905" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="1044" y="934" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">- id: Long</text>
+<text x="1044" y="961" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">- enabled: boolean</text>
+<polyline points="1030,980 1500,980" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="1044" y="1010" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ getEnabled(): boolean</text>
+</svg>

@@ -1,0 +1,450 @@
+[
+  {
+    "method": "login",
+    "methods": [
+      "POST"
+    ],
+    "controller": "AuthController",
+    "path": "/api/auth/login"
+  },
+  {
+    "method": "list",
+    "methods": [
+      "GET"
+    ],
+    "controller": "CourseDemoController",
+    "path": "/api/demo/courses"
+  },
+  {
+    "method": "list",
+    "methods": [
+      "GET"
+    ],
+    "controller": "DepartmentController",
+    "path": "/api/departments"
+  },
+  {
+    "method": "create",
+    "methods": [
+      "POST"
+    ],
+    "controller": "DepartmentController",
+    "path": "/api/departments"
+  },
+  {
+    "method": "delete",
+    "methods": [
+      "DELETE"
+    ],
+    "controller": "DepartmentController",
+    "path": "/api/departments/{id}"
+  },
+  {
+    "method": "update",
+    "methods": [
+      "PUT"
+    ],
+    "controller": "DepartmentController",
+    "path": "/api/departments/{id}"
+  },
+  {
+    "method": "commit",
+    "methods": [
+      "POST"
+    ],
+    "controller": "CompanyImportController",
+    "path": "/api/imports/company/commit"
+  },
+  {
+    "method": "preview",
+    "methods": [
+      "POST"
+    ],
+    "controller": "CompanyImportController",
+    "path": "/api/imports/company/preview"
+  },
+  {
+    "method": "me",
+    "methods": [
+      "GET"
+    ],
+    "controller": "MeController",
+    "path": "/api/me"
+  },
+  {
+    "method": "menu",
+    "methods": [
+      "GET"
+    ],
+    "controller": "MeController",
+    "path": "/api/me/menu"
+  },
+  {
+    "method": "password",
+    "methods": [
+      "PUT"
+    ],
+    "controller": "MeController",
+    "path": "/api/me/password"
+  },
+  {
+    "method": "me",
+    "methods": [
+      "GET"
+    ],
+    "controller": "RoleHierarchyController",
+    "path": "/api/me/permission-origins"
+  },
+  {
+    "method": "permissions",
+    "methods": [
+      "GET"
+    ],
+    "controller": "MeController",
+    "path": "/api/me/permissions"
+  },
+  {
+    "method": "list",
+    "methods": [
+      "GET"
+    ],
+    "controller": "PermissionController",
+    "path": "/api/permissions"
+  },
+  {
+    "method": "create",
+    "methods": [
+      "POST"
+    ],
+    "controller": "PermissionController",
+    "path": "/api/permissions"
+  },
+  {
+    "method": "tree",
+    "methods": [
+      "GET"
+    ],
+    "controller": "PermissionController",
+    "path": "/api/permissions/tree"
+  },
+  {
+    "method": "delete",
+    "methods": [
+      "DELETE"
+    ],
+    "controller": "PermissionController",
+    "path": "/api/permissions/{id}"
+  },
+  {
+    "method": "update",
+    "methods": [
+      "PUT"
+    ],
+    "controller": "PermissionController",
+    "path": "/api/permissions/{id}"
+  },
+  {
+    "method": "resources",
+    "methods": [
+      "GET"
+    ],
+    "controller": "PermissionController",
+    "path": "/api/permissions/{id}/resources"
+  },
+  {
+    "method": "unbind",
+    "methods": [
+      "DELETE"
+    ],
+    "controller": "PermissionController",
+    "path": "/api/permissions/{id}/resources/{resourceId}"
+  },
+  {
+    "method": "bind",
+    "methods": [
+      "PUT"
+    ],
+    "controller": "PermissionController",
+    "path": "/api/permissions/{id}/resources/{resourceId}"
+  },
+  {
+    "method": "status",
+    "methods": [
+      "PUT"
+    ],
+    "controller": "PermissionController",
+    "path": "/api/permissions/{id}/status"
+  },
+  {
+    "method": "list",
+    "methods": [
+      "GET"
+    ],
+    "controller": "ApiResourceController",
+    "path": "/api/resources"
+  },
+  {
+    "method": "create",
+    "methods": [
+      "POST"
+    ],
+    "controller": "ApiResourceController",
+    "path": "/api/resources"
+  },
+  {
+    "method": "delete",
+    "methods": [
+      "DELETE"
+    ],
+    "controller": "ApiResourceController",
+    "path": "/api/resources/{id}"
+  },
+  {
+    "method": "update",
+    "methods": [
+      "PUT"
+    ],
+    "controller": "ApiResourceController",
+    "path": "/api/resources/{id}"
+  },
+  {
+    "method": "status",
+    "methods": [
+      "PUT"
+    ],
+    "controller": "ApiResourceController",
+    "path": "/api/resources/{id}/status"
+  },
+  {
+    "method": "edges",
+    "methods": [
+      "GET"
+    ],
+    "controller": "RoleHierarchyController",
+    "path": "/api/role-hierarchy"
+  },
+  {
+    "method": "list",
+    "methods": [
+      "GET"
+    ],
+    "controller": "RoleController",
+    "path": "/api/roles"
+  },
+  {
+    "method": "create",
+    "methods": [
+      "POST"
+    ],
+    "controller": "RoleController",
+    "path": "/api/roles"
+  },
+  {
+    "method": "delete",
+    "methods": [
+      "DELETE"
+    ],
+    "controller": "RoleController",
+    "path": "/api/roles/{id}"
+  },
+  {
+    "method": "update",
+    "methods": [
+      "PUT"
+    ],
+    "controller": "RoleController",
+    "path": "/api/roles/{id}"
+  },
+  {
+    "method": "status",
+    "methods": [
+      "PUT"
+    ],
+    "controller": "RoleController",
+    "path": "/api/roles/{id}/status"
+  },
+  {
+    "method": "role",
+    "methods": [
+      "GET"
+    ],
+    "controller": "RoleHierarchyController",
+    "path": "/api/roles/{roleId}/effective-permissions"
+  },
+  {
+    "method": "permissions",
+    "methods": [
+      "GET"
+    ],
+    "controller": "GrantController",
+    "path": "/api/roles/{roleId}/permissions"
+  },
+  {
+    "method": "revokePermission",
+    "methods": [
+      "DELETE"
+    ],
+    "controller": "GrantController",
+    "path": "/api/roles/{roleId}/permissions/{permissionId}"
+  },
+  {
+    "method": "grantPermission",
+    "methods": [
+      "PUT"
+    ],
+    "controller": "GrantController",
+    "path": "/api/roles/{roleId}/permissions/{permissionId}"
+  },
+  {
+    "method": "remove",
+    "methods": [
+      "DELETE"
+    ],
+    "controller": "RoleHierarchyController",
+    "path": "/api/roles/{seniorId}/inherits/{inheritedId}"
+  },
+  {
+    "method": "inherit",
+    "methods": [
+      "PUT"
+    ],
+    "controller": "RoleHierarchyController",
+    "path": "/api/roles/{seniorId}/inherits/{inheritedId}"
+  },
+  {
+    "method": "info",
+    "methods": [
+      "GET"
+    ],
+    "controller": "SystemInfoController",
+    "path": "/api/system-info"
+  },
+  {
+    "method": "list",
+    "methods": [
+      "GET"
+    ],
+    "controller": "SystemController",
+    "path": "/api/systems"
+  },
+  {
+    "method": "create",
+    "methods": [
+      "POST"
+    ],
+    "controller": "SystemController",
+    "path": "/api/systems"
+  },
+  {
+    "method": "delete",
+    "methods": [
+      "DELETE"
+    ],
+    "controller": "SystemController",
+    "path": "/api/systems/{id}"
+  },
+  {
+    "method": "update",
+    "methods": [
+      "PUT"
+    ],
+    "controller": "SystemController",
+    "path": "/api/systems/{id}"
+  },
+  {
+    "method": "status",
+    "methods": [
+      "PUT"
+    ],
+    "controller": "SystemController",
+    "path": "/api/systems/{id}/status"
+  },
+  {
+    "method": "list",
+    "methods": [
+      "GET"
+    ],
+    "controller": "UserController",
+    "path": "/api/users"
+  },
+  {
+    "method": "create",
+    "methods": [
+      "POST"
+    ],
+    "controller": "UserController",
+    "path": "/api/users"
+  },
+  {
+    "method": "delete",
+    "methods": [
+      "DELETE"
+    ],
+    "controller": "UserController",
+    "path": "/api/users/{id}"
+  },
+  {
+    "method": "get",
+    "methods": [
+      "GET"
+    ],
+    "controller": "UserController",
+    "path": "/api/users/{id}"
+  },
+  {
+    "method": "update",
+    "methods": [
+      "PUT"
+    ],
+    "controller": "UserController",
+    "path": "/api/users/{id}"
+  },
+  {
+    "method": "password",
+    "methods": [
+      "PUT"
+    ],
+    "controller": "UserController",
+    "path": "/api/users/{id}/password"
+  },
+  {
+    "method": "status",
+    "methods": [
+      "PUT"
+    ],
+    "controller": "UserController",
+    "path": "/api/users/{id}/status"
+  },
+  {
+    "method": "user",
+    "methods": [
+      "GET"
+    ],
+    "controller": "RoleHierarchyController",
+    "path": "/api/users/{userId}/permission-origins"
+  },
+  {
+    "method": "roles",
+    "methods": [
+      "GET"
+    ],
+    "controller": "GrantController",
+    "path": "/api/users/{userId}/roles"
+  },
+  {
+    "method": "revokeRole",
+    "methods": [
+      "DELETE"
+    ],
+    "controller": "GrantController",
+    "path": "/api/users/{userId}/roles/{roleId}"
+  },
+  {
+    "method": "grantRole",
+    "methods": [
+      "PUT"
+    ],
+    "controller": "GrantController",
+    "path": "/api/users/{userId}/roles/{roleId}"
+  }
+]

@@ -1,0 +1,109 @@
+{
+  "generatedAt": "2026-11-17T16:36:23.097Z",
+  "preview": {
+    "notes": [
+      "新员工账号停用且无可用初始密码；管理员重置密码后启用",
+      "只导入角色模板，不按岗位自动授权；部门经理名称不自动关联同名员工",
+      "本人范围保留为独立操作；没有真实API定义，不生成或绑定外部API",
+      "权限矩阵有 1 个空白单元格，保持未授权，原始空白值保留"
+    ],
+    "modules": 115,
+    "employees": 10000,
+    "qualifiedDepartments": 9756,
+    "roleTemplates": 5,
+    "digest": "64be707e26007886e42e930951e33847a0fe64d8ec91b5b3c342ee9de69df053",
+    "departments": 111,
+    "systems": 18,
+    "functions": 359
+  },
+  "committed": {
+    "notes": [
+      "新员工账号停用且无可用初始密码；管理员重置密码后启用",
+      "只导入角色模板，不按岗位自动授权；部门经理名称不自动关联同名员工",
+      "本人范围保留为独立操作；没有真实API定义，不生成或绑定外部API",
+      "权限矩阵有 1 个空白单元格，保持未授权，原始空白值保留"
+    ],
+    "modules": 115,
+    "employees": 10000,
+    "qualifiedDepartments": 9756,
+    "roleTemplates": 5,
+    "digest": "64be707e26007886e42e930951e33847a0fe64d8ec91b5b3c342ee9de69df053",
+    "departments": 111,
+    "systems": 18,
+    "functions": 359
+  },
+  "repeated": {
+    "notes": [
+      "新员工账号停用且无可用初始密码；管理员重置密码后启用",
+      "只导入角色模板，不按岗位自动授权；部门经理名称不自动关联同名员工",
+      "本人范围保留为独立操作；没有真实API定义，不生成或绑定外部API",
+      "权限矩阵有 1 个空白单元格，保持未授权，原始空白值保留"
+    ],
+    "modules": 115,
+    "employees": 10000,
+    "qualifiedDepartments": 9756,
+    "roleTemplates": 5,
+    "digest": "64be707e26007886e42e930951e33847a0fe64d8ec91b5b3c342ee9de69df053",
+    "departments": 111,
+    "systems": 18,
+    "functions": 359
+  },
+  "counts": {
+    "users": 10001,
+    "departments": 111,
+    "systems": 18,
+    "roles": 5,
+    "permissions": 1271,
+    "menus": 474,
+    "buttons": 797,
+    "resources": 0,
+    "inheritanceEdges": 0,
+    "mode": "structured",
+    "sourceDescriptionCount": 359
+  },
+  "idempotency": true,
+  "persistenceVerified": true,
+  "database": "isolated H2 file database; not MySQL",
+  "noEmployeeDetails": true,
+  "sourceFieldHashes": {
+    "employees": {
+      "count": 10000,
+      "sha256": "43b6285aabada41ca4e67df8746178fd2acda883a9050811c1b84917e0f09585"
+    },
+    "departments": {
+      "count": 111,
+      "sha256": "f4f9a6464fa66452ae6105607a2fc3a82f66081c6b1f9200eca8a312884adfa9"
+    },
+    "functions": {
+      "count": 359,
+      "sha256": "522560bec7aa53bcd05f92b99e5d9559c789712457c70318dc7b600b41ef0289"
+    },
+    "roleGrants": {
+      "count": 2192,
+      "sha256": "92a1f27dda474b2cbd65fc1b1788230ce9d9d147fa9b3f4c2bd136622da7c30f"
+    },
+    "buttons": {
+      "count": 797,
+      "sha256": "a9a7f0c5f9b82dbb18fd6e71bca6a14c81c9d4ee57a34431f92c925c0aaaba33"
+    }
+  },
+  "sourceFieldsMatch": true,
+  "tableCounts": {
+    "sys_user": 10001,
+    "sys_account": 10001,
+    "sys_role": 5,
+    "biz_system": 18,
+    "sys_permission": 1271,
+    "sys_user_role": 0,
+    "sys_role_hierarchy": 0,
+    "permission_api": 0,
+    "api_resource": 0
+  },
+  "rolePermissionLinks": 2192,
+  "sourceNote": "9756 company-qualified departments, including 9000 project departments and 756 others; one blank role cell preserved as ungranted",
+  "firstCommitMilliseconds": 2947,
+  "runtimeModeAfterRestart": "ddd",
+  "usersAfterRestart": 10001,
+  "databaseSchemaOnRestart": "validate",
+  "uiVerification": "company-ui-verification.json"
+}

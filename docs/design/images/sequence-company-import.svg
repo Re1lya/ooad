@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1980" height="1130" viewBox="0 0 1980 1130">
+<rect width="100%" height="100%" fill="white"/>
+<text x="990.0" y="55" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="30" font-weight="700" fill="#24354b" text-anchor="middle">三表导入：预览后确认的顺序图</text>
+<text x="990.0" y="87" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#60748c" text-anchor="middle">摘要绑定原文件 · 提交前完整校验 · Service 事务失败全部回滚</text>
+<rect x="42" y="120" width="236" height="65" fill="#e9f0fa" stroke="#24354b" stroke-width="2"/>
+<text x="160" y="161" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="18" font-weight="700" fill="#24354b" text-anchor="middle">obj: 管理员页面</text>
+<polyline points="160,185 160,1095" fill="none" stroke="#758aa4" stroke-width="2" stroke-dasharray="8 8"/>
+<rect x="412" y="120" width="236" height="65" fill="#e9f0fa" stroke="#24354b" stroke-width="2"/>
+<text x="530" y="157" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="14" font-weight="700" fill="#24354b" text-anchor="middle">api: CompanyImportController</text>
+<polyline points="530,185 530,1095" fill="none" stroke="#758aa4" stroke-width="2" stroke-dasharray="8 8"/>
+<rect x="812" y="120" width="236" height="65" fill="#e9f0fa" stroke="#24354b" stroke-width="2"/>
+<text x="930" y="148" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="18" font-weight="700" fill="#24354b" text-anchor="middle">«MetaClass»</text>
+<text x="930" y="170" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="15" font-weight="700" fill="#24354b" text-anchor="middle">: CompanyWorkbookParser</text>
+<polyline points="930,185 930,1095" fill="none" stroke="#758aa4" stroke-width="2" stroke-dasharray="8 8"/>
+<rect x="1232" y="120" width="236" height="65" fill="#e9f0fa" stroke="#24354b" stroke-width="2"/>
+<text x="1350" y="157" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="14" font-weight="700" fill="#24354b" text-anchor="middle">service: CompanyImportService</text>
+<polyline points="1350,185 1350,1095" fill="none" stroke="#758aa4" stroke-width="2" stroke-dasharray="8 8"/>
+<rect x="1682" y="120" width="236" height="65" fill="#e9f0fa" stroke="#24354b" stroke-width="2"/>
+<text x="1800" y="157" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="14" font-weight="700" fill="#24354b" text-anchor="middle">users: UserAccountRepository</text>
+<polyline points="1800,185 1800,1095" fill="none" stroke="#758aa4" stroke-width="2" stroke-dasharray="8 8"/>
+<rect x="153" y="235" width="14" height="805" fill="#d9e8fa" stroke="#24354b" stroke-width="2"/>
+<rect x="523" y="235" width="14" height="265" fill="#d9e8fa" stroke="#24354b" stroke-width="2"/>
+<rect x="523" y="585" width="14" height="415" fill="#d9e8fa" stroke="#24354b" stroke-width="2"/>
+<rect x="923" y="320" width="14" height="90" fill="#d9e8fa" stroke="#24354b" stroke-width="2"/>
+<rect x="923" y="675" width="14" height="80" fill="#d9e8fa" stroke="#24354b" stroke-width="2"/>
+<rect x="1343" y="825" width="14" height="135" fill="#d9e8fa" stroke="#24354b" stroke-width="2"/>
+<rect x="1793" y="890" width="14" height="40" fill="#d9e8fa" stroke="#24354b" stroke-width="2"/>
+<polyline points="167,235 523,235" fill="none" stroke="#758aa4" stroke-width="2"/>
+<polygon points="523,235 512.1946347717678,240.21958640933477 512.1946347717678,229.78041359066523" fill="#758aa4" stroke="#758aa4"/>
+<text x="345.0" y="222" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="16" font-weight="400" fill="#24354b" text-anchor="middle">1 preview(三份 multipart 文件)</text>
+<polyline points="537,320 923,320" fill="none" stroke="#758aa4" stroke-width="2"/>
+<polygon points="923,320 912.1946347717678,325.21958640933474 912.1946347717678,314.78041359066526" fill="#758aa4" stroke="#758aa4"/>
+<text x="730.0" y="307" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="16" font-weight="400" fill="#24354b" text-anchor="middle">2 plan = parse(三份文件)</text>
+<polyline points="523,480 167,480" fill="none" stroke="#758aa4" stroke-width="2" stroke-dasharray="8 8"/>
+<polyline points="177.80536522823212,474.78041359066526 167,480 177.80536522823212,485.21958640933474" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="345.0" y="467" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="16" font-weight="400" fill="#24354b" text-anchor="middle">统计、处理规则与 SHA-256 摘要（不写库）</text>
+<polyline points="167,585 523,585" fill="none" stroke="#758aa4" stroke-width="2"/>
+<polygon points="523,585 512.1946347717678,590.2195864093347 512.1946347717678,579.7804135906653" fill="#758aa4" stroke="#758aa4"/>
+<text x="345.0" y="572" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="16" font-weight="400" fill="#24354b" text-anchor="middle">3 commit(三份原文件, digest)</text>
+<polyline points="537,675 923,675" fill="none" stroke="#758aa4" stroke-width="2"/>
+<polygon points="923,675 912.1946347717678,680.2195864093347 912.1946347717678,669.7804135906653" fill="#758aa4" stroke="#758aa4"/>
+<text x="730.0" y="662" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="16" font-weight="400" fill="#24354b" text-anchor="middle">4 plan = parse(三份文件)</text>
+<polyline points="537,825 1343,825" fill="none" stroke="#758aa4" stroke-width="2"/>
+<polygon points="1343,825 1332.1946347717678,830.2195864093347 1332.1946347717678,819.7804135906653" fill="#758aa4" stroke="#758aa4"/>
+<text x="940.0" y="812" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="16" font-weight="400" fill="#24354b" text-anchor="middle">5 commit(plan, digest)</text>
+<polyline points="1357,890 1793,890" fill="none" stroke="#758aa4" stroke-width="2"/>
+<polygon points="1793,890 1782.1946347717678,895.2195864093347 1782.1946347717678,884.7804135906653" fill="#758aa4" stroke="#758aa4"/>
+<text x="1575.0" y="877" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="16" font-weight="400" fill="#24354b" text-anchor="middle">6 save(account)（事务内按员工迭代）</text>
+<polyline points="523,1000 167,1000" fill="none" stroke="#758aa4" stroke-width="2" stroke-dasharray="8 8"/>
+<polyline points="177.80536522823212,994.7804135906653 167,1000 177.80536522823212,1005.2195864093347" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="345.0" y="987" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="16" font-weight="400" fill="#24354b" text-anchor="middle">事务提交后返回汇总；其他五类仓储调用略</text>
+</svg>

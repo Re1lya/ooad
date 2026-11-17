@@ -1,0 +1,254 @@
+[
+  {
+    "name": "class-auth",
+    "type": "class",
+    "verifiedSourceClasses": [
+      "AuthService",
+      "UserAccountRepository",
+      "JwtTokenService",
+      "UserService",
+      "UserAccount",
+      "AuthData.Token",
+      "PasswordEncoder"
+    ],
+    "checks": [
+      "noOverlap",
+      "edgesClearOfBoxes",
+      "serviceCentered",
+      "sourceMethodsExist",
+      "textFits"
+    ]
+  },
+  {
+    "name": "class-permission",
+    "type": "class",
+    "verifiedSourceClasses": [
+      "PermissionService",
+      "PermissionRepository",
+      "SystemService",
+      "ApiResourceService",
+      "RolePermissionRepository",
+      "Permission",
+      "PermissionApiRepository"
+    ],
+    "checks": [
+      "noOverlap",
+      "edgesClearOfBoxes",
+      "serviceCentered",
+      "sourceMethodsExist",
+      "textFits"
+    ]
+  },
+  {
+    "name": "sequence-login",
+    "type": "sequence",
+    "checks": [
+      "executionTopAligned",
+      "messagesTouchActivationEdges",
+      "independentCallsHaveSeparateActivations",
+      "noFragmentCutsExecutions",
+      "lifelineTextFits"
+    ]
+  },
+  {
+    "name": "sequence-authorize",
+    "type": "sequence",
+    "checks": [
+      "executionTopAligned",
+      "messagesTouchActivationEdges",
+      "independentCallsHaveSeparateActivations",
+      "noFragmentCutsExecutions",
+      "lifelineTextFits"
+    ]
+  },
+  {
+    "name": "sequence-password-failure",
+    "type": "sequence",
+    "checks": [
+      "executionTopAligned",
+      "messagesTouchActivationEdges",
+      "independentCallsHaveSeparateActivations",
+      "noFragmentCutsExecutions",
+      "lifelineTextFits"
+    ]
+  },
+  {
+    "name": "er-core",
+    "type": "conceptual-er",
+    "entities": 6,
+    "manyToMany": [
+      "用户-角色",
+      "角色-前端权限",
+      "前端权限-API资源",
+      "角色-角色继承"
+    ]
+  },
+  {
+    "name": "er-physical",
+    "type": "physical-er",
+    "tables": 11,
+    "foreignKeys": 14,
+    "checks": [
+      "persistentSchemaMatches",
+      "noOverlap",
+      "edgesClearOfBoxes"
+    ]
+  },
+  {
+    "name": "class-rbac1",
+    "type": "class",
+    "verifiedSourceClasses": [
+      "RoleHierarchyService",
+      "RoleHierarchyRepository",
+      "RoleGraphUseCase",
+      "RoleRepository",
+      "AuthorizationService",
+      "RoleHierarchy",
+      "Role"
+    ],
+    "checks": [
+      "noOverlap",
+      "edgesClearOfBoxes",
+      "serviceCentered",
+      "sourceMethodsExist",
+      "textFits"
+    ]
+  },
+  {
+    "name": "sequence-rbac1",
+    "type": "sequence",
+    "checks": [
+      "executionTopAligned",
+      "messagesTouchActivationEdges",
+      "independentCallsHaveSeparateActivations",
+      "noFragmentCutsExecutions",
+      "lifelineTextFits"
+    ]
+  },
+  {
+    "name": "class-dual-design",
+    "type": "class",
+    "verifiedSourceClasses": [
+      "DddRoleGraphService",
+      "RoleGraphUseCase",
+      "StructuredRoleGraphService",
+      "RoleGraph",
+      "RoleHierarchyService"
+    ],
+    "checks": [
+      "noOverlap",
+      "edgesClearOfBoxes",
+      "serviceCentered",
+      "sourceMethodsExist",
+      "textFits"
+    ]
+  },
+  {
+    "name": "sequence-ddd-policy",
+    "type": "sequence",
+    "checks": [
+      "executionTopAligned",
+      "messagesTouchActivationEdges",
+      "independentCallsHaveSeparateActivations",
+      "noFragmentCutsExecutions",
+      "lifelineTextFits"
+    ]
+  },
+  {
+    "name": "sequence-company-import",
+    "type": "sequence",
+    "checks": [
+      "executionTopAligned",
+      "messagesTouchActivationEdges",
+      "independentCallsHaveSeparateActivations",
+      "noFragmentCutsExecutions",
+      "lifelineTextFits"
+    ]
+  },
+  {
+    "name": "structure-rbac1",
+    "type": "structure-chart",
+    "checks": [
+      "noOverlap",
+      "edgesClearOfBoxes",
+      "sourceBehaviorMapped"
+    ]
+  },
+  {
+    "name": "class-full-user",
+    "type": "class",
+    "verifiedSourceClasses": [
+      "DddUserService",
+      "UserUseCase",
+      "AccountRepository",
+      "Account",
+      "CredentialGateway",
+      "DepartmentDirectory",
+      "AssignmentRepository"
+    ],
+    "checks": [
+      "noOverlap",
+      "edgesClearOfBoxes",
+      "serviceCentered",
+      "sourceMethodsExist",
+      "textFits"
+    ]
+  },
+  {
+    "name": "class-domain-adapter",
+    "type": "class",
+    "verifiedSourceClasses": [
+      "JpaAccountRepositoryAdapter",
+      "AccountRepository",
+      "UserAccountRepository",
+      "Account",
+      "UserAccount"
+    ],
+    "checks": [
+      "noOverlap",
+      "edgesClearOfBoxes",
+      "serviceCentered",
+      "sourceMethodsExist",
+      "textFits"
+    ]
+  },
+  {
+    "name": "sequence-ddd-account",
+    "type": "sequence",
+    "checks": [
+      "executionTopAligned",
+      "messagesTouchActivationEdges",
+      "independentCallsHaveSeparateActivations",
+      "noFragmentCutsExecutions",
+      "lifelineTextFits"
+    ]
+  },
+  {
+    "name": "structure-full-system",
+    "type": "structure-chart",
+    "checks": [
+      "noOverlap",
+      "sourceModulesMapped"
+    ]
+  },
+  {
+    "name": "class-ddd-permission",
+    "type": "class",
+    "verifiedSourceClasses": [
+      "DddPermissionService",
+      "PermissionUseCase",
+      "PermissionCatalog",
+      "FrontendPermission",
+      "SystemCatalog",
+      "ResourceCatalog",
+      "AssignmentRepository"
+    ],
+    "checks": [
+      "noOverlap",
+      "edgesClearOfBoxes",
+      "serviceCentered",
+      "sourceMethodsExist",
+      "textFits"
+    ]
+  }
+]

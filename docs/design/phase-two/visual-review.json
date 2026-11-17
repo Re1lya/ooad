@@ -1,0 +1,32 @@
+{
+  "reviewedAt": "2026-11-18T00:47:00+08:00",
+  "diagrams": [
+    "class-auth",
+    "class-permission",
+    "sequence-login",
+    "sequence-authorize",
+    "sequence-password-failure",
+    "er-core",
+    "er-physical",
+    "class-rbac1",
+    "sequence-rbac1",
+    "class-dual-design",
+    "sequence-ddd-policy",
+    "sequence-company-import",
+    "structure-rbac1",
+    "class-full-user",
+    "class-domain-adapter",
+    "sequence-ddd-account",
+    "structure-full-system",
+    "class-ddd-permission"
+  ],
+  "method": "PNG files opened and visually reviewed; automatic geometry validation also passed",
+  "notes": [
+    "class fields use association roles; local/return dependencies dashed",
+    "sequence activation bars and message endpoints readable",
+    "conceptual ER includes role self-association; physical ER has 11 tables and 14 foreign keys",
+    "RBAC1 双实现类图和三表导入、面向对象委派顺序图已打开 PNG 检查，类框无重叠，箭头与激活条可读。",
+    "物理ER已扩展用户、权限框容纳来源字段；结构化模块分解图已PNG目视复核。"
+  ],
+  "fullDualDesignReview": "2026-11-18: opened new class/domain-adapter/permission and account sequence PNGs; reviewed changed diagrams contact sheet; unaffected diagrams retain prior visual review."
+}

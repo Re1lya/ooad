@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1860" height="1120" viewBox="0 0 1860 1120">
+<rect width="100%" height="100%" fill="white"/>
+<text x="930.0" y="55" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="30" font-weight="700" fill="#24354b" text-anchor="middle">角色图算法双实现类图（结构化调用支线）</text>
+<text x="930.0" y="87" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#60748c" text-anchor="middle">类和方法取自当前源码 · 实线标角色名为关联，虚线为依赖 · Service 位于中心</text>
+<polyline points="910,410 910,330" fill="none" stroke="#758aa4" stroke-width="2" stroke-dasharray="8 8"/>
+<polygon points="910,330 917.3944140798909,345.3076007399955 902.6055859201091,345.3076007399955" fill="white" stroke="#758aa4"/>
+<polyline points="270,410 270,240 630,240" fill="none" stroke="#758aa4" stroke-width="2" stroke-dasharray="8 8"/>
+<polygon points="630,240 614.6923992600045,247.3944140798909 614.6923992600045,232.6055859201091" fill="white" stroke="#758aa4"/>
+<polyline points="1190,550 1300,550" fill="none" stroke="#758aa4" stroke-width="2" stroke-dasharray="8 8"/>
+<polyline points="1289.1946347717678,555.2195864093347 1300,550 1289.1946347717678,544.7804135906653" fill="none" stroke="#758aa4" stroke-width="2"/>
+<polyline points="1190,920 1240,920 1240,250 1190,250" fill="none" stroke="#758aa4" stroke-width="2"/>
+<polyline points="1200.8053652282322,244.78041359066523 1190,250 1200.8053652282322,255.21958640933477" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="1215.0" y="910" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="15" font-weight="400" fill="#24354b" text-anchor="middle">policy</text>
+<rect x="630" y="410" width="560" height="280" fill="#e9f0fa" stroke="#24354b" stroke-width="2"/>
+<text x="910.0" y="448" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="23" font-weight="700" fill="#24354b" text-anchor="middle">DddRoleGraphService</text>
+<polyline points="630,465 1190,465" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="644" y="494" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">—</text>
+<polyline points="630,513 1190,513" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="644" y="543" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ validate(Long, Long, Map): void</text>
+<text x="644" y="570" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ resolve(Node, Map): List&lt;Path&gt;</text>
+<text x="644" y="597" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ strategy(): String</text>
+<rect x="630" y="120" width="560" height="210" fill="#f8fafc" stroke="#24354b" stroke-width="2"/>
+<text x="910.0" y="158" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="23" font-weight="700" fill="#24354b" text-anchor="middle">«interface» RoleGraphUseCase</text>
+<polyline points="630,175 1190,175" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="644" y="204" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">—</text>
+<polyline points="630,223 1190,223" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="644" y="253" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ validate(Long, Long, Map): void</text>
+<text x="644" y="280" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ resolve(Node, Map): List&lt;Path&gt;</text>
+<text x="644" y="307" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ strategy(): String</text>
+<rect x="35" y="410" width="470" height="280" fill="#f8fafc" stroke="#24354b" stroke-width="2"/>
+<text x="270.0" y="448" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="23" font-weight="700" fill="#24354b" text-anchor="middle">StructuredRoleGraphService</text>
+<polyline points="35,465 505,465" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="49" y="494" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">—</text>
+<polyline points="35,513 505,513" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="49" y="543" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ validate(Long, Long, Map): void</text>
+<text x="49" y="570" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ resolve(Node, Map): List&lt;Path&gt;</text>
+<text x="49" y="597" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ strategy(): String</text>
+<rect x="1300" y="410" width="530" height="280" fill="#f8fafc" stroke="#24354b" stroke-width="2"/>
+<text x="1565.0" y="448" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="23" font-weight="700" fill="#24354b" text-anchor="middle">RoleGraph</text>
+<polyline points="1300,465 1830,465" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="1314" y="494" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">- edges: Map&lt;Long, List&lt;Node&gt;&gt;</text>
+<polyline points="1300,513 1830,513" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="1314" y="543" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ assertCanInherit(Long, Long): void</text>
+<text x="1314" y="570" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ effectivePaths(Node): List&lt;Path&gt;</text>
+<rect x="630" y="810" width="560" height="220" fill="#f8fafc" stroke="#24354b" stroke-width="2"/>
+<text x="910.0" y="848" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="23" font-weight="700" fill="#24354b" text-anchor="middle">RoleHierarchyService</text>
+<polyline points="630,865 1190,865" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="644" y="894" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">- policy: RoleGraphUseCase</text>
+<polyline points="630,913 1190,913" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="644" y="943" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ inherit(Long, Long): void</text>
+<text x="644" y="970" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ resolve(Role, Map): List&lt;ResolvedRole&gt;</text>
+</svg>

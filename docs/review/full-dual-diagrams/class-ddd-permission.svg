@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1940" height="1220" viewBox="0 0 1940 1220">
+<rect width="100%" height="100%" fill="white"/>
+<text x="970.0" y="55" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="30" font-weight="700" fill="#24354b" text-anchor="middle">面向对象设计：菜单按钮与 API 绑定</text>
+<text x="970.0" y="87" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#60748c" text-anchor="middle">类和方法取自当前源码 · 实线标角色名为关联，虚线为依赖 · Service 位于中心</text>
+<polyline points="930,440 930,320" fill="none" stroke="#758aa4" stroke-width="2" stroke-dasharray="8 8"/>
+<polygon points="930,320 937.3944140798909,335.3076007399955 922.6055859201091,335.3076007399955" fill="white" stroke="#758aa4"/>
+<polyline points="650,550 530,550" fill="none" stroke="#758aa4" stroke-width="2"/>
+<polyline points="540.8053652282322,544.7804135906653 530,550 540.8053652282322,555.2195864093347" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="590.0" y="540" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="15" font-weight="400" fill="#24354b" text-anchor="middle">permissions</text>
+<polyline points="1210,550 1360,550" fill="none" stroke="#758aa4" stroke-width="2" stroke-dasharray="8 8"/>
+<polyline points="1349.1946347717678,555.2195864093347 1360,550 1349.1946347717678,544.7804135906653" fill="none" stroke="#758aa4" stroke-width="2"/>
+<polyline points="650,770 520,940" fill="none" stroke="#758aa4" stroke-width="2"/>
+<polyline points="522.417500921075,928.2460351669489 520,940 530.7099396193878,934.5873118185999" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="640" y="870.0" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="15" font-weight="400" fill="#24354b" text-anchor="end">systems</text>
+<polyline points="930,770 930,940" fill="none" stroke="#758aa4" stroke-width="2"/>
+<polyline points="924.7804135906653,929.1946347717678 930,940 935.2195864093347,929.1946347717678" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="920" y="870.0" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="15" font-weight="400" fill="#24354b" text-anchor="end">resources</text>
+<polyline points="1210,770 1380,940" fill="none" stroke="#758aa4" stroke-width="2"/>
+<polyline points="1368.66864802889,936.0502579189495 1380,940 1376.0502579189495,928.66864802889" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="1200" y="870.0" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="15" font-weight="400" fill="#24354b" text-anchor="end">assignments</text>
+<rect x="650" y="440" width="560" height="330" fill="#e9f0fa" stroke="#24354b" stroke-width="2"/>
+<text x="930.0" y="478" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="23" font-weight="700" fill="#24354b" text-anchor="middle">DddPermissionService</text>
+<polyline points="650,495 1210,495" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="664" y="524" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">- permissions: PermissionCatalog</text>
+<text x="664" y="551" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">- systems: SystemCatalog</text>
+<text x="664" y="578" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">- resources: ResourceCatalog</text>
+<text x="664" y="605" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">- assignments: AssignmentRepository</text>
+<polyline points="650,624 1210,624" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="664" y="654" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ create(Input): View</text>
+<text x="664" y="681" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ update(Long, Update): View</text>
+<text x="664" y="708" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ bind(Long, Long): void</text>
+<text x="664" y="735" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ tree(Long): List&lt;Tree&gt;</text>
+<rect x="660" y="130" width="540" height="190" fill="#f8fafc" stroke="#24354b" stroke-width="2"/>
+<text x="930.0" y="168" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="23" font-weight="700" fill="#24354b" text-anchor="middle">«interface» PermissionUseCase</text>
+<polyline points="660,185 1200,185" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="674" y="214" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">—</text>
+<polyline points="660,233 1200,233" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="674" y="263" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ bind(Long, Long): void</text>
+<text x="674" y="290" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ tree(Long): List&lt;Tree&gt;</text>
+<rect x="30" y="440" width="500" height="220" fill="#f8fafc" stroke="#24354b" stroke-width="2"/>
+<text x="280.0" y="478" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="23" font-weight="700" fill="#24354b" text-anchor="middle">«interface» PermissionCatalog</text>
+<polyline points="30,495 530,495" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="44" y="524" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">—</text>
+<polyline points="30,543 530,543" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="44" y="573" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ find(Long): Optional&lt;FrontendPermission&gt;</text>
+<text x="44" y="600" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ save(FrontendPermission): FrontendPermission</text>
+<rect x="1360" y="420" width="540" height="300" fill="#f8fafc" stroke="#24354b" stroke-width="2"/>
+<text x="1630.0" y="458" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="23" font-weight="700" fill="#24354b" text-anchor="middle">FrontendPermission</text>
+<polyline points="1360,475 1900,475" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="1374" y="504" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">- systemId: Long</text>
+<text x="1374" y="531" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">- parentId: Long</text>
+<polyline points="1360,550 1900,550" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="1374" y="580" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ edit(..., Map, boolean): void</text>
+<text x="1374" y="607" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ assertBindable(ProtectedResource): void</text>
+<text x="1374" y="634" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ changeStatus(boolean): void</text>
+<rect x="30" y="940" width="500" height="200" fill="#f8fafc" stroke="#24354b" stroke-width="2"/>
+<text x="280.0" y="978" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="23" font-weight="700" fill="#24354b" text-anchor="middle">«interface» SystemCatalog</text>
+<polyline points="30,995 530,995" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="44" y="1024" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">—</text>
+<polyline points="30,1043 530,1043" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="44" y="1073" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ find(Long): Optional&lt;ManagedSystem&gt;</text>
+<rect x="660" y="940" width="540" height="200" fill="#f8fafc" stroke="#24354b" stroke-width="2"/>
+<text x="930.0" y="978" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="23" font-weight="700" fill="#24354b" text-anchor="middle">«interface» ResourceCatalog</text>
+<polyline points="660,995 1200,995" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="674" y="1024" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">—</text>
+<polyline points="660,1043 1200,1043" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="674" y="1073" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ find(Long): Optional&lt;ProtectedResource&gt;</text>
+<rect x="1360" y="940" width="540" height="200" fill="#f8fafc" stroke="#24354b" stroke-width="2"/>
+<text x="1630.0" y="978" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="23" font-weight="700" fill="#24354b" text-anchor="middle">«interface» AssignmentRepository</text>
+<polyline points="1360,995 1900,995" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="1374" y="1024" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">—</text>
+<polyline points="1360,1043 1900,1043" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="1374" y="1073" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ bind(Long, Long): void</text>
+<text x="1374" y="1100" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ unbind(Long, Long): void</text>
+</svg>

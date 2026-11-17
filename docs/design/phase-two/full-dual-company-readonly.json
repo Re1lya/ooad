@@ -1,0 +1,23 @@
+{
+  "modules": {
+    "permissions": "ddd",
+    "departments": "ddd",
+    "authentication": "ddd",
+    "roles": "ddd",
+    "companyImport": "ddd",
+    "users": "ddd",
+    "systems": "ddd",
+    "hierarchy": "ddd",
+    "resources": "ddd",
+    "authorization": "ddd"
+  },
+  "users": 10001,
+  "checks": [
+    "既有文件库启动validate成功",
+    "十个业务模块全部DDD",
+    "原有10001用户保留"
+  ],
+  "ddl": "validate",
+  "backendStrategy": "ddd",
+  "generatedAt": "2026-11-18T01:57:26.3721886+08:00"
+}

@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1840" height="1190" viewBox="0 0 1840 1190">
+<rect width="100%" height="100%" fill="white"/>
+<text x="920.0" y="55" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="30" font-weight="700" fill="#24354b" text-anchor="middle">领域仓储与 JPA 适配边界</text>
+<text x="920.0" y="87" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#60748c" text-anchor="middle">类和方法取自当前源码 · 实线标角色名为关联，虚线为依赖 · Service 位于中心</text>
+<polyline points="910,430 910,320" fill="none" stroke="#758aa4" stroke-width="2" stroke-dasharray="8 8"/>
+<polygon points="910,320 917.3944140798909,335.3076007399955 902.6055859201091,335.3076007399955" fill="white" stroke="#758aa4"/>
+<polyline points="630,540 510,540" fill="none" stroke="#758aa4" stroke-width="2"/>
+<polyline points="520.8053652282322,534.7804135906653 510,540 520.8053652282322,545.2195864093347" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="570.0" y="530" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="15" font-weight="400" fill="#24354b" text-anchor="middle">data</text>
+<polyline points="1190,540 1320,540" fill="none" stroke="#758aa4" stroke-width="2" stroke-dasharray="8 8"/>
+<polyline points="1309.1946347717678,545.2195864093347 1320,540 1309.1946347717678,534.7804135906653" fill="none" stroke="#758aa4" stroke-width="2"/>
+<polyline points="910,700 910,920" fill="none" stroke="#758aa4" stroke-width="2" stroke-dasharray="8 8"/>
+<polyline points="904.7804135906653,909.1946347717678 910,920 915.2195864093347,909.1946347717678" fill="none" stroke="#758aa4" stroke-width="2"/>
+<rect x="630" y="430" width="560" height="270" fill="#e9f0fa" stroke="#24354b" stroke-width="2"/>
+<text x="910.0" y="468" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="23" font-weight="700" fill="#24354b" text-anchor="middle">JpaAccountRepositoryAdapter</text>
+<polyline points="630,485 1190,485" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="644" y="514" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">- data: UserAccountRepository</text>
+<polyline points="630,533 1190,533" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="644" y="563" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ find(Long): Optional&lt;Account&gt;</text>
+<text x="644" y="590" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ lock(Long): Optional&lt;Account&gt;</text>
+<text x="644" y="617" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ save(Account): Account</text>
+<rect x="650" y="130" width="520" height="190" fill="#f8fafc" stroke="#24354b" stroke-width="2"/>
+<text x="910.0" y="168" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="23" font-weight="700" fill="#24354b" text-anchor="middle">«interface» AccountRepository</text>
+<polyline points="650,185 1170,185" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="664" y="214" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">—</text>
+<polyline points="650,233 1170,233" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="664" y="263" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ lock(Long): Optional&lt;Account&gt;</text>
+<text x="664" y="290" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ save(Account): Account</text>
+<rect x="30" y="450" width="480" height="200" fill="#f8fafc" stroke="#24354b" stroke-width="2"/>
+<text x="270.0" y="488" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="23" font-weight="700" fill="#24354b" text-anchor="middle">«interface» UserAccountRepository</text>
+<polyline points="30,505 510,505" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="44" y="534" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">—</text>
+<polyline points="30,553 510,553" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="44" y="583" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ lockById(Long): Optional&lt;UserAccount&gt;</text>
+<rect x="1320" y="450" width="480" height="200" fill="#f8fafc" stroke="#24354b" stroke-width="2"/>
+<text x="1560.0" y="488" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="23" font-weight="700" fill="#24354b" text-anchor="middle">Account</text>
+<polyline points="1320,505 1800,505" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="1334" y="534" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">—</text>
+<polyline points="1320,553 1800,553" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="1334" y="583" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ changeStatus(Long, boolean): void</text>
+<text x="1334" y="610" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ resetPassword(String): void</text>
+<rect x="650" y="920" width="520" height="200" fill="#f8fafc" stroke="#24354b" stroke-width="2"/>
+<text x="910.0" y="958" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="23" font-weight="700" fill="#24354b" text-anchor="middle">UserAccount</text>
+<polyline points="650,975 1170,975" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="664" y="1004" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">—</text>
+<polyline points="650,1023 1170,1023" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="664" y="1053" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ getCredentialVersion(): long</text>
+<text x="664" y="1080" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#24354b" text-anchor="start">+ getDepartmentId(): Long</text>
+</svg>

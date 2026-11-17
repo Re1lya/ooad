@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2190" height="1210" viewBox="0 0 2190 1210">
+<rect width="100%" height="100%" fill="white"/>
+<text x="1095.0" y="55" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="30" font-weight="700" fill="#24354b" text-anchor="middle">建立角色继承关系顺序图</text>
+<text x="1095.0" y="87" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#60748c" text-anchor="middle">当前代码成功路径 · 共享事务与持久化，角色图校验按配置切换</text>
+<rect x="32" y="120" width="236" height="65" fill="#e9f0fa" stroke="#24354b" stroke-width="2"/>
+<text x="150" y="161" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="18" font-weight="700" fill="#24354b" text-anchor="middle">obj: MVC 分发器</text>
+<polyline points="150,185 150,1175" fill="none" stroke="#758aa4" stroke-width="2" stroke-dasharray="8 8"/>
+<rect x="352" y="120" width="236" height="65" fill="#e9f0fa" stroke="#24354b" stroke-width="2"/>
+<text x="470" y="158" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="15" font-weight="700" fill="#24354b" text-anchor="middle">api: RoleHierarchyController</text>
+<polyline points="470,185 470,1175" fill="none" stroke="#758aa4" stroke-width="2" stroke-dasharray="8 8"/>
+<rect x="712" y="120" width="236" height="65" fill="#e9f0fa" stroke="#24354b" stroke-width="2"/>
+<text x="830" y="158" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="15" font-weight="700" fill="#24354b" text-anchor="middle">service: RoleHierarchyService</text>
+<polyline points="830,185 830,1175" fill="none" stroke="#758aa4" stroke-width="2" stroke-dasharray="8 8"/>
+<rect x="1102" y="120" width="236" height="65" fill="#e9f0fa" stroke="#24354b" stroke-width="2"/>
+<text x="1220" y="161" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="18" font-weight="700" fill="#24354b" text-anchor="middle">roles: RoleRepository</text>
+<polyline points="1220,185 1220,1175" fill="none" stroke="#758aa4" stroke-width="2" stroke-dasharray="8 8"/>
+<rect x="1512" y="120" width="236" height="65" fill="#e9f0fa" stroke="#24354b" stroke-width="2"/>
+<text x="1630" y="156" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="13" font-weight="700" fill="#24354b" text-anchor="middle">edges: RoleHierarchyRepository</text>
+<polyline points="1630,185 1630,1175" fill="none" stroke="#758aa4" stroke-width="2" stroke-dasharray="8 8"/>
+<rect x="1892" y="120" width="236" height="65" fill="#e9f0fa" stroke="#24354b" stroke-width="2"/>
+<text x="2010" y="159" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="16" font-weight="700" fill="#24354b" text-anchor="middle">policy: RoleGraphUseCase</text>
+<polyline points="2010,185 2010,1175" fill="none" stroke="#758aa4" stroke-width="2" stroke-dasharray="8 8"/>
+<rect x="143" y="235" width="14" height="885" fill="#d9e8fa" stroke="#24354b" stroke-width="2"/>
+<rect x="463" y="235" width="14" height="825" fill="#d9e8fa" stroke="#24354b" stroke-width="2"/>
+<rect x="823" y="315" width="14" height="695" fill="#d9e8fa" stroke="#24354b" stroke-width="2"/>
+<rect x="1213" y="400" width="14" height="40" fill="#d9e8fa" stroke="#24354b" stroke-width="2"/>
+<rect x="1213" y="490" width="14" height="40" fill="#d9e8fa" stroke="#24354b" stroke-width="2"/>
+<rect x="1213" y="580" width="14" height="40" fill="#d9e8fa" stroke="#24354b" stroke-width="2"/>
+<rect x="1623" y="670" width="14" height="40" fill="#d9e8fa" stroke="#24354b" stroke-width="2"/>
+<rect x="1623" y="760" width="14" height="40" fill="#d9e8fa" stroke="#24354b" stroke-width="2"/>
+<rect x="2003" y="850" width="14" height="40" fill="#d9e8fa" stroke="#24354b" stroke-width="2"/>
+<rect x="1623" y="940" width="14" height="40" fill="#d9e8fa" stroke="#24354b" stroke-width="2"/>
+<polyline points="157,235 463,235" fill="none" stroke="#758aa4" stroke-width="2"/>
+<polygon points="463,235 452.1946347717679,240.21958640933477 452.1946347717679,229.78041359066523" fill="#758aa4" stroke="#758aa4"/>
+<text x="310.0" y="222" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="16" font-weight="400" fill="#24354b" text-anchor="middle">1 inherit(seniorId, inheritedId)</text>
+<polyline points="477,315 823,315" fill="none" stroke="#758aa4" stroke-width="2"/>
+<polygon points="823,315 812.1946347717678,320.21958640933474 812.1946347717678,309.78041359066526" fill="#758aa4" stroke="#758aa4"/>
+<text x="650.0" y="302" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="16" font-weight="400" fill="#24354b" text-anchor="middle">2 inherit(seniorId, inheritedId)</text>
+<polyline points="837,400 1213,400" fill="none" stroke="#758aa4" stroke-width="2"/>
+<polygon points="1213,400 1202.1946347717678,405.21958640933474 1202.1946347717678,394.78041359066526" fill="#758aa4" stroke="#758aa4"/>
+<text x="1025.0" y="387" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="16" font-weight="400" fill="#24354b" text-anchor="middle">3 lockHierarchyRoles()</text>
+<polyline points="837,490 1213,490" fill="none" stroke="#758aa4" stroke-width="2"/>
+<polygon points="1213,490 1202.1946347717678,495.21958640933474 1202.1946347717678,484.78041359066526" fill="#758aa4" stroke="#758aa4"/>
+<text x="1025.0" y="477" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="16" font-weight="400" fill="#24354b" text-anchor="middle">4 senior = findById(seniorId)</text>
+<polyline points="837,580 1213,580" fill="none" stroke="#758aa4" stroke-width="2"/>
+<polygon points="1213,580 1202.1946347717678,585.2195864093347 1202.1946347717678,574.7804135906653" fill="#758aa4" stroke="#758aa4"/>
+<text x="1025.0" y="567" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="16" font-weight="400" fill="#24354b" text-anchor="middle">5 inherited = findById(inheritedId)</text>
+<polyline points="837,670 1623,670" fill="none" stroke="#758aa4" stroke-width="2"/>
+<polygon points="1623,670 1612.1946347717678,675.2195864093347 1612.1946347717678,664.7804135906653" fill="#758aa4" stroke="#758aa4"/>
+<text x="1230.0" y="657" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="16" font-weight="400" fill="#24354b" text-anchor="middle">6 existsBySeniorRole_IdAndInheritedRole_Id(...)</text>
+<polyline points="837,760 1623,760" fill="none" stroke="#758aa4" stroke-width="2"/>
+<polygon points="1623,760 1612.1946347717678,765.2195864093347 1612.1946347717678,754.7804135906653" fill="#758aa4" stroke="#758aa4"/>
+<text x="1230.0" y="747" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="16" font-weight="400" fill="#24354b" text-anchor="middle">7 allEdges = findAll()</text>
+<polyline points="837,850 2003,850" fill="none" stroke="#758aa4" stroke-width="2"/>
+<polygon points="2003,850 1992.1946347717678,855.2195864093347 1992.1946347717678,844.7804135906653" fill="#758aa4" stroke="#758aa4"/>
+<text x="1420.0" y="837" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="16" font-weight="400" fill="#24354b" text-anchor="middle">8 validate(seniorId, inheritedId, snapshot)</text>
+<polyline points="837,940 1623,940" fill="none" stroke="#758aa4" stroke-width="2"/>
+<polygon points="1623,940 1612.1946347717678,945.2195864093347 1612.1946347717678,934.7804135906653" fill="#758aa4" stroke="#758aa4"/>
+<text x="1230.0" y="927" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="16" font-weight="400" fill="#24354b" text-anchor="middle">9 save(new RoleHierarchy(...))</text>
+<polyline points="463,1060 157,1060" fill="none" stroke="#758aa4" stroke-width="2" stroke-dasharray="8 8"/>
+<polyline points="167.80536522823212,1054.7804135906651 157,1060 167.80536522823212,1065.2195864093349" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="310.0" y="1047" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="16" font-weight="400" fill="#24354b" text-anchor="middle">HTTP 204 · 提交后后续请求读取新关系</text>
+</svg>

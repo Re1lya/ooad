@@ -1,0 +1,9 @@
+{
+  "markdownFiles": 10,
+  "localLinksChecked": 134,
+  "openApiOperations": 47,
+  "archivedFilesPreserved": 583,
+  "problems": [],
+  "scope": "Historical first-review documentation audit; current API, tests, and diagrams are in verification.json",
+  "currentVerification": "verification.json"
+}

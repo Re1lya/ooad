@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1900" height="950" viewBox="0 0 1900 950">
+<rect width="100%" height="100%" fill="white"/>
+<text x="950.0" y="55" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="30" font-weight="700" fill="#24354b" text-anchor="middle">结构化设计：全业务功能模块分解</text>
+<text x="950.0" y="87" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="17" font-weight="400" fill="#60748c" text-anchor="middle">公共 HTTP 契约 → 十个事务脚本服务 → 共享 JPA 与技术能力</text>
+<polyline points="950,230 950,300 75,300" fill="none" stroke="#758aa4" stroke-width="2"/>
+<polyline points="950,300 1878,300" fill="none" stroke="#758aa4" stroke-width="2"/>
+<polyline points="1878,300 1878,560 75,560" fill="none" stroke="#758aa4" stroke-width="2"/>
+<rect x="650" y="130" width="600" height="100" fill="#e9f0fa" stroke="#24354b" stroke-width="2"/>
+<text x="950.0" y="187" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="24" font-weight="700" fill="#24354b" text-anchor="middle">统一权限管理系统</text>
+<rect x="40" y="370" width="320" height="110" fill="#e9f0fa" stroke="#24354b" stroke-width="2"/>
+<text x="200.0" y="427" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="24" font-weight="700" fill="#24354b" text-anchor="middle">登录与密码</text>
+<polyline points="200.0,300 200.0,370" fill="none" stroke="#758aa4" stroke-width="2"/>
+<rect x="415" y="370" width="320" height="110" fill="#e9f0fa" stroke="#24354b" stroke-width="2"/>
+<text x="575.0" y="427" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="24" font-weight="700" fill="#24354b" text-anchor="middle">用户管理</text>
+<polyline points="575.0,300 575.0,370" fill="none" stroke="#758aa4" stroke-width="2"/>
+<rect x="790" y="370" width="320" height="110" fill="#e9f0fa" stroke="#24354b" stroke-width="2"/>
+<text x="950.0" y="427" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="24" font-weight="700" fill="#24354b" text-anchor="middle">部门管理</text>
+<polyline points="950.0,300 950.0,370" fill="none" stroke="#758aa4" stroke-width="2"/>
+<rect x="1165" y="370" width="320" height="110" fill="#e9f0fa" stroke="#24354b" stroke-width="2"/>
+<text x="1325.0" y="427" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="24" font-weight="700" fill="#24354b" text-anchor="middle">应用管理</text>
+<polyline points="1325.0,300 1325.0,370" fill="none" stroke="#758aa4" stroke-width="2"/>
+<rect x="1540" y="370" width="320" height="110" fill="#e9f0fa" stroke="#24354b" stroke-width="2"/>
+<text x="1700.0" y="427" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="24" font-weight="700" fill="#24354b" text-anchor="middle">角色管理</text>
+<polyline points="1700.0,300 1700.0,370" fill="none" stroke="#758aa4" stroke-width="2"/>
+<rect x="40" y="630" width="320" height="110" fill="#e9f0fa" stroke="#24354b" stroke-width="2"/>
+<text x="200.0" y="687" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="24" font-weight="700" fill="#24354b" text-anchor="middle">前端权限</text>
+<polyline points="200.0,560 200.0,630" fill="none" stroke="#758aa4" stroke-width="2"/>
+<rect x="415" y="630" width="320" height="110" fill="#e9f0fa" stroke="#24354b" stroke-width="2"/>
+<text x="575.0" y="687" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="24" font-weight="700" fill="#24354b" text-anchor="middle">API资源</text>
+<polyline points="575.0,560 575.0,630" fill="none" stroke="#758aa4" stroke-width="2"/>
+<rect x="790" y="630" width="320" height="110" fill="#e9f0fa" stroke="#24354b" stroke-width="2"/>
+<text x="950.0" y="687" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="24" font-weight="700" fill="#24354b" text-anchor="middle">授权鉴权</text>
+<polyline points="950.0,560 950.0,630" fill="none" stroke="#758aa4" stroke-width="2"/>
+<rect x="1165" y="630" width="320" height="110" fill="#e9f0fa" stroke="#24354b" stroke-width="2"/>
+<text x="1325.0" y="687" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="24" font-weight="700" fill="#24354b" text-anchor="middle">角色继承</text>
+<polyline points="1325.0,560 1325.0,630" fill="none" stroke="#758aa4" stroke-width="2"/>
+<rect x="1540" y="630" width="320" height="110" fill="#e9f0fa" stroke="#24354b" stroke-width="2"/>
+<text x="1700.0" y="687" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="24" font-weight="700" fill="#24354b" text-anchor="middle">公司三表导入</text>
+<polyline points="1700.0,560 1700.0,630" fill="none" stroke="#758aa4" stroke-width="2"/>
+<text x="950" y="869" font-family="Microsoft YaHei,DejaVu Sans,sans-serif" font-size="19" font-weight="400" fill="#24354b" text-anchor="middle">过程组织：读取 → 校验 → 写入 → 结果转换；每个业务端口在 structured / ddd 中只装载一个实现。</text>
+</svg>

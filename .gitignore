@@ -1,0 +1,57 @@
+HELP.md
+target/
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+
+# Local browser traces may contain authentication data. Only reviewed screenshots go in docs.
+.playwright-cli/
+output/
+__pycache__/
+.env
+*.local.json
+node_modules/
+
+# 私有运行库、来源数据及每次对话的生成结果
+/work/
+/outputs/
+*.mv.db
+*.trace.db
+
+# Machine-specific credentials, caches and supplied spreadsheets
+.cache/
+.env.*
+!.env.example
+*.log
+*.pid
+*.xlsx
+*.xls
+*.xlsm
