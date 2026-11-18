@@ -10,6 +10,7 @@ public class ProtectedResource {
   private Long id;
   private Long systemId;
   private String name;
+  private String code;
   private String method;
   private String path;
   private boolean active = true;
@@ -21,6 +22,17 @@ public class ProtectedResource {
         || path.contains("?")
         || path.contains("#")
         || path.contains("**")) throw new IllegalArgumentException("资源路径须为不含查询参数的绝对路径，不支持 ** 通配符");
+  }
+
+  /** 后端权限码可选；登记后与方法、路径一样固定，供接入应用做方法级授权。 */
+  public void assertCode() {
+    if (code != null && !code.matches("[A-Za-z][A-Za-z0-9_:.-]{0,63}"))
+      throw new IllegalArgumentException("权限码须以字母开头，只含字母、数字和 _:.-，最长 64 位");
+  }
+
+  /** 启用且登记了权限码的资源才向接入应用提供后端权限码（信息专家：资源自己知道是否有效）。 */
+  public java.util.Optional<String> authorityCode() {
+    return active && code != null ? java.util.Optional.of(code) : java.util.Optional.empty();
   }
 
   /** 更名不会修改既有 HTTP 资源标识。 */

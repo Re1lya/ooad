@@ -5,12 +5,18 @@ public final class ResourceData {
   private ResourceData() {}
 
   /** 与 HTTP 表现及数据库技术无关的用例数据。 */
-  public record Create(Long systemId, String name, String method, String path) {}
+  public record Create(Long systemId, String name, String method, String path, String code) {}
 
   /** 与 HTTP 表现及数据库技术无关的用例数据。 */
   public record Update(String name) {}
 
   /** 与 HTTP 表现及数据库技术无关的用例数据。 */
   public record View(
-      Long id, Long systemId, String name, String method, String path, boolean active) {}
+      Long id,
+      Long systemId,
+      String name,
+      String method,
+      String path,
+      boolean active,
+      String code) {}
 }

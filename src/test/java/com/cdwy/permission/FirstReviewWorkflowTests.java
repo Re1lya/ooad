@@ -43,7 +43,7 @@ class FirstReviewWorkflowTests {
   @Autowired AdminBootstrapService bootstrap;
   @Autowired UserAccountRepository users;
   @Autowired ApplicationContext context;
-  @Autowired RequestMappingHandlerMapping routes;
+  @Autowired @org.springframework.beans.factory.annotation.Qualifier("requestMappingHandlerMapping") RequestMappingHandlerMapping routes;
   String admin, employee;
   long user, system, role, menu, button, resource;
 
@@ -173,7 +173,9 @@ class FirstReviewWorkflowTests {
                 "select table_name from information_schema.tables where table_schema='PUBLIC' and"
                     + " table_type='BASE TABLE'",
                 String.class));
-    assertEquals(11, tables.size());
+    // 11 张业务表 + 1 张审计日志技术表（不进入核心 ER）；JWT 无状态，不存在会话表。
+    assertEquals(12, tables.size());
+    assertTrue(tables.stream().anyMatch(t -> t.equalsIgnoreCase("sys_audit_log")));
     assertFalse(tables.stream().anyMatch(t -> t.toLowerCase().contains("session")));
     call("GET", "/api/me", employee, null, 200);
   }
@@ -745,7 +747,8 @@ class FirstReviewWorkflowTests {
             "authorization",
             "hierarchy",
             "authentication",
-            "companyImport")) {
+            "companyImport",
+            "identity")) {
       mvc.perform(get("/api/system-info").header("Authorization", "Bearer " + admin))
           .andExpect(status().isOk())
           .andExpect(jsonPath("$.modules." + module).value(selected));

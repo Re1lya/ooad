@@ -8,6 +8,8 @@ import com.cdwy.permission.service.port.error.*;
 import com.cdwy.permission.service.port.rbac.HierarchyUseCase;
 import java.util.*;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,9 +26,11 @@ public class DddHierarchyService implements HierarchyUseCase {
     return "ddd";
   }
 
+  private static final Logger log = LoggerFactory.getLogger(DddHierarchyService.class);
   private final com.cdwy.permission.service.port.rbac.RoleGraphUseCase policy;
   private final RoleCatalog roles;
   private final AssignmentRepository assignments;
+  private final com.cdwy.permission.service.port.audit.AuditTrailUseCase audit;
 
   /** 读取业务角色。 */
   private AccessRole require(Long id) {
@@ -71,14 +75,40 @@ public class DddHierarchyService implements HierarchyUseCase {
     }
     policy.validate(senior, inherited, graph);
     assignments.inherit(senior, inherited);
+    log.info(
+        "角色继承已建立：{}({}) 继承 {}({})，下一次鉴权即按新继承图计算",
+        first.getCode(),
+        senior,
+        second.getCode(),
+        inherited);
+    audit.record(
+        "ROLE_INHERITANCE_ADDED",
+        "role",
+        "rbac-role-" + senior,
+        first.getName() + " 继承 " + second.getName(),
+        Map.of("inherits", false),
+        Map.of("seniorRoleId", senior, "inheritedRoleId", inherited, "inherits", true));
   }
 
   /** 解除直接边不影响其他路径。 */
   @Transactional
   public void remove(Long senior, Long inherited) {
     roles.lockGraph();
-    require(senior);
-    require(inherited);
+    AccessRole first = require(senior), second = require(inherited);
+    if (!assignments.hierarchy().contains(new Link(senior, inherited))) return;
     assignments.removeInheritance(senior, inherited);
+    log.info(
+        "角色继承已解除：{}({}) 不再继承 {}({})",
+        first.getCode(),
+        senior,
+        second.getCode(),
+        inherited);
+    audit.record(
+        "ROLE_INHERITANCE_REMOVED",
+        "role",
+        "rbac-role-" + senior,
+        first.getName() + " 解除继承 " + second.getName(),
+        Map.of("seniorRoleId", senior, "inheritedRoleId", inherited, "inherits", true),
+        Map.of("inherits", false));
   }
 }

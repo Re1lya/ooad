@@ -55,7 +55,7 @@ public final class HttpMapping {
 
   /** HTTP 与用例数据显式转换，record 不依赖字段写入。 */
   public static ResourceData.Create command(ResourceDtos.Create v) {
-    return new ResourceData.Create(v.systemId(), v.name(), v.method(), v.path());
+    return new ResourceData.Create(v.systemId(), v.name(), v.method(), v.path(), blankToNull(v.code()));
   }
 
   /** HTTP 与用例数据显式转换，record 不依赖字段写入。 */
@@ -65,7 +65,8 @@ public final class HttpMapping {
 
   /** HTTP 与用例数据显式转换，record 不依赖字段写入。 */
   public static ResourceDtos.View view(ResourceData.View v) {
-    return new ResourceDtos.View(v.id(), v.systemId(), v.name(), v.method(), v.path(), v.active());
+    return new ResourceDtos.View(
+        v.id(), v.systemId(), v.name(), v.method(), v.path(), v.active(), v.code());
   }
 
   /** HTTP 与用例数据显式转换，record 不依赖字段写入。 */
@@ -178,5 +179,10 @@ public final class HttpMapping {
         v.qualifiedDepartments(),
         v.digest(),
         v.notes());
+  }
+
+  /** 可选文本字段：空白视为未填写。 */
+  static String blankToNull(String value) {
+    return value == null || value.isBlank() ? null : value.trim();
   }
 }

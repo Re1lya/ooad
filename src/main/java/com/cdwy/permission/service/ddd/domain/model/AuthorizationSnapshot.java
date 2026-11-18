@@ -70,6 +70,27 @@ public final class AuthorizationSnapshot {
         .toList();
   }
 
+  /** 有效角色：分配角色及沿继承链可达的启用角色；停用角色阻断路径，菱形只计一次。 */
+  public List<AccessRole> effectiveRoles(List<Long> assigned) {
+    Map<Long, AccessRole> result = new LinkedHashMap<>();
+    for (Long id : assigned) {
+      AccessRole root = roles.get(id);
+      if (root == null) continue;
+      for (Path path : graph.effectivePaths(new Node(id, root.getEnabled())))
+        result.putIfAbsent(path.roleId(), roles.get(path.roleId()));
+    }
+    return List.copyOf(result.values());
+  }
+
+  /** 指定接入应用内的有效前端权限（菜单、按钮），供接入应用身份接口使用。 */
+  public List<com.cdwy.permission.service.port.data.PermissionData.View> grantedIn(
+      Long systemId, List<Long> assigned) {
+    return origins(assigned).stream()
+        .map(HierarchyData.PermissionOrigin::permission)
+        .filter(view -> systemId.equals(view.systemId()))
+        .toList();
+  }
+
   /** 权限目录负责导航与授权区分。 */
   public PermissionDirectory directory() {
     return directory;

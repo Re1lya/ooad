@@ -36,7 +36,13 @@ public class DddResourceService implements ResourceUseCase {
   /** 资源结果。 */
   private ResourceData.View view(ProtectedResource n) {
     return new ResourceData.View(
-        n.getId(), n.getSystemId(), n.getName(), n.getMethod(), n.getPath(), n.getActive());
+        n.getId(),
+        n.getSystemId(),
+        n.getName(),
+        n.getMethod(),
+        n.getPath(),
+        n.getActive(),
+        n.getCode());
   }
 
   /** 全部注册资源。 */
@@ -52,7 +58,9 @@ public class DddResourceService implements ResourceUseCase {
     n.setName(input.name());
     n.setMethod(input.method());
     n.setPath(input.path());
+    n.setCode(input.code());
     n.assertPath();
+    n.assertCode();
     matcher.validate(input.path());
     if (resources.all().stream()
         .anyMatch(

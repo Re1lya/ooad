@@ -11,6 +11,8 @@ import com.cdwy.permission.service.port.rbac.RoleGraphUseCase;
 import com.cdwy.permission.service.port.rbac.RoleGraphUseCase.Node;
 import java.util.*;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,9 +31,11 @@ public class RoleHierarchyService implements HierarchyUseCase {
     return "structured";
   }
 
+  private static final Logger log = LoggerFactory.getLogger(RoleHierarchyService.class);
   private final RoleHierarchyRepository hierarchy;
   private final RoleRepository roles;
   private final RoleGraphUseCase policy;
+  private final com.cdwy.permission.service.port.audit.AuditTrailUseCase audit;
 
   /** 解析结果携带业务角色与一条最短可用路径。 */
   public record ResolvedRole(Role role, List<Long> path) {}
@@ -64,15 +68,42 @@ public class RoleHierarchyService implements HierarchyUseCase {
       throw new IllegalArgumentException("请先启用关系两端的角色");
     policy.validate(seniorId, inheritedId, snapshot(graph()));
     hierarchy.save(new RoleHierarchy(senior, inherited));
+    log.info(
+        "角色继承已建立：{}({}) 继承 {}({})，下一次鉴权即按新继承图计算",
+        senior.getCode(),
+        seniorId,
+        inherited.getCode(),
+        inheritedId);
+    audit.record(
+        "ROLE_INHERITANCE_ADDED",
+        "role",
+        "rbac-role-" + seniorId,
+        senior.getName() + " 继承 " + inherited.getName(),
+        Map.of("inherits", false),
+        Map.of("seniorRoleId", seniorId, "inheritedRoleId", inheritedId, "inherits", true));
   }
 
   /** 解除继承只删除直接边；其他继承路径及直接授权继续保留。 */
   @Transactional
   public void remove(Long seniorId, Long inheritedId) {
     roles.lockHierarchyRoles();
-    require(seniorId);
-    require(inheritedId);
+    Role senior = require(seniorId);
+    Role inherited = require(inheritedId);
+    if (!hierarchy.existsBySeniorRole_IdAndInheritedRole_Id(seniorId, inheritedId)) return;
     hierarchy.deleteBySeniorRole_IdAndInheritedRole_Id(seniorId, inheritedId);
+    log.info(
+        "角色继承已解除：{}({}) 不再继承 {}({})",
+        senior.getCode(),
+        seniorId,
+        inherited.getCode(),
+        inheritedId);
+    audit.record(
+        "ROLE_INHERITANCE_REMOVED",
+        "role",
+        "rbac-role-" + seniorId,
+        senior.getName() + " 解除继承 " + inherited.getName(),
+        Map.of("seniorRoleId", seniorId, "inheritedRoleId", inheritedId, "inherits", true),
+        Map.of("inherits", false));
   }
 
   /** 每次鉴权读取当前继承关系，避免将授权快照写入 JWT。 */

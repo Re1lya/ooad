@@ -10,7 +10,7 @@ export const screens: Record<string, Screen> = {
  systems:{title:'应用管理',noun:'应用',icon:'grid',caption:'将各个业务应用的权限资源，纳入统一目录。',fields:[{key:'code',label:'应用编码'},{key:'name',label:'应用名称'},{key:'baseUrl',label:'应用地址',optional:true}],columns:[['name','应用名称'],['code','应用编码'],['baseUrl','访问地址'],['enabled','运行状态']]},
  roles:{title:'角色管理',noun:'角色',icon:'shield',caption:'用角色组织权限，让授权更加可维护。',fields:[{key:'code',label:'角色编码'},{key:'name',label:'角色名称'},{key:'description',label:'角色说明',optional:true}],columns:[['name','角色名称'],['code','角色编码'],['description','角色说明'],['enabled','角色状态']]},
  permissions:{title:'菜单与按钮',noun:'权限',icon:'layers',caption:'定义用户看得到、点得到的功能入口。',fields:[{key:'systemId',label:'所属应用',type:'system'},{key:'code',label:'权限编码'},{key:'name',label:'显示名称'},{key:'type',label:'权限类型',choices:[['MENU','菜单'],['BUTTON','按钮']]},{key:'menuPath',label:'菜单地址',optional:true},{key:'parentId',label:'父菜单',type:'menu',optional:true}],columns:[['name','权限名称'],['code','权限编码'],['type','资源类型'],['systemId','所属应用'],['active','权限状态']]},
- resources:{title:'API 资源',noun:'资源',icon:'code',caption:'让每一次接口访问，都经过真实的授权校验。',fields:[{key:'systemId',label:'所属应用',type:'system'},{key:'name',label:'资源名称'},{key:'method',label:'HTTP 方法',choices:['GET','POST','PUT','PATCH','DELETE'].map(v=>[v,v])},{key:'path',label:'接口路径'}],columns:[['name','资源名称'],['method','请求方法'],['path','接口路径'],['systemId','所属应用'],['active','资源状态']]}
+ resources:{title:'API 资源',noun:'资源',icon:'code',caption:'让每一次接口访问，都经过真实的授权校验。',fields:[{key:'systemId',label:'所属应用',type:'system'},{key:'name',label:'资源名称'},{key:'method',label:'HTTP 方法',choices:['GET','POST','PUT','PATCH','DELETE'].map(v=>[v,v])},{key:'path',label:'接口路径'},{key:'code',label:'后端权限码',optional:true}],columns:[['name','资源名称'],['method','请求方法'],['path','接口路径'],['code','权限码'],['systemId','所属应用'],['active','资源状态']]}
 };
 export const pageInfo: Record<string, [string,string,string]> = {
  imports:['数据导入','将组织、成员与功能权限，安全汇入同一个工作空间。','organization'],
@@ -33,10 +33,10 @@ export function useConsole() {
  function message(text:string,error=false){clearTimeout(noticeTimer);s.notice=text;s.failure=error;if(!error)noticeTimer=setTimeout(()=>s.notice='',6000);}
  /** 完全清理当前身份与目录，避免不同登录账号看到前一账号的数据。 */
  function logout(){s.token='';sessionStorage.removeItem('permission-token');s.me=null;s.password='';s.editor=false;s.confirm?.cancel();s.confirm=null;for(const key of ['systems','roles','permissions','resources','departments','users','edges','rows','myPermissions','myMenu','origins'] as const)s[key]=[];}
- /** 对非成功响应保留后端信息，超时取消；过期会话立即退出。 */
+ /** 对非成功响应保留后端信息，超时取消；过期会话立即退出。X-Client-Menu 让后端 logback 日志标出触发请求的菜单。 */
  const api:Api=async(path,method='GET',body)=>{
   const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),body instanceof FormData?180000:15000);
-  try {const response=await fetch(path,{method,signal:controller.signal,headers:{...(body instanceof FormData?{}:{'Content-Type':'application/json'}),...(s.token?{Authorization:`Bearer ${s.token}`}:{})},...(body===undefined?{}:{body:body instanceof FormData?body:JSON.stringify(body)})});
+  try {const response=await fetch(path,{method,signal:controller.signal,headers:{...(body instanceof FormData?{}:{'Content-Type':'application/json'}),...(s.token?{Authorization:`Bearer ${s.token}`}:{}),'X-Client-Menu':s.page},...(body===undefined?{}:{body:body instanceof FormData?body:JSON.stringify(body)})});
    const data=response.status===204?null:await response.json().catch(()=>null);
    if(!response.ok){if(response.status===401&&path!=='/api/auth/login')logout();throw new Error(data?.message||`请求失败（${response.status}）`);}return data;
   }catch(error){if(error instanceof DOMException&&error.name==='AbortError')throw new Error('请求超时，请检查连接后重试');throw error;}finally{clearTimeout(timer);}

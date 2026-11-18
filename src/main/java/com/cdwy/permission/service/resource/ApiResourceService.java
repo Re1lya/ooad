@@ -43,7 +43,13 @@ public class ApiResourceService implements ResourceUseCase {
 
   public static ResourceData.View view(ApiResource r) {
     return new ResourceData.View(
-        r.getId(), r.getSystem().getId(), r.getName(), r.getMethod(), r.getPath(), r.getActive());
+        r.getId(),
+        r.getSystem().getId(),
+        r.getName(),
+        r.getMethod(),
+        r.getPath(),
+        r.getActive(),
+        r.getCode());
   }
 
   public List<ResourceData.View> list() {
@@ -60,6 +66,8 @@ public class ApiResourceService implements ResourceUseCase {
         || input.path().contains("**"))
       throw new IllegalArgumentException("资源路径须为不含查询参数的绝对路径，不支持 ** 通配符");
     PathPatternParser.defaultInstance.parse(input.path());
+    if (input.code() != null && !input.code().matches("[A-Za-z][A-Za-z0-9_:.-]{0,63}"))
+      throw new IllegalArgumentException("权限码须以字母开头，只含字母、数字和 _:.-，最长 64 位");
     if (resources.existsBySystem_IdAndMethodAndPath(input.systemId(), input.method(), input.path()))
       throw new ConflictException("API 资源已存在");
     ApiResource r = new ApiResource();
@@ -67,6 +75,7 @@ public class ApiResourceService implements ResourceUseCase {
     r.setMethod(input.method());
     r.setPath(input.path());
     r.setName(input.name());
+    r.setCode(input.code());
     return view(resources.save(r));
   }
 

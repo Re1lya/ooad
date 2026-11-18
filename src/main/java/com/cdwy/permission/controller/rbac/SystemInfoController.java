@@ -20,6 +20,7 @@ public class SystemInfoController {
   private final com.cdwy.permission.service.port.rbac.HierarchyUseCase hierarchy;
   private final com.cdwy.permission.service.port.auth.AuthenticationUseCase authentication;
   private final com.cdwy.permission.service.port.importing.CompanyImportUseCase companyImport;
+  private final com.cdwy.permission.service.port.identity.ApplicationIdentityUseCase identity;
 
   /** 来源为当前实际注入的端口实现。 */
   @GetMapping("/api/system-info")
@@ -37,6 +38,7 @@ public class SystemInfoController {
             java.util.Map.entry("authorization", authorization.strategy()),
             java.util.Map.entry("hierarchy", hierarchy.strategy()),
             java.util.Map.entry("authentication", authentication.strategy()),
-            java.util.Map.entry("companyImport", companyImport.strategy())));
+            java.util.Map.entry("companyImport", companyImport.strategy()),
+            java.util.Map.entry("identity", identity.strategy())));
   }
 }

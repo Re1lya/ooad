@@ -21,6 +21,13 @@ public class ApiResource {
   @Column(nullable = false, length = 128)
   private String name;
 
+  /**
+   * 后端权限码（如课程系统的 TC、CV），接入应用据此做方法级授权；未登记时为空。
+   * 同一权限码可以覆盖多个接口（例如 TCM 同时覆盖 PUT 与 DELETE /current-term），因此不设唯一约束。
+   */
+  @Column(length = 64)
+  private String code;
+
   @Column(nullable = false, length = 8)
   private String method;
 
@@ -46,6 +53,14 @@ public class ApiResource {
 
   public void setName(String value) {
     name = value;
+  }
+
+  public String getCode() {
+    return code;
+  }
+
+  public void setCode(String value) {
+    code = value;
   }
 
   public String getMethod() {

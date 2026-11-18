@@ -40,7 +40,7 @@ class PhaseTwoRbac1Tests {
   @Autowired AdminBootstrapService bootstrap;
   @Autowired UserAccountRepository users;
   @Autowired ApplicationContext context;
-  @Autowired RequestMappingHandlerMapping routes;
+  @Autowired @org.springframework.beans.factory.annotation.Qualifier("requestMappingHandlerMapping") RequestMappingHandlerMapping routes;
   String admin, employee;
   long user, system, role, menu, button, resource;
 

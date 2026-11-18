@@ -150,7 +150,8 @@ public class DddPermissionService implements PermissionUseCase {
                     n.getName(),
                     n.getMethod(),
                     n.getPath(),
-                    n.getActive()))
+                    n.getActive(),
+                    n.getCode()))
         .toList();
   }
 
