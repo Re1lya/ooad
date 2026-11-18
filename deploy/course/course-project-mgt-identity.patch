@@ -1,0 +1,447 @@
+diff --git a/backend/src/main/java/cn/edu/xmu/projectmgt/infrastructure/logging/LayerLoggingAspect.java b/backend/src/main/java/cn/edu/xmu/projectmgt/infrastructure/logging/LayerLoggingAspect.java
+index 2c4e68e..bf5ef9d 100644
+--- a/backend/src/main/java/cn/edu/xmu/projectmgt/infrastructure/logging/LayerLoggingAspect.java
++++ b/backend/src/main/java/cn/edu/xmu/projectmgt/infrastructure/logging/LayerLoggingAspect.java
+@@ -19,7 +19,7 @@ import org.springframework.stereotype.Component;
+ public class LayerLoggingAspect {
+ 
+     /**
+-     * 记录分层方法进入、完成和异常；不记录参数值，避免泄漏敏感信息。
++     * 记录分层方法进入、完成和异常；Servlet Filter 由容器直接调用 final 初始化方法，不能被 CGLIB 安全代理，因此从切面中排除。
+      *
+      * @param joinPoint 被拦截方法
+      * @return 原方法返回值
+@@ -29,7 +29,8 @@ public class LayerLoggingAspect {
+             "(within(cn.edu.xmu.projectmgt.api..*) "
+                     + "|| within(cn.edu.xmu.projectmgt.service..*) "
+                     + "|| within(cn.edu.xmu.projectmgt.infrastructure..*)) "
+-                    + "&& !within(cn.edu.xmu.projectmgt.infrastructure.logging.LayerLoggingAspect)"
++                    + "&& !within(cn.edu.xmu.projectmgt.infrastructure.logging.LayerLoggingAspect) "
++                    + "&& !execution(* jakarta.servlet.Filter+.*(..))"
+     )
+     public Object logLayerMethod(ProceedingJoinPoint joinPoint) throws Throwable {
+         Class<?> targetClass = AopUtils.getTargetClass(joinPoint.getTarget());
+diff --git a/backend/src/main/java/cn/edu/xmu/projectmgt/infrastructure/security/BearerAuthenticationFilter.java b/backend/src/main/java/cn/edu/xmu/projectmgt/infrastructure/security/BearerAuthenticationFilter.java
+index 6d77041..320476b 100644
+--- a/backend/src/main/java/cn/edu/xmu/projectmgt/infrastructure/security/BearerAuthenticationFilter.java
++++ b/backend/src/main/java/cn/edu/xmu/projectmgt/infrastructure/security/BearerAuthenticationFilter.java
+@@ -113,4 +113,4 @@ public class BearerAuthenticationFilter extends OncePerRequestFilter {
+      */
+     private record SecurityErrorResponse(String code, String message) {
+     }
+-}
+\ No newline at end of file
++}
+diff --git a/backend/src/main/java/cn/edu/xmu/projectmgt/infrastructure/security/SecurityConfiguration.java b/backend/src/main/java/cn/edu/xmu/projectmgt/infrastructure/security/SecurityConfiguration.java
+index 7a79fad..abf04ac 100644
+--- a/backend/src/main/java/cn/edu/xmu/projectmgt/infrastructure/security/SecurityConfiguration.java
++++ b/backend/src/main/java/cn/edu/xmu/projectmgt/infrastructure/security/SecurityConfiguration.java
+@@ -34,24 +34,16 @@ public class SecurityConfiguration {
+ 
+     private final ObjectMapper objectMapper;
+ 
+-    /**
+-     * 创建 Bearer Token 认证过滤器。
+-     */
+-    @Bean
+-    public BearerAuthenticationFilter bearerAuthenticationFilter(
+-            UnifiedIdentityGateway identityGateway
+-    ) {
+-        return new BearerAuthenticationFilter(identityGateway, objectMapper);
+-    }
+-
+     /**
+      * 配置无状态接口访问规则。
+      */
+     @Bean
+     public SecurityFilterChain securityFilterChain(
+             HttpSecurity http,
+-            BearerAuthenticationFilter bearerAuthenticationFilter
++            UnifiedIdentityGateway identityGateway
+     ) throws Exception {
++        BearerAuthenticationFilter bearerAuthenticationFilter =
++                new BearerAuthenticationFilter(identityGateway, objectMapper);
+         http
+                 .csrf(AbstractHttpConfigurer::disable)
+                 .cors(Customizer.withDefaults())
+@@ -110,4 +102,4 @@ public class SecurityConfiguration {
+      */
+     private record SecurityErrorResponse(String code, String message) {
+     }
+-}
+\ No newline at end of file
++}
+diff --git a/web/nginx/default.conf b/web/nginx/default.conf
+index 0018cdf..3aab3f8 100644
+--- a/web/nginx/default.conf
++++ b/web/nginx/default.conf
+@@ -1,84 +1,81 @@
++# 课程项目管理系统前端（Cdwy 第二次检查部署版）：
++#   /api/                    -> course-backend:8080（去掉 /api 前缀，与老师仓库后续版本一致）
++#   /identity/api/auth/login -> rbac-backend:18081/api/auth/login（统一身份登录）
++#   其余路径                 -> Vue SPA
+ server {
+     listen       80;
+     listen  [::]:80;
++    server_name _;
++
++    root /usr/share/nginx/html;
++    index index.html;
++    client_max_body_size 50m;
+ 
+     access_log  /var/log/nginx/coursemgt-frontend.access.log  main;
+     error_log  /var/log/nginx/coursemgt-frontend.error.log  error;
+ 
+-    # 启用gzip压缩
+     gzip on;
+-    # 设置gzip压缩级别，1-9，数字越大压缩率越高，但CPU消耗也越大
+     gzip_comp_level 6;
+-    # 设置gzip缓冲区大小
+-    gzip_buffers 16 8k;
+-    # 设置gzip最小压缩文件大小，小于此值的文件不会被压缩
+     gzip_min_length 1k;
+-    # 设置gzip压缩的MIME类型
+-    gzip_types
+-        text/plain
+-        text/css
+-        text/xml
+-        text/javascript
+-        application/javascript
+-        application/xml+rss
+-        application/json
+-        application/xml
+-        image/svg+xml
+-        font/woff
+-        font/woff2
+-        application/font-woff
+-        application/font-woff2;
+-    # 设置gzip版本
++    gzip_types text/plain text/css text/xml text/javascript application/javascript application/json application/xml image/svg+xml;
+     gzip_vary on;
+-    # 禁用IE6的gzip压缩
+-    gzip_disable "MSIE [1-6]\.";
+ 
+-    location /version {
+-        add_header Content-Type text/plain;
+-        return 200 "0.0.9-SNAPSHOT";
++    location = /healthz {
++        access_log off;
++        default_type text/plain;
++        return 200 "ok\n";
+     }
+ 
++    location /version {
++        default_type text/plain;
++        return 200 "0.0.9-SNAPSHOT+cdwy-identity";
++    }
+ 
+-    # 处理预检请求
+-    location / {
++    location = /api {
++        return 308 /api/;
++    }
+ 
+-        root   /usr/share/nginx/html;
+-        index  index.html index.htm;
+-        try_files $uri $uri/ /index.html = 404;
++    location /api/ {
++        resolver 127.0.0.11 valid=10s ipv6=off;
++        set $backend_upstream course-backend:8080;
++        rewrite ^/api/(.*)$ /$1 break;
++        proxy_pass http://$backend_upstream;
++        proxy_http_version 1.1;
++        proxy_set_header Host $host;
++        proxy_set_header X-Real-IP $remote_addr;
++        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
++        proxy_set_header X-Forwarded-Proto $scheme;
++        proxy_set_header Connection "";
++        proxy_request_buffering off;
++        proxy_connect_timeout 5s;
++        proxy_read_timeout 120s;
+     }
+ 
++    # 统一身份登录：只转发登录 API 到 Cdwy 统一权限管理系统后端。
++    location = /identity/api/auth/login {
++        resolver 127.0.0.11 valid=10s ipv6=off;
++        set $identity_upstream rbac-backend:18081;
++        proxy_pass http://$identity_upstream/api/auth/login;
++        proxy_http_version 1.1;
++        proxy_set_header Host $host;
++        proxy_set_header X-Real-IP $remote_addr;
++        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
++        proxy_set_header X-Forwarded-Proto $scheme;
++        proxy_set_header Connection "";
++        proxy_connect_timeout 5s;
++        proxy_read_timeout 30s;
++    }
+ 
++    location = /index.html {
++        add_header Cache-Control "no-store";
++    }
+ 
+-    #error_page  404              /404.html;
++    location / {
++        try_files $uri $uri/ /index.html;
++    }
+ 
+-    # redirect server error pages to the static page /50x.html
+-    #
+     error_page   500 502 503 504  /50x.html;
+     location = /50x.html {
+         root   /usr/share/nginx/html;
+     }
+-
+-    # proxy the PHP scripts to Apache listening on 127.0.0.1:80
+-    #
+-    #location ~ \.php$ {
+-    #    proxy_pass   http://127.0.0.1;
+-    #}
+-
+-    # pass the PHP scripts to FastCGI server listening on 127.0.0.1:9000
+-    #
+-    #location ~ \.php$ {
+-    #    root           html;
+-    #    fastcgi_pass   127.0.0.1:9000;
+-    #    fastcgi_index  index.php;
+-    #    fastcgi_param  SCRIPT_FILENAME  /scripts$fastcgi_script_name;
+-    #    include        fastcgi_params;
+-    #}
+-
+-    # deny access to .htaccess files, if Apache's document root
+-    # concurs with nginx's one
+-    #
+-    #location ~ /\.ht {
+-    #    deny  all;
+-    #}
+ }
+-
+diff --git a/web/src/auth/identity-session.ts b/web/src/auth/identity-session.ts
+new file mode 100644
+index 0000000..2f6e12a
+--- /dev/null
++++ b/web/src/auth/identity-session.ts
+@@ -0,0 +1,52 @@
++import type { Router } from 'vue-router'
++
++/**
++ * 统一身份登录会话（Cdwy 统一权限管理系统接入）。
++ *
++ * 课程系统不保存账号和密码：登录页直接调用统一权限管理系统的登录 API，
++ * 拿到的 JWT 存入 cpm.accessToken，之后所有课程后端请求都携带它；
++ * 课程后端再用同一个令牌向统一权限管理系统查询 /auth/me 取得角色与权限码。
++ */
++export const ACCESS_TOKEN_KEY = 'cpm.accessToken'
++export const IDENTITY_LOGIN_URL = import.meta.env.VITE_IDENTITY_LOGIN_URL ?? '/identity/api/auth/login'
++
++export function currentAccessToken(): string | null {
++  const mockToken = import.meta.env.DEV ? import.meta.env.VITE_MOCK_ACCESS_TOKEN : undefined
++  return localStorage.getItem(ACCESS_TOKEN_KEY) ?? mockToken ?? null
++}
++
++export interface IdentityLoginResult {
++  accessToken: string
++  tokenType: string
++  expiresIn: number
++}
++
++/** 调用统一权限管理系统登录 API，成功后保存令牌。 */
++export async function loginWithIdentity(username: string, password: string): Promise<IdentityLoginResult> {
++  const response = await fetch(IDENTITY_LOGIN_URL, {
++    method: 'POST',
++    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
++    body: JSON.stringify({ username, password }),
++  })
++  const body = await response.json().catch(() => null)
++  if (!response.ok || !body?.accessToken) {
++    throw new Error(body?.message ?? '登录失败，请检查账号和密码。')
++  }
++  localStorage.setItem(ACCESS_TOKEN_KEY, body.accessToken)
++  return body as IdentityLoginResult
++}
++
++/** 清除本标签页保存的统一身份令牌。 */
++export function logoutIdentity() {
++  localStorage.removeItem(ACCESS_TOKEN_KEY)
++}
++
++/** 未登录时进入任何页面都先跳到统一身份登录页。 */
++export function installIdentityGuard(router: Router) {
++  router.beforeEach((to) => {
++    if (to.name === 'login' || currentAccessToken()) {
++      return true
++    }
++    return { name: 'login', query: { redirect: to.fullPath } }
++  })
++}
+diff --git a/web/src/env.d.ts b/web/src/env.d.ts
+index 0854af6..0602b45 100644
+--- a/web/src/env.d.ts
++++ b/web/src/env.d.ts
+@@ -3,6 +3,7 @@
+ interface ImportMetaEnv {
+   readonly VITE_API_BASE_URL?: string
+   readonly VITE_MOCK_ACCESS_TOKEN?: string
++  readonly VITE_IDENTITY_LOGIN_URL?: string
+ }
+ 
+ interface ImportMeta {
+diff --git a/web/src/main.ts b/web/src/main.ts
+index 1663ef5..7c7fe94 100644
+--- a/web/src/main.ts
++++ b/web/src/main.ts
+@@ -2,6 +2,9 @@ import { createApp } from 'vue'
+ import { createPinia } from 'pinia'
+ import App from './App.vue'
+ import { router } from './router'
++import { installIdentityGuard } from './auth/identity-session'
+ import './styles.css'
+ 
++installIdentityGuard(router)
++
+ createApp(App).use(createPinia()).use(router).mount('#app')
+\ No newline at end of file
+diff --git a/web/src/router.ts b/web/src/router.ts
+index fb99599..5714c84 100644
+--- a/web/src/router.ts
++++ b/web/src/router.ts
+@@ -13,6 +13,7 @@ import AuditLogsView from '@/views/AuditLogsView.vue'
+ import StudentLayout from '@/layouts/StudentLayout.vue'
+ import TeacherLayout from '@/layouts/TeacherLayout.vue'
+ import EntryView from '@/views/EntryView.vue'
++import LoginView from '@/views/LoginView.vue'
+ import StudentCourseGradesView from '@/views/StudentCourseGradesView.vue'
+ import StudentCourseMilestonesView from '@/views/StudentCourseMilestonesView.vue'
+ import StudentMilestoneDetailView from '@/views/StudentMilestoneDetailView.vue'
+@@ -33,6 +34,11 @@ export const router = createRouter({
+       name: 'entry',
+       component: EntryView,
+     },
++    {
++      path: '/login',
++      name: 'login',
++      component: LoginView,
++    },
+     {
+       path: '/student',
+       component: StudentLayout,
+diff --git a/web/src/views/EntryView.vue b/web/src/views/EntryView.vue
+index b3b572e..a5e3a24 100644
+--- a/web/src/views/EntryView.vue
++++ b/web/src/views/EntryView.vue
+@@ -1,5 +1,14 @@
+ <script setup lang="ts">
+-import { RouterLink } from 'vue-router'
++import { RouterLink, useRouter } from 'vue-router'
++import { logoutIdentity } from '@/auth/identity-session'
++
++const router = useRouter()
++
++/** 退出统一身份：清除令牌后回到登录页。 */
++async function logout() {
++  logoutIdentity()
++  await router.replace({ name: 'login' })
++}
+ </script>
+ 
+ <template>
+@@ -44,7 +53,10 @@ import { RouterLink } from 'vue-router'
+         </RouterLink>
+       </nav>
+ 
+-      <p class="entry-footnote">使用统一身份账号进入</p>
++      <p class="entry-footnote">
++        使用统一身份账号进入 ·
++        <button type="button" class="underline" @click="logout">退出登录</button>
++      </p>
+     </section>
+   </main>
+ </template>
+\ No newline at end of file
+diff --git a/web/src/views/LoginView.vue b/web/src/views/LoginView.vue
+new file mode 100644
+index 0000000..6edc9dd
+--- /dev/null
++++ b/web/src/views/LoginView.vue
+@@ -0,0 +1,65 @@
++<script setup lang="ts">
++import { shallowRef } from 'vue'
++import { useRoute, useRouter } from 'vue-router'
++import { loginWithIdentity } from '@/auth/identity-session'
++
++const route = useRoute()
++const router = useRouter()
++const username = shallowRef('')
++const password = shallowRef('')
++const busy = shallowRef(false)
++const error = shallowRef<string | null>(null)
++
++async function submit() {
++  if (busy.value) {
++    return
++  }
++  busy.value = true
++  error.value = null
++  try {
++    await loginWithIdentity(username.value.trim(), password.value)
++    password.value = ''
++    const redirect = typeof route.query.redirect === 'string' && route.query.redirect.startsWith('/')
++      ? route.query.redirect
++      : '/'
++    await router.replace(redirect)
++  } catch (cause) {
++    error.value = cause instanceof Error ? cause.message : '登录失败，请稍后重试。'
++  } finally {
++    busy.value = false
++  }
++}
++</script>
++
++<template>
++  <main class="entry-shell">
++    <section class="entry-panel" aria-labelledby="login-title">
++      <header class="entry-header">
++        <p class="entry-brand">课程项目</p>
++        <p class="entry-kicker">统一身份登录</p>
++      </header>
++
++      <div class="entry-intro">
++        <h1 id="login-title" class="entry-title">使用统一身份账号登录</h1>
++        <p class="entry-copy">账号、角色和菜单权限由 Cdwy 统一权限管理系统维护，本系统不保存密码。</p>
++      </div>
++
++      <form class="mt-6 grid gap-3" @submit.prevent="submit">
++        <label class="grid gap-1 text-[13px] text-ios-secondary">
++          登录名
++          <input v-model="username" name="username" autocomplete="username" required maxlength="64" class="rounded-[10px] border border-ios-separator bg-white px-3 py-2 text-[15px] text-black">
++        </label>
++        <label class="grid gap-1 text-[13px] text-ios-secondary">
++          密码
++          <input v-model="password" name="password" type="password" autocomplete="current-password" required maxlength="72" class="rounded-[10px] border border-ios-separator bg-white px-3 py-2 text-[15px] text-black">
++        </label>
++        <p v-if="error" role="alert" class="text-[13px] text-red-600">{{ error }}</p>
++        <button type="submit" :disabled="busy" class="mt-2 rounded-[10px] bg-black px-4 py-2.5 text-[15px] font-medium text-white disabled:opacity-50">
++          {{ busy ? '正在登录…' : '登录' }}
++        </button>
++      </form>
++
++      <p class="entry-footnote">令牌只保存在本浏览器，退出后需要重新登录。</p>
++    </section>
++  </main>
++</template>
+diff --git a/web/vite.config.ts b/web/vite.config.ts
+index 22ff24d..f140a32 100644
+--- a/web/vite.config.ts
++++ b/web/vite.config.ts
+@@ -18,6 +18,11 @@ export default defineConfig({
+         changeOrigin: true,
+         rewrite: (path) => path.replace(/^\/api/, ''),
+       },
++      '/identity': {
++        target: 'http://127.0.0.1:18081',
++        changeOrigin: true,
++        rewrite: (path) => path.replace(/^\/identity/, ''),
++      },
+     },
+   },
+ })
+\ No newline at end of file
