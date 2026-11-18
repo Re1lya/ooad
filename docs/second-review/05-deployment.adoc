@@ -1,0 +1,140 @@
+= Docker Swarm 部署说明（第二次检查版）
+Cdwy 小组
+:revdate: 2026-11-18
+:toc: left
+:sectnums:
+:table-caption: 表
+:imagesdir: images
+
+== 部署拓扑
+
+一个 stack（`cdwy`）、一个 overlay 网络（`cdwy`）、4 个服务；MySQL 使用集群已有实例，不由本 stack 创建。
+
+image::deployment-swarm.png[Swarm 部署图,800]
+
+[cols="2,2,2,3",options="header"]
+|===
+|服务 |镜像来源 |端口 |说明
+|`rbac-frontend` |`deploy/permission/Dockerfile.frontend` |发布 18080 → 80 |Nginx 托管 `/ui/`，`/api/` 转发到 `rbac-backend:18081`
+|`rbac-backend` |`deploy/permission/Dockerfile.backend` |18081（仅 overlay）、18082 健康 |`SPRING_PROFILES_ACTIVE=swarm`，logback 控制台 + `/app/logs`
+|`course-frontend` |老师仓库 `web/Dockerfile` + 本仓库补丁 |发布 18090 → 80 |`/api/` → `course-backend:8080`；`/identity/api/auth/login` → `rbac-backend`
+|`course-backend` |老师仓库 `backend/Dockerfile` + 本仓库补丁 |8080（仅 overlay）、8081 健康 |`APP_IDENTITY_BASE_URL=http://rbac-backend:18081/api/apps/cpm`
+|===
+
+配置文件：link:../../deploy/stack.yml[deploy/stack.yml]、link:../../deploy/.env.example[deploy/.env.example]。
+
+== 前置条件
+
+* Swarm 已初始化，在管理节点执行命令；
+* MySQL 8 可从 Swarm 容器访问（`DB_HOST` 填 MySQL 的可达地址，例如其所在节点的私网地址，经 ingress 发布的 3306 端口）；
+* 构建机：JDK 21、Maven、Node 22/24、Docker；课程后端需要课程提供的 CloneFactory 0.0.2 已安装到本机 Maven 仓库；
+* 节点内存约 2 GB 时，两个后端放在不同节点（每个后端限制 640 MB）。
+
+== 构建镜像
+
+权限系统（在仓库根目录；Apple 芯片构建 x86 服务器镜像时加 `PLATFORM=linux/amd64`）：
+
+[source,bash]
+----
+PLATFORM=linux/amd64 scripts/build-permission-images.sh cdwy/rbac-backend:second-review cdwy/rbac-frontend:second-review
+----
+
+课程系统（克隆老师仓库、固定提交、打补丁、构建）：
+
+[source,bash]
+----
+PLATFORM=linux/amd64 deploy/course/build-course-images.sh ../course-build cdwy/course-backend:second-review cdwy/course-frontend:second-review
+----
+
+课程系统固定在 `ca90f1c`，原因：2026-11-18 核对时老师 master `4a721ba` 引用了未提交的 `GroupAuditRecorder` 等 3 个类而无法编译，而 `ca90f1c` 的日志切面会代理 Servlet Filter 导致启动 NPE。补丁 link:../../deploy/course/course-project-mgt-identity.patch[course-project-mgt-identity.patch] 只包含：
+
+. 回移老师 `4a721ba` 中的两处启动修复（`LayerLoggingAspect` 排除 Filter、`BearerAuthenticationFilter` 不注册为 Bean）；
+. 课程前端统一身份登录页、未登录跳转守卫、入口页“退出登录”；
+. 课程前端 Nginx：`/api/` 反向代理与 `/identity/api/auth/login` 登录转发、`/healthz`。
+
+镜像分发：推送到镜像仓库后用 `docker stack deploy --with-registry-auth`；没有镜像仓库时，在带标签的节点上 `docker load` 同名镜像（stack 已用节点标签固定位置）。
+
+== 数据库
+
+以 MySQL 管理员身份执行（权限系统应用账号只授予数据读写，表由管理员按脚本创建；课程系统由 Flyway 建表，需要库内 DDL 权限）：
+
+[source,sql]
+----
+CREATE DATABASE cdwy_rbac DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_as_cs;
+CREATE DATABASE course_project DEFAULT CHARACTER SET utf8mb4;
+CREATE USER 'cdwy_rbac'@'%' IDENTIFIED BY '<权限系统库密码>';
+CREATE USER 'course_project'@'%' IDENTIFIED BY '<课程系统库密码>';
+GRANT SELECT, INSERT, UPDATE, DELETE ON cdwy_rbac.* TO 'cdwy_rbac'@'%';
+GRANT ALL PRIVILEGES ON course_project.* TO 'course_project'@'%';
+----
+
+然后对 `cdwy_rbac` 执行 link:../first-review/database-mysql.sql[database-mysql.sql]（已有旧库则执行 link:migrate-second-review.sql[增量迁移]）。
+
+== Docker secret 与节点标签
+
+[source,bash]
+----
+printf '%s' '<权限系统库密码>' | docker secret create rbac_db_password -
+openssl rand -base64 48 | tr -d '\n' | docker secret create rbac_jwt_secret -
+printf '%s' '<首次管理员密码>' | docker secret create rbac_bootstrap_password -
+printf '%s' '<课程系统库密码>' | docker secret create course_project_db_password -
+
+docker node update --label-add cdwy.rbac=true <节点A>
+docker node update --label-add cdwy.course=true <节点B>
+----
+
+secret 以文件挂载到 `/run/secrets/<属性名>`，由 Spring `configtree` 读取，不出现在环境变量与 `docker inspect` 中。首次管理员只在库中没有管理员时创建，之后重复启动不会改动。
+
+== 部署
+
+[source,bash]
+----
+cp deploy/.env.example deploy/.env      # 修改镜像名、DB_HOST、端口等
+set -a; . deploy/.env; set +a
+docker stack deploy --with-registry-auth -c deploy/stack.yml cdwy
+docker stack services cdwy
+----
+
+更新镜像后重复 `docker stack deploy`；失败时 Swarm 自动回滚，也可 `docker service rollback cdwy_rbac-backend`。
+
+== 登记课程系统权限
+
+[source,bash]
+----
+RBAC_URL=http://<节点>:18080 RBAC_ADMIN=admin DEMO_PASSWORD='<演示账号密码>' \
+  python3 scripts/register-course-app.py
+----
+
+脚本只调用普通管理 API（不是初始化接口），登记 `cpm` 应用的 17 个菜单/按钮、17 个 API 资源（含权限码）、绑定关系、`teacher`/`student`/`course-admin`/`course-observer` 四个角色与 `course-admin → teacher` 继承；设置 `DEMO_PASSWORD` 时另建 `t1001`、`cadmin`、`observer`、`s2026001` 四个演示账号。
+
+课程系统要求用户在本系统有教师（或学生）资料才能进入工作台。用课程管理员令牌经课程系统接口登记教师（课程后端会向权限系统查询姓名与工号）：
+
+[source,bash]
+----
+TOKEN=$(curl -s -X POST -H 'Content-Type: application/json' \
+  -d '{"username":"cadmin","password":"<演示账号密码>"}' http://<节点>:18080/api/auth/login | python3 -c 'import sys,json;print(json.load(sys.stdin)["accessToken"])')
+curl -X POST -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"userId":"cadmin","title":"教授","dept":"信息学院"}' http://<节点>:18090/api/teachers
+----
+
+== 现场核对清单
+
+[cols="1,4,3",options="header"]
+|===
+|序号 |操作 |预期
+|1 |`docker stack services cdwy`、`docker stack ps cdwy` |4 个服务 `1/1`，健康检查 healthy
+|2 |浏览器打开 `http://<节点>:18080/ui/`，管理员登录 |权限系统工作台
+|3 |依次切换“用户管理”“角色继承”“API 资源”菜单，同时 `docker service logs -f cdwy_rbac-backend` |每次切换出现 `[menu=users]`、`[menu=hierarchy]` 等请求开始/结束日志及 Controller、Service 层日志
+|4 |权限系统“应用管理”“API 资源”“角色继承” |`cpm` 应用、17 个带权限码的 API、`课程管理员 → 教师` 继承
+|5 |浏览器打开 `http://<节点>:18090/`，以 `cadmin` 登录 |课程系统“管理”组全部可用
+|6 |以 `observer` 登录课程系统 |只有“课程”“日志”可用
+|7 |在权限系统给 `课程督导` 增加“学期管理”，课程系统刷新 |“学期”变为可用（无需重新登录）
+|8 |`RBAC_URL=… COURSE_URL=http://<节点>:18090/api … python3 scripts/verify-course-integration.py` |全部 PASS
+|===
+
+== 常见问题
+
+* 课程前端 502：`docker service ps cdwy_course-backend` 与 `docker service logs cdwy_course-backend`，检查 MySQL 与 Flyway。
+* 课程系统提示“统一身份认证暂时不可用”：课程后端访问不到 `rbac-backend:18081`，检查两个服务是否在同一 overlay 网络、`APP_IDENTITY_BASE_URL` 是否带 `/api/apps/cpm`。
+* 课程系统提示“当前账号尚未关联本系统用户”：该用户还没有在课程系统登记为教师或学生，按第 7 节登记。
+* 若集群上已有旧版权限系统服务，新 stack 使用 18080/18090 端口，可以并存；确认新版可用后再决定是否下线旧服务。

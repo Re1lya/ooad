@@ -1,0 +1,77 @@
+= 数据库设计（第二次检查版）
+Cdwy 小组
+:revdate: 2026-11-18
+:toc: left
+:sectnums:
+:table-caption: 表
+:imagesdir: ../design/images
+
+== 设计原则
+
+* ER 图只表达核心业务对象及其关系，不画日志、会话、Token 等技术对象（第一轮检查意见）。
+* 用户—角色、角色—前端权限、前端权限—API 资源三组关系均为多对多；角色继承是角色到角色的多对多自关联。
+* JWT 无状态：令牌只携带身份与有效期，服务端不保存会话，因此没有会话表。
+* 部署使用 MySQL 8，应用以 `ddl-auto=validate` 启动，表结构由 link:../first-review/database-mysql.sql[建表脚本] 创建。
+
+== 概念模型（核心 ER）
+
+六类核心概念：用户、部门、应用、角色、前端权限（菜单/按钮）、API 资源。
+
+image::er-core.png[核心概念 ER,800]
+
+[cols="2,1,4",options="header"]
+|===
+|关系 |基数 |说明
+|部门—用户 |1:N |部门树（自关联 1:N）；用户可不属于部门
+|用户—角色 |M:N |`sys_user_role`；多角色权限取并集
+|角色—角色（继承） |M:N |`sys_role_hierarchy`；高级角色获得被继承角色的权限，DAG，多级多继承
+|角色—前端权限 |M:N |`sys_role_permission`；以节点为单位授权
+|应用—前端权限 |1:N |菜单树（自关联 1:N），按钮挂在同应用菜单下
+|应用—API 资源 |1:N |方法 + 路径 + 应用唯一；可登记后端权限码
+|前端权限—API 资源 |M:N |`permission_api`；菜单/按钮调用的后端接口，两端同应用
+|===
+
+== 物理模型
+
+物理层 12 张表：11 张业务表 + 1 张审计日志技术表；14 个外键。字段级字典由测试导出的实际 JPA 模型生成，见 link:../first-review/database-design.md[字段字典]；11 张业务表的物理 ER 见下图（审计表不进核心模型，未画入）。
+
+image::er-physical.png[物理 ER,900]
+
+[cols="2,2,4",options="header"]
+|===
+|表 |主键 / 唯一键 |外键与说明
+|`sys_department` |id；`uk_department_name` |`parent_id → sys_department`
+|`sys_user` |id |`department_id → sys_department`；人员身份、状态、有效期、凭证版本
+|`sys_account` |user_id |`user_id → sys_user`；`uk_account_username`；用户凭证技术拆表（同一实体 `@SecondaryTable`）
+|`sys_role` |id；`uk_role_code` |—
+|`biz_system` |id；`uk_system_code` |—
+|`sys_permission` |id；`uk_permission_code` |`system_id → biz_system`，`parent_id → sys_permission`；type 只允许 MENU/BUTTON
+|`api_resource` |id；`uk_api_route(system_id, method, path)` |`system_id → biz_system`；*本轮新增* `code`（可空，后端权限码）
+|`sys_user_role` |id；`uk_sys_user_role(user_id, role_id)` |两个外键
+|`sys_role_permission` |id；`uk_sys_role_permission(role_id, permission_id)` |两个外键
+|`permission_api` |id；`uk_permission_api(permission_id, resource_id)` |两个外键
+|`sys_role_hierarchy` |id；`uk_role_hierarchy(senior_role_id, inherited_role_id)` |两个外键；`CHECK senior_role_id <> inherited_role_id`
+|`sys_audit_log` |id；`uk_audit_request(system_code, request_id)` |*本轮新增技术表*，无外键：操作人姓名与角色、应用编码以快照保存
+|===
+
+== 本轮变更
+
+[cols="2,4",options="header"]
+|===
+|变更 |原因
+|`api_resource.code` |课程系统按后端权限码（`TC`、`CV` 等）做方法级授权；权限码登记在 API 资源上，经“前端权限—API”绑定随角色下发。一个权限码可覆盖多个接口（`TCM` 同时覆盖 `PUT`、`DELETE /current-term`），因此不设唯一键
+|`sys_audit_log` |课程系统把关键操作写入统一身份系统并从中查询（老师课程系统的既有契约）；本系统也记录角色继承变更
+|===
+
+已有库升级执行 link:migrate-second-review.sql[增量迁移脚本]；新库直接执行建表脚本。
+
+== 一致性与并发
+
+* 唯一键保证三组关联与继承边不重复，重复请求在服务层表现为幂等。
+* 多级防环在服务层完成：写继承边前对角色表加悲观写锁（`RoleRepository.lockHierarchyRoles` / `RoleCatalog.lockGraph`），在同一事务内读取全图后校验，避免并发反向加边形成环（`PhaseTwoRbac1Tests.concurrentOppositeEdgesCannotFormCycle`）。
+* 删除被引用的角色、权限、资源、应用返回 409。
+
+== 验证
+
+* 测试中用 H2 MySQL 模式执行建表脚本，与 JPA 实际模型逐表比较列、主键、外键与唯一键（`FirstReviewWorkflowTests.mysqlDdlMatchesPersistentTablesColumnsKeysAndUniqueConstraints`），外键总数断言为 14。
+* 2026-11-18 在本地 MySQL 8.4 容器执行建表脚本，两种设计模式均以 `ddl-auto=validate` 启动成功；生产服务器尚未部署。

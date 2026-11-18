@@ -21,6 +21,11 @@
       "IS_NULLABLE": "NO"
     },
     {
+      "COLUMN_NAME": "CODE",
+      "DATA_TYPE": "CHARACTER VARYING",
+      "IS_NULLABLE": "YES"
+    },
+    {
       "COLUMN_NAME": "NAME",
       "DATA_TYPE": "CHARACTER VARYING",
       "IS_NULLABLE": "NO"
@@ -90,6 +95,88 @@
       "COLUMN_NAME": "PASSWORD_HASH",
       "DATA_TYPE": "CHARACTER VARYING",
       "IS_NULLABLE": "NO"
+    }
+  ],
+  "SYS_AUDIT_LOG": [
+    {
+      "COLUMN_NAME": "ACTOR_ID",
+      "DATA_TYPE": "BIGINT",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "ID",
+      "DATA_TYPE": "BIGINT",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "COLUMN_NAME": "OCCURRED_AT",
+      "DATA_TYPE": "TIMESTAMP WITH TIME ZONE",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "COLUMN_NAME": "OBJECT_TYPE",
+      "DATA_TYPE": "CHARACTER VARYING",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "REQUEST_ID",
+      "DATA_TYPE": "CHARACTER VARYING",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "SYSTEM_CODE",
+      "DATA_TYPE": "CHARACTER VARYING",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "COLUMN_NAME": "TYPE",
+      "DATA_TYPE": "CHARACTER VARYING",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "COLUMN_NAME": "ACTOR_NAME",
+      "DATA_TYPE": "CHARACTER VARYING",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "CLASS_ID",
+      "DATA_TYPE": "CHARACTER VARYING",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "COURSE_ID",
+      "DATA_TYPE": "CHARACTER VARYING",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "OBJECT_ID",
+      "DATA_TYPE": "CHARACTER VARYING",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "TERM_ID",
+      "DATA_TYPE": "CHARACTER VARYING",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "AFTER_JSON",
+      "DATA_TYPE": "CHARACTER VARYING",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "BEFORE_JSON",
+      "DATA_TYPE": "CHARACTER VARYING",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "ACTOR_ROLES",
+      "DATA_TYPE": "CHARACTER VARYING",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "TARGET",
+      "DATA_TYPE": "CHARACTER VARYING",
+      "IS_NULLABLE": "YES"
     }
   ],
   "SYS_DEPARTMENT": [

@@ -5,6 +5,7 @@
 ## 建议阅读顺序
 
 1. 先读[首页](../README.md)，了解业务范围和运行方式。
+   第二次检查材料（adoc，含需求、数据库、详细设计、测试追踪、部署）见[second-review](second-review/README.adoc)。
 2. 读[全业务双设计](phase-two/full-dual-design.md)，核对十组用例及 structured / ddd 对照。
 3. 读[需求](first-review/requirements.md)、[API](first-review/api-design.md)和[数据库](first-review/database-design.md)，串起“需求 → 资源 → 接口 → 服务 → 表”。
 4. 看[图与截图](design/README.md)，再打开具体类和方法。

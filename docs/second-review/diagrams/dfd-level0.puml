@@ -1,0 +1,20 @@
+@startuml dfd-level0
+!include common.iuml
+!pragma layout smetana
+title 0 层数据流图（系统上下文）
+left to right direction
+skinparam rectangleBorderColor #567a5d
+actor "管理员" as Admin
+actor "普通用户\n（教师、学生）" as User
+rectangle "课程项目管理系统\n（接入应用 cpm）" as Course
+usecase "0\n统一权限\n管理系统" as P0
+database "权限数据存储\n（账号、角色、继承、权限、API、应用、审计）" as DS
+
+Admin --> P0 : 账号/角色/继承/菜单按钮/API/授权维护请求
+P0 --> Admin : 目录、有效权限及来源、审计记录
+User --> P0 : 登录凭据
+P0 --> User : JWT（只含身份与有效期）
+Course --> P0 : 用户 JWT + 应用编码\n（/auth/me、用户查询、审计写入）
+P0 --> Course : 有效角色、菜单按钮码、API 权限码\n人员姓名工号、审计分页
+P0 <--> DS
+@enduml

@@ -1,0 +1,25 @@
+@startuml structure-chart-identity
+!include common.iuml
+!pragma layout smetana
+title 模块结构图（结构化设计）：ApplicationIdentityService.current
+skinparam rectangleBackgroundColor #ffffff
+skinparam rectangleBorderColor #567a5d
+rectangle "计算接入应用身份\nApplicationIdentityService.current" as M0
+rectangle "读取应用\nBusinessSystemRepository.findByCode" as M1
+rectangle "读取用户\nUserAccountRepository.findById" as M2
+rectangle "展开角色继承\nRoleHierarchyService.graph / resolve" as M3
+rectangle "求有效权限\nAuthorizationService.effective" as M4
+rectangle "取 API 绑定\nPermissionApiRepository.findAllByPermission_Id" as M5
+rectangle "图遍历（BFS）\nStructuredRoleGraphService.resolve" as M6
+M0 --> M1 : ↓应用编码  ↑应用(启用)
+M0 --> M2 : ↓用户ID  ↑账号(可用)
+M0 --> M3 : ↓分配角色  ↑有效角色+路径
+M0 --> M4 : ↓用户ID  ↑有效前端权限
+M0 --> M5 : ↓权限ID  ↑绑定的 API 资源
+M3 --> M6 : ↓角色节点、邻接表  ↑可达路径
+note right of M0
+  数据耦合：模块之间只传 ID、编码、列表；
+  不共享全局变量（避免公共耦合）。
+  功能内聚：每个下层模块只完成一个读取或计算步骤。
+end note
+@enduml

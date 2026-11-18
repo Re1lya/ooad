@@ -12,6 +12,21 @@
 
 ![管理工作台](docs/design/phase-two/overview.png)
 
+## 第二次检查（2026-11-24 至 11-26）
+
+本版在同组初版的基础上补齐第二次检查要求，材料入口：[docs/second-review](docs/second-review/README.adoc)（adoc）。
+
+| 检查要求 | 本版落实 |
+|---|---|
+| 两个系统的权限都由权限系统管理 | 新增 `/api/apps/{应用编码}/auth/me`、`/identity/users/{userId}`、`/auth/audit-logs`，与老师课程项目管理系统的统一身份契约一致；课程系统只需配置 `APP_IDENTITY_BASE_URL=http://rbac-backend:18081/api/apps/cpm`。API 资源新增后端权限码（`TC`、`CV` 等），随角色及继承下发 |
+| 前后端部署到 Docker Swarm | [deploy/stack.yml](deploy/stack.yml)：权限系统前端/后端、课程系统前端/后端 4 个服务；Dockerfile、Nginx、docker secret、健康检查（Actuator）；[部署说明](docs/second-review/05-deployment.adoc) |
+| 菜单切换产生 logback 日志 | 前端每个请求带 `X-Client-Menu`；`logback-spring.xml` + `RequestLoggingFilter`（请求号、菜单、操作人）+ `LayerLoggingAspect`（Controller / Service / DDD 应用服务 / 基础设施分层日志，令牌与密码打码） |
+| 需求与测试对应 | [需求规格](docs/second-review/01-requirements.adoc) FR-01~FR-30、NFR-01~NFR-12；[需求—测试追踪](docs/second-review/04-test-traceability.adoc) |
+| 包图、类图、顺序图、GRASP、结构化与 DDD 区别、JavaEE 技术 | [详细设计](docs/second-review/03-detailed-design.adoc)：包图、DFD、模块结构图、两个答辩 API 的两种类图与顺序图 |
+| 数据库设计（adoc） | [数据库设计](docs/second-review/02-database-design.adoc)、[增量迁移](docs/second-review/migrate-second-review.sql) |
+| 课程系统登记与联调 | [scripts/register-course-app.py](scripts/register-course-app.py) 用普通管理 API 登记 `cpm` 应用的菜单、按钮、API、角色与继承；[scripts/verify-course-integration.py](scripts/verify-course-integration.py) 跨系统验收（本机 19/19 通过） |
+| 课程系统构建 | [deploy/course](deploy/course)：固定老师仓库 `ca90f1c` + 补丁（统一身份登录页、Nginx 转发、回移老师的两处启动修复） |
+
 ## 组员先看什么
 
 | 想了解的内容 | 入口 |
@@ -35,9 +50,9 @@ GitHub 可直接阅读 Markdown、Java 和 PNG/SVG。HTML 阅读页需要下载�
 | 业务用例 | 登录与本人改密、用户、部门、应用、角色、菜单按钮、API 资源、授权鉴权、继承维护、公司导入，共十组 |
 | 权限模型 | RBAC1，多级和多继承；直接权限与继承权限取并集；显示权限来源及有效继承路径 |
 | 设计实现 | 十组业务用例和角色图算法均提供 `structured` / `ddd` 实现，启动时二选一 |
-| Service | 24 个 `@Service` 定义；每种模式实际装载 13 个；不将基础设施 Adapter 混入数量 |
-| 持久化 | 六类核心概念、10 个 JPA Entity、11 张表、14 个外键 |
-| HTTP API | 56 个实际操作；OpenAPI 与 MVC 路由逐项核对 |
+| Service | 27 个 `@Service` 定义；每种模式实际装载 15 个（含接入应用身份模块与共享审计服务）；不将基础设施 Adapter 混入数量 |
+| 持久化 | 六类核心概念、11 个 JPA Entity、12 张表（11 张业务表 + 1 张审计日志技术表）、14 个外键 |
+| HTTP API | 61 个实际操作（含课程系统接入的统一身份与审计接口）；OpenAPI 与 MVC 路由逐项核对 |
 | 界面 | Vue 管理工作台、独立个人空间、桌面与窄屏导航 |
 | 运行方式 | 默认 H2 内存演示；另提供 H2 文件库方式；MySQL DDL 与 `validate` 配置 |
 
@@ -216,13 +231,13 @@ python scripts/build-full-dual-report.py --output docs/review
 
 | 验证项 | 结果 |
 |---|---|
-| 后端验收与领域/架构测试 | 81 个，0 失败、0 错误、0 跳过 |
+| 后端验收与领域/架构测试 | 103 个，0 失败、0 错误、0 跳过（2026-11-18） |
 | 前端 | TypeScript 检查与 Vite 生产构建通过 |
 | 浏览器 | 两模式各 3 组真实 Edge 场景，每模式 23 项，共 46 项通过 |
-| JaCoCo 行覆盖率 | 89.13% |
-| JaCoCo 分支覆盖率 | 75.63% |
+| JaCoCo 行覆盖率 | 90.69% |
+| JaCoCo 分支覆盖率 | 75.48% |
 | 设计图 | 18 张，自动几何检查与 PNG 目视复核 |
-| API 与数据模型 | 56 个操作、11 张表、14 个外键，文档与导出结构核对 |
+| API 与数据模型 | 61 个操作、12 张表、14 个外键，文档与导出结构核对；建表脚本已在本地 MySQL 8.4 以 validate 启动两种模式 |
 
 覆盖率包含 CloneFactory 生成代码。浏览器和后端业务验收采用隔离 H2 与合成数据；这些结果不能代替真实 MySQL、生产性能或外部系统联调验收。完整 JaCoCo 报告在构建后生成到 `target/site/jacoco/index.html`。
 
@@ -254,6 +269,6 @@ python scripts/build-full-dual-report.py --output docs/review
 
 ## 交付边界
 
-当前交付为上述 RBAC1、双设计、前端与三表导入功能。真实 MySQL 验证、旧业务库迁移、服务器部署、大规模性能压测及外部应用联调尚待完成；审批、四级复核、SSO 和完整 HR/OA 对接不在这一版范围。
+当前交付为上述 RBAC1、双设计、前端、三表导入，以及课程项目管理系统接入（统一身份、审计）、分层 logback 日志和 Docker Swarm 部署文件。已在本机用 MySQL 8.4 与老师的课程后端完成跨系统联调；服务器上的 Swarm 部署、旧业务库迁移与大规模性能压测尚待完成；审批、四级复核、SSO 和完整 HR/OA 对接不在这一版范围。
 
 本仓库用于组员协作和课程检查。当前实现与统计以这里的源码、[需求追踪](docs/first-review/requirements.md)及[验证汇总](docs/first-review/verification.json)为准。

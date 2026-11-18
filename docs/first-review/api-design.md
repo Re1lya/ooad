@@ -1,6 +1,6 @@
 # API 设计（RBAC1 增强版）
 
-接口清单从通过验收测试的 Spring MVC 路由导出，与 [OpenAPI](openapi.json) 同步生成。当前 56 个 HTTP 操作。
+接口清单从通过验收测试的 Spring MVC 路由导出，与 [OpenAPI](openapi.json) 同步生成。当前 61 个 HTTP 操作。
 
 ## 约定
 
@@ -17,6 +17,11 @@
 
 | 方法 | 路径 | 含义／必要性 | 输入DTO | 成功响应 | 访问主体 | 源码 |
 |---|---|---|---|---|---|---|
+| GET | `/api/apps/{systemCode}/auth/audit-logs` | 查询接入应用审计记录：管理员或在该应用内拥有有效权限的用户可查询；按操作人、对象、时间筛选，时间倒序分页。 | — | 200 | 已登录 | [ApplicationIdentityController.logs](../../src/main/java/com/cdwy/permission/controller/identity/ApplicationIdentityController.java) |
+| POST | `/api/apps/{systemCode}/auth/audit-logs` | 写入接入应用审计记录：接入应用在业务事务提交后写入；requestId 幂等，操作人取自JWT并保存姓名与角色快照。 | AuditWrite | 201 | 已登录 | [ApplicationIdentityController.write](../../src/main/java/com/cdwy/permission/controller/identity/ApplicationIdentityController.java) |
+| GET | `/api/apps/{systemCode}/auth/me` | 接入应用查询当前身份：课程系统等接入应用携带用户本人JWT调用；返回有效角色编码（含继承）与该应用内菜单、按钮权限码及其绑定的后端API权限码，授权变化下一次调用即生效。 | — | 200 | 已登录 | [ApplicationIdentityController.me](../../src/main/java/com/cdwy/permission/controller/identity/ApplicationIdentityController.java) |
+| GET | `/api/apps/{systemCode}/identity/users/{userId}` | 接入应用按统一身份查人：按登录名查询姓名与工号，供课程系统登记教师；应用或用户不存在返回404。 | — | 200 | 已登录 | [ApplicationIdentityController.user](../../src/main/java/com/cdwy/permission/controller/identity/ApplicationIdentityController.java) |
+| GET | `/api/audit-logs` | 查看审计记录：管理员按应用编码查看审计记录；本系统角色继承变更使用应用编码 rbac。 | — | 200 | 管理员 | [AuditLogController.list](../../src/main/java/com/cdwy/permission/controller/audit/AuditLogController.java) |
 | POST | `/api/auth/login` | 账号密码登录：验证当前账号和密码后签发JWT；不创建登录会话，不在Token保存权限列表。 | Login | 200 | 公开 | [AuthController.login](../../src/main/java/com/cdwy/permission/controller/auth/AuthController.java) |
 | GET | `/api/demo/courses` | 课程API鉴权示例：仅为示例静态课程；需登记course应用的GET /api/demo/courses资源、绑定权限并分配角色。 | — | 200 | 业务授权 | [CourseDemoController.list](../../src/main/java/com/cdwy/permission/controller/demo/CourseDemoController.java) |
 | GET | `/api/departments` | 查询部门列表：查询部门资源；用户分页，其余为当前小规模演示的完整列表。 | — | 200 | 管理员 | [DepartmentController.list](../../src/main/java/com/cdwy/permission/controller/organization/DepartmentController.java) |

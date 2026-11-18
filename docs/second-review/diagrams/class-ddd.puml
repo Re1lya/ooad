@@ -1,0 +1,105 @@
+@startuml class-ddd
+!include common.iuml
+!pragma layout smetana
+title DDD 类图：角色继承与接入应用身份（应用层 → 领域层 ← 基础设施层）
+hide empty members
+
+package "接口层 controller" {
+  class RoleHierarchyController
+  class ApplicationIdentityController
+}
+package "应用层 service.ddd.application" {
+  class DddHierarchyService <<ApplicationService>> {
+    +inherit(senior, inherited)
+    +remove(senior, inherited)
+  }
+  class DddApplicationIdentityService <<ApplicationService>> {
+    +current(userId, systemCode)
+    +lookup(systemCode, userId)
+  }
+  class DddRoleGraphService <<ApplicationService>> {
+    +validate(senior, inherited, graph)
+    +resolve(node, graph)
+  }
+}
+package "领域层 service.ddd.domain.model" {
+  class AuthorizationSnapshot <<DomainService>> {
+    +effectiveRoles(assigned) : List<AccessRole>
+    +grantedIn(systemId, assigned) : List<View>
+    +origins(assigned)
+    +assertCanInherit(senior, inherited)
+  }
+  class RoleGraph <<ValueObject>> {
+    -edges : Map<Long, List<Node>>
+    +assertCanInherit(senior, inherited)
+    +effectivePaths(root) : List<Path>
+  }
+  class PermissionDirectory {
+    +usable(permissionId)
+    +view(permissionId)
+  }
+  class AccessRole <<Entity>> {
+    id, code, name, enabled
+  }
+  class Account <<Entity>> {
+    +usable(now)
+  }
+  class ManagedSystem <<Entity>> {
+    code, enabled
+  }
+  class ProtectedResource <<Entity>> {
+    method, path, code, active
+    +authorityCode() : Optional<String>
+  }
+}
+package "领域仓储端口 service.ddd.domain.repository" {
+  interface RoleCatalog
+  interface AccountRepository
+  interface SystemCatalog
+  interface PermissionCatalog
+  interface ResourceCatalog
+  interface AssignmentRepository
+}
+package "基础设施层 infrastructure.persistence" {
+  class JpaRoleCatalogAdapter
+  class JpaAssignmentAdapter
+  class JpaResourceCatalogAdapter
+  class "其余 JPA 适配器" as OtherAdapters
+}
+package "service.port" {
+  interface HierarchyUseCase
+  interface ApplicationIdentityUseCase
+  interface RoleGraphUseCase
+  interface AuditTrailUseCase
+}
+
+RoleHierarchyController --> HierarchyUseCase
+ApplicationIdentityController --> ApplicationIdentityUseCase
+DddHierarchyService ..|> HierarchyUseCase
+DddApplicationIdentityService ..|> ApplicationIdentityUseCase
+DddRoleGraphService ..|> RoleGraphUseCase
+DddHierarchyService --> RoleGraphUseCase
+DddHierarchyService --> RoleCatalog
+DddHierarchyService --> AssignmentRepository
+DddHierarchyService --> AuditTrailUseCase
+DddRoleGraphService ..> RoleGraph : 创建并委托
+DddApplicationIdentityService ..> AuthorizationSnapshot : 创建
+DddApplicationIdentityService --> AccountRepository
+DddApplicationIdentityService --> SystemCatalog
+DddApplicationIdentityService --> ResourceCatalog
+DddApplicationIdentityService --> PermissionCatalog
+AuthorizationSnapshot *-- RoleGraph
+AuthorizationSnapshot *-- PermissionDirectory
+AuthorizationSnapshot o-- AccessRole
+JpaRoleCatalogAdapter ..|> RoleCatalog
+JpaAssignmentAdapter ..|> AssignmentRepository
+JpaResourceCatalogAdapter ..|> ResourceCatalog
+OtherAdapters ..|> AccountRepository
+OtherAdapters ..|> SystemCatalog
+OtherAdapters ..|> PermissionCatalog
+note bottom of RoleGraph
+  信息专家：只有角色图掌握邻接关系，
+  由它判断“新增边是否成环”和“有效路径”。
+  领域层不依赖 Spring、JPA（架构测试校验）。
+end note
+@enduml

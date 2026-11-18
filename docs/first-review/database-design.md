@@ -1,15 +1,16 @@
-# 数据库设计（当前11表模型）
+# 数据库设计（当前12表模型）
 
-概念层是6类核心对象；物理层是11张持久化表。`sys_account`为用户凭证技术拆表，另外4张表达用户角色、角色权限、权限API和角色继承关联。JWT不持久化，无登录会话表。
+概念层是6类核心对象；物理层是11张业务表加1张审计日志技术表。`sys_account`为用户凭证技术拆表，另外4张表达用户角色、角色权限、权限API和角色继承关联；`sys_audit_log`只记录接入应用与角色继承变更的审计，不进入核心ER。JWT不持久化，无登录会话表。
 
 ## 实体与物理映射
 
 | 表 | 概念／职责 | 说明 |
 |---|---|---|
-| `api_resource` | API资源 | 应用+方法+路径组合唯一；与菜单、按钮不是同一实体。 |
+| `api_resource` | API资源 | 应用+方法+路径组合唯一；code为可选后端权限码（接入应用方法级授权）；与菜单、按钮不是同一实体。 |
 | `biz_system` | 应用 | 应用目录；停用影响该应用所有权限和资源。 |
 | `permission_api` | 权限API关联 | 前端权限与API资源M:N；两端应用一致由Service校验。 |
 | `sys_account` | 用户登录凭证（技术拆表） | @SecondaryTable映射到同一个UserAccount实体；user_id同时为主键和外键，没有第二个独立人员实体。 |
+| `sys_audit_log` | 审计日志（技术表） | 接入应用写入的关键操作与本系统角色继承变更；不进入核心ER，无外键，操作人与应用以快照保存，(system_code, request_id) 幂等。 |
 | `sys_department` | 部门 | 部门树；parent_id可空，Service拒绝环。 |
 | `sys_permission` | 前端权限 | 仅MENU/BUTTON；parent_id菜单树，code全局唯一。 |
 | `sys_role` | 角色 | 业务权限集合；enabled控制是否计入有效权限。 |
@@ -30,6 +31,7 @@
 | `id` | BIGINT | 否 |
 | `method` | CHARACTER VARYING | 否 |
 | `system_id` | BIGINT | 否 |
+| `code` | CHARACTER VARYING | 是 |
 | `name` | CHARACTER VARYING | 否 |
 | `path` | CHARACTER VARYING | 否 |
 
@@ -58,6 +60,27 @@
 | `user_id` | BIGINT | 否 |
 | `username` | CHARACTER VARYING | 否 |
 | `password_hash` | CHARACTER VARYING | 否 |
+
+### sys_audit_log
+
+| 字段 | H2实际类型 | 可空 |
+|---|---|---|
+| `actor_id` | BIGINT | 是 |
+| `id` | BIGINT | 否 |
+| `occurred_at` | TIMESTAMP WITH TIME ZONE | 否 |
+| `object_type` | CHARACTER VARYING | 是 |
+| `request_id` | CHARACTER VARYING | 是 |
+| `system_code` | CHARACTER VARYING | 否 |
+| `type` | CHARACTER VARYING | 否 |
+| `actor_name` | CHARACTER VARYING | 是 |
+| `class_id` | CHARACTER VARYING | 是 |
+| `course_id` | CHARACTER VARYING | 是 |
+| `object_id` | CHARACTER VARYING | 是 |
+| `term_id` | CHARACTER VARYING | 是 |
+| `after_json` | CHARACTER VARYING | 是 |
+| `before_json` | CHARACTER VARYING | 是 |
+| `actor_roles` | CHARACTER VARYING | 是 |
+| `target` | CHARACTER VARYING | 是 |
 
 ### sys_department
 

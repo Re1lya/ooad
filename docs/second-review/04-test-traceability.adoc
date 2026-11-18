@@ -1,0 +1,83 @@
+= 需求—测试追踪（第二次检查版）
+Cdwy 小组
+:revdate: 2026-11-18
+:toc: left
+:sectnums:
+:table-caption: 表
+:test: ../../src/test/java/com/cdwy/permission
+
+== 执行方式与结果
+
+[source,bash]
+----
+mvn -B -f third-party/clonefactory/pom.xml install -DskipTests
+mvn -B clean verify          # 同时生成 target/site/jacoco/index.html
+----
+
+2026-11-18 结果：103 个测试，失败 0、错误 0、跳过 0。JaCoCo：行 90.69%、分支 75.48%、指令 89.37%、方法 88.29%（含 CloneFactory 生成代码）。机器可读汇总见 link:../first-review/verification.json[verification.json]。
+
+每个 HTTP 验收类都以两种设计各跑一遍：`Ddd*` 类继承结构化测试类，只把 `app.backend-strategy` 改为 `ddd`，因此同一条需求在两条设计路线上使用完全相同的测试方法与数据。
+
+[cols="3,1,1,1",options="header"]
+|===
+|测试类 |结构化 |DDD |数量
+|link:{test}/FirstReviewWorkflowTests.java[FirstReviewWorkflowTests] / link:{test}/DddFullWorkflowTests.java[DddFullWorkflowTests] |✓ |✓ |22 + 23
+|link:{test}/PhaseTwoRbac1Tests.java[PhaseTwoRbac1Tests] / link:{test}/DddRbac1Tests.java[DddRbac1Tests] |✓ |✓ |7 + 8
+|link:{test}/ApplicationIdentityTests.java[ApplicationIdentityTests] / link:{test}/DddApplicationIdentityTests.java[DddApplicationIdentityTests] |✓ |✓ |9 + 10
+|link:{test}/CompanyImportTests.java[CompanyImportTests] / link:{test}/DddCompanyImportTests.java[DddCompanyImportTests] |✓ |✓ |8 + 8
+|link:{test}/DualDesignBoundaryTests.java[DualDesignBoundaryTests]（架构与领域规则） 2+|无需 Spring |5
+|link:{test}/infrastructure/logging/LayerLoggingTests.java[LayerLoggingTests]（日志脱敏与分层） 2+|无需 Spring |3
+|===
+
+== 追踪表
+
+测试数据：`ApplicationIdentityTests` 建立 `cpm` 与 `oa` 两个应用；`cpm` 下菜单 `MCO`（绑定 API `GET /courses`，权限码 `CV`）与按钮 `MCOR`（绑定 `PUT /courses/{id}/review`，权限码 `CR`）；角色 `course-admin` 继承 `teacher`，用户 `lin` 只分配 `course-admin`。`PhaseTwoRbac1Tests` 使用 `course` 应用、`teacher` 角色和 `GET /api/demo/courses` 资源，按用例再建多级/菱形角色。
+
+[cols="1,4,3,5",options="header"]
+|===
+|需求 |验收条件 |API |测试类.方法
+
+|FR-01 |正确凭据得到 Bearer JWT，不建会话；错误、缺失、伪造、过期返回 401 |`POST /api/auth/login` |`FirstReviewWorkflowTests.loginReturnsBearerAndNeverCreatesServerSession`、`badCredentialsMissingMalformedExpiredAndForgedTokensReturn401`
+|FR-02 |改密后旧 Token 失效 |`PUT /api/me/password` |`passwordChangeInvalidatesOldTokenWithoutSessionStorage`
+|FR-03 |用户维护、停用即失效、管理员保护 |`/api/users/**` |`disabledAccountInvalidatesTokenAndReenableDoesNotReviveIt`、`deletionsRespectReferencesAndProtectAdministrator`、`ordinaryUsersCannotManageAndAdministratorHasNoAutomaticBusinessGrant`
+|FR-04 |外部/临时人员期限 |`POST /api/users` |`externalAndTemporaryPeopleUseSharedUserEntityAndConfiguredValidityLimits`；`DualDesignBoundaryTests.FR26_expiryIncludesLastDayAndExcludesFollowingMidnight`
+|FR-05 |部门树与删除引用 |`/api/departments/**` |`departmentTreeAndDeleteReferencesRemainConsistent`
+|FR-06、FR-15 |独立启停影响所有持有人；普通编辑不能夹带状态 |`/api/*/{id}/status` |`statusCommandsAffectAllHoldersWithoutChangingOrdinaryFields`、`ordinaryEditsCannotSmuggleStatusAndNamesDoNotRevokeGrants`
+|FR-07、FR-10 |多角色并集；重复分配幂等；撤一个角色不影响其他来源 |`/api/users/{id}/roles/{roleId}` |`duplicateAssignmentsAreIdempotentAndGrantUnionSurvivesOneRoleRevocation`
+|FR-08 |菜单树防环、跨应用父节点与按钮父节点被拒 |`/api/permissions` |`menuTreeRejectsCyclesCrossApplicationParentsAndButtonParents`
+|FR-09 |资源唯一、拒绝宽泛通配；可登记后端权限码 |`/api/resources` |`resourceValidationRejectsDuplicatesAndBroadWildcards`；权限码见 FR-27
+|FR-11、FR-12、FR-14 |三段授权链缺一即 403；新授权无需重新登录；不能跨应用绑定或绕过更具体资源 |`/api/roles/{id}/permissions/**`、`/api/permissions/{id}/resources/**`、`GET /api/demo/courses` |`rolePermissionAndApiBindingAreAllNecessaryAndNewGrantsWorkWithoutRelogin`、`permissionRevocationAndApiUnbindingImmediatelyRejectExistingToken`、`apiResourcesCannotBindAcrossApplicationsOrBypassMoreSpecificRoute`
+|FR-13 |导航补祖先容器但不授予其 API |`GET /api/me/menu` |`menuTreeKeepsAncestorsAsContainersWithoutGrantingTheirApi`
+|FR-17 |多级继承；撤除必要边后同一 Token 下一次请求 403 |`PUT/DELETE /api/roles/{s}/inherits/{i}` |`PhaseTwoRbac1Tests.transitiveInheritanceAndRevocation`
+|FR-18 |自继承、环、重复、缺失对象；停用节点参与防环；并发反向加边只成功一边 |同上 |`rejectCyclesAndKeepIdempotency`、`disabledIntermediateStillParticipatesInCycleCheck`、`concurrentOppositeEdgesCannotFormCycle`
+|FR-19 |菱形去重、停用阻断、多来源互不误撤 |`GET /api/me/permission-origins` |`diamondAndDisabledBranches`、`independentSourcesSurviveDirectRevocation`
+|FR-20 |继承管理边界与角色预览 |`GET /api/roles/{id}/effective-permissions` |`authorizationBoundaryAndPreview`
+|FR-21、FR-22 |前端任务闭环与交互 |前端 |`frontend/tests/*.test.cjs`（Edge/Playwright，历史记录见 `docs/design/phase-two/`，本轮未重跑）；本轮浏览器人工核对见第 3 节
+|FR-23 |实际装载模式可查询 |`GET /api/system-info` |`DddRbac1Tests.FR23_reportsSelectedImplementation`
+|FR-24、FR-25 |三表预览与确认导入 |`POST /api/imports/company/*` |`CompanyImportTests.FR24_*`、`FR25_*`（8 个）及 DDD 重跑
+|FR-26 |全模块双实现；领域与应用层无持久化依赖；Controller 只依赖端口 |— |`DualDesignBoundaryTests.FR26_applicationAndDomainHaveNoPersistenceDependencies`、`FR26_httpBoundaryDependsOnPorts`；`FirstReviewWorkflowTests.FR26_allBusinessModulesReportSelectedStrategy`
+|FR-27 |`/auth/me` 返回继承角色与本应用菜单、按钮、API 权限码；解除继承、停用角色、停用资源、停用应用即时生效；只返回本应用；未知应用 404，无 Token 401 |`GET /api/apps/{code}/auth/me` |`ApplicationIdentityTests.FR27_currentIdentityIncludesInheritedRolesAndCodes`、`FR27_inheritanceChangeIsVisibleOnNextCall`、`FR27_disabledRoleAndResourceAreExcluded`、`FR27_permissionsAreScopedToTheApplication`；`DddApplicationIdentityTests.FR27_identityModuleReportsDdd`
+|FR-28 |按统一身份标识查姓名与工号；不存在 404 |`GET /api/apps/{code}/identity/users/{userId}` |`FR28_lookupUserByIdentityId`
+|FR-29 |审计写入幂等、操作人快照、按应用隔离、按目标筛选；无应用内权限者 403，管理员可查；未知应用 404；缺类型 400 |`GET/POST /api/apps/{code}/auth/audit-logs` |`FR29_auditWriteIsIdempotentAndScoped`、`FR29_auditQueryRequiresPermissionInApplication`
+|FR-30 |建立、解除继承写入审计，操作人为当前管理员 |`GET /api/audit-logs` |`FR30_hierarchyChangesAreAudited`
+|NFR-01、NFR-02 |认证边界；响应不泄露密码摘要与凭证版本 |— |`badCredentials…Return401`、`loginResponseCannotExposePasswordOrCredentialVersionOrAdminAssignment`
+|NFR-04 |分层与依赖方向 |— |`DualDesignBoundaryTests`（5 个）
+|NFR-09 |MySQL 建表脚本与 JPA 模型逐表一致；无会话表 |— |`mysqlDdlMatchesPersistentTablesColumnsKeysAndUniqueConstraints`、`loginReturnsBearerAndNeverCreatesServerSession`
+|NFR-11 |菜单头进入日志；Controller 与 Service/DDD 应用服务均有日志；令牌与密码打码；菜单头防注入 |任意 `/api` 请求 |`ApplicationIdentityTests.NFR11_menuSwitchProducesLayeredLogs`（两种模式）、`LayerLoggingTests`（3 个）
+|NFR-12 |Swarm 部署、健康检查 |— |部署后按 link:05-deployment.adoc[部署说明] 第 8 节逐项核对
+|===
+
+== 跨系统联调记录（2026-11-18，本机）
+
+环境：MySQL 8.4 容器（执行 `database-mysql.sql`）；权限系统后端以 `swarm` 配置启动（分别验证 `ddd` 与 `structured` 两种模式在 `validate` 下启动）；老师课程后端 ca90f1c（打本仓库补丁，Flyway 执行 13 个迁移）；课程前端开发服务器。
+
+[cols="4,1",options="header"]
+|===
+|检查项 |结果
+|`register-course-app.py` 登记 `cpm`：17 个菜单/按钮、17 个 API 资源、4 个角色、`course-admin → teacher` 继承；重复执行无副作用 |通过
+|`verify-course-integration.py`：`/auth/me` 继承角色；课程系统按 `TEC`/`TC`/`CV` 放行或拒绝；撤回按钮后同一 Token 下一次请求 403；解除继承后角色即时变化；审计写入与课程端查询 |19/19 通过
+|课程前端：未登录访问被引导到统一身份登录页；“课程督导”登录后“管理”组只亮“课程、日志”（link:evidence/course-observer-menus-before.jpg[截图]）；权限系统给该角色加“学期管理”后刷新，“学期”变为可用（link:evidence/course-observer-menus-after-grant.png[截图]） |通过（浏览器核对）
+|权限系统前端：切换“API 资源”“角色继承”菜单，后端日志出现 `[menu=resources]`、`[menu=hierarchy]` 及 Controller、Service 两层日志（link:evidence/menu-switch-hierarchy-log.txt[日志摘录]、link:evidence/rbac-api-resources-with-codes.jpg[API 资源截图]、link:evidence/rbac-course-admin-inherits-teacher.jpg[继承截图]） |通过（浏览器核对）
+|===
+
+限制：本机没有课程要求的 CloneFactory 0.0.2，课程后端以仓库附带的 0.0.1-SNAPSHOT 构建，课程系统内部 record 拷贝为空，导致“新建学期”等落库返回 409（鉴权已通过）；课程侧建课、加学生等写审计链路未在本机走通，改为按课程审计客户端相同的请求格式直接写入验证。正式部署应使用课程提供的 CloneFactory 0.0.2 构建课程后端。

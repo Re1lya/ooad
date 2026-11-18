@@ -1,0 +1,23 @@
+@startuml deployment-swarm
+!include common.iuml
+!pragma layout smetana
+title Docker Swarm 部署图（stack: cdwy，overlay 网络 cdwy）
+actor 浏览器
+node "Swarm 节点（label cdwy.rbac=true）" {
+  node "rbac-frontend\nNginx :80（发布 18080）" as RF
+  node "rbac-backend\nSpring Boot :18081 / 健康 :18082\nlogback → 控制台 + /app/logs" as RB
+}
+node "Swarm 节点（label cdwy.course=true）" {
+  node "course-frontend\nNginx :80（发布 18090）" as CF
+  node "course-backend\nSpring Boot :8080 / 健康 :8081" as CBK
+}
+database "MySQL（lab_mysql）\ncdwy_rbac / course_project" as DB
+浏览器 --> RF : /ui/ 管理控制台
+浏览器 --> CF : 课程系统
+RF --> RB : /api/*（携带 X-Client-Menu）
+CF --> CBK : /api/* → /*
+CF --> RB : /identity/api/auth/login
+CBK --> RB : /api/apps/cpm/auth/me\n/identity/users/{id}\n/auth/audit-logs
+RB --> DB
+CBK --> DB
+@enduml

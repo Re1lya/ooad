@@ -1,0 +1,27 @@
+-- 第二次检查增量迁移：在已按第一次检查 DDL 建好的库上执行（新库直接执行 docs/first-review/database-mysql.sql）。
+-- 需要具有 ALTER / CREATE 权限的账号（应用账号只有 SELECT/INSERT/UPDATE/DELETE）。
+
+-- 1) API 资源增加可选的后端权限码（课程系统 TC、CV 等），同一权限码可覆盖多个接口，因此不建唯一键。
+ALTER TABLE api_resource ADD COLUMN code VARCHAR(64) NULL AFTER name;
+
+-- 2) 审计日志技术表：接入应用写入的关键操作与本系统角色继承变更；不进入核心 ER，不设外键。
+CREATE TABLE sys_audit_log (
+  id BIGINT NOT NULL AUTO_INCREMENT,
+  system_code VARCHAR(64) NOT NULL,
+  request_id VARCHAR(64) NULL,
+  occurred_at DATETIME(6) NOT NULL,
+  actor_id BIGINT NULL,
+  actor_name VARCHAR(128) NULL,
+  actor_roles VARCHAR(255) NULL,
+  type VARCHAR(64) NOT NULL,
+  object_type VARCHAR(64) NULL,
+  object_id VARCHAR(128) NULL,
+  target VARCHAR(255) NULL,
+  before_json VARCHAR(4000) NULL,
+  after_json VARCHAR(4000) NULL,
+  term_id VARCHAR(128) NULL,
+  course_id VARCHAR(128) NULL,
+  class_id VARCHAR(128) NULL,
+  PRIMARY KEY (id),
+  CONSTRAINT uk_audit_request UNIQUE (system_code,request_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_as_cs;

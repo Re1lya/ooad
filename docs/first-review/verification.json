@@ -1,16 +1,19 @@
 {
-  "generatedAt": "2026-11-17T18:46:04.903856+00:00",
-  "sourceRevision": "1dd7d129b95f445004ef4b752c52d97cce170786",
-  "branch": "main",
+  "generatedAt": "2026-11-18T13:51:19.933723+00:00",
+  "sourceRevision": "45cb2cc3c691ec419fa080dfd825144646ae0a3c",
+  "branch": "feat/second-review-integration",
   "includesWorkingTreeChanges": true,
   "repository": "https://github.com/yyyjjjj949/ooad",
-  "sourceFiles": 143,
+  "sourceFiles": 160,
   "springServices": [
     "AdminBootstrapService",
     "ApiResourceService",
+    "ApplicationIdentityService",
+    "AuditTrailService",
     "AuthService",
     "AuthorizationService",
     "CompanyImportService",
+    "DddApplicationIdentityService",
     "DddAuthenticationService",
     "DddAuthorizationService",
     "DddCompanyImportService",
@@ -31,17 +34,18 @@
     "SystemService",
     "UserService"
   ],
-  "serviceCount": 24,
-  "activeServiceCountPerMode": 13,
+  "serviceCount": 27,
+  "activeServiceCountPerMode": 15,
   "backendStrategies": [
     "structured",
     "ddd"
   ],
-  "dualBusinessModules": 10,
+  "dualBusinessModules": 11,
   "dualAlgorithmPorts": 1,
-  "sharedTechnicalServices": 2,
+  "sharedTechnicalServices": 3,
   "jpaEntities": [
     "ApiResource",
+    "AuditLog",
     "BusinessSystem",
     "Department",
     "Permission",
@@ -53,45 +57,45 @@
     "UserRole"
   ],
   "conceptualEntityCount": 6,
-  "persistentTableCount": 11,
+  "persistentTableCount": 12,
   "foreignKeyCount": 14,
-  "httpOperationCount": 56,
+  "httpOperationCount": 61,
   "tests": {
-    "tests": 81,
+    "tests": 103,
     "failures": 0,
     "errors": 0,
     "skipped": 0
   },
   "jacoco": {
     "instruction": {
-      "covered": 11307,
-      "missed": 1559,
-      "percent": 87.88
+      "covered": 13734,
+      "missed": 1633,
+      "percent": 89.37
     },
     "branch": {
-      "covered": 658,
-      "missed": 212,
-      "percent": 75.63
+      "covered": 791,
+      "missed": 257,
+      "percent": 75.48
     },
     "line": {
-      "covered": 2303,
-      "missed": 281,
-      "percent": 89.13
+      "covered": 2757,
+      "missed": 283,
+      "percent": 90.69
     },
     "complexity": {
-      "covered": 953,
-      "missed": 311,
-      "percent": 75.4
+      "covered": 1120,
+      "missed": 349,
+      "percent": 76.24
     },
     "method": {
-      "covered": 708,
-      "missed": 115,
-      "percent": 86.03
+      "covered": 829,
+      "missed": 110,
+      "percent": 88.29
     },
     "class": {
-      "covered": 151,
+      "covered": 175,
       "missed": 5,
-      "percent": 96.79
+      "percent": 97.22
     }
   },
   "frontendBuild": "vue-tsc --noEmit && vite build: passed",
@@ -144,7 +148,7 @@
     "fullDualDesignReview": "2026-11-18: opened new class/domain-adapter/permission and account sequence PNGs; reviewed changed diagrams contact sheet; unaffected diagrams retain prior visual review."
   },
   "diagramCount": 18,
-  "mysqlValidation": "isolated H2 MySQL-mode structural comparison only; real MySQL not run",
+  "mysqlValidation": "H2 MySQL-mode structural comparison in tests; additionally applied to a local MySQL 8.4 container and started both strategies with ddl-auto=validate (2026-11-18); production server not yet deployed",
   "companyDataReadOnlyCheck": "../design/phase-two/full-dual-company-readonly.json",
   "serverDeploymentValidated": false,
   "oldDatabaseMigration": false

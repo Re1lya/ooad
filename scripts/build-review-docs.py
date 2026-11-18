@@ -168,6 +168,24 @@ for phase in ['preview','commit']:
  add('POST','/api/imports/company/'+phase,'预览并校验公司三表' if phase=='preview' else '确认导入公司三表','Import'+phase.title(),ref('ImportSummary'),purpose='管理员上传员工、部门、功能权限三张XLSX；'+('只校验并返回摘要，不写入。' if phase=='preview' else '核对原文件摘要后事务导入；自然键复用、来源字段保留；不自动启用账号或授予个人角色。'))
 add('GET','/api/system-info','查看实际RBAC1设计模式',None,ref('SystemInfo'),purpose='返回当前实际装载的 structured 或 ddd 实现，不包含密钥。')
 
+# 第二次检查：API 资源后端权限码 + 接入应用（课程项目管理系统）统一身份与审计接口
+schemas['ResourceCreate']['properties']['code']=string(64,nullable=True,pattern='^[A-Za-z][A-Za-z0-9_:.-]{0,63}$',description='后端权限码（如课程系统 TC、CV），可选；同一权限码可覆盖多个接口')
+schemas['ResourceView']['properties']['code']=string(nullable=True)
+strings={'type':'array','items':text}
+schemas['IdentityCurrent']=obj({'subject':text,'roles':strings,'permissions':strings})
+schemas['IdentityUser']=obj({'userId':text,'no':text,'name':text})
+schemas['AuditWrite']=obj({'requestId':string(64,nullable=True),'type':string(64,minLength=1),'objectType':string(64,nullable=True),'objectId':string(128,nullable=True),'target':string(255,nullable=True),'before':{'type':'object','nullable':True},'after':{'type':'object','nullable':True},'termId':string(128,nullable=True),'courseId':string(128,nullable=True),'classId':string(128,nullable=True)},['type'],True)
+schemas['AuditActor']=obj({'id':integer(),'name':string(nullable=True),'roles':strings,'deleted':{'type':'boolean'}})
+schemas['AuditEntry']=obj({'id':integer(),'systemCode':text,'at':string(format='date-time'),'actor':ref('AuditActor'),'type':text,'objectType':string(nullable=True),'objectId':string(nullable=True),'target':string(nullable=True),'before':{'type':'object','nullable':True},'after':{'type':'object','nullable':True},'termId':string(nullable=True),'courseId':string(nullable=True),'classId':string(nullable=True)})
+schemas['AuditPage']=obj({'page':{'type':'integer'},'pageSize':{'type':'integer'},'total':integer(),'items':array('AuditEntry')})
+examples['ResourceCreate']={'systemId':1,'name':'新建学期','method':'POST','path':'/terms','code':'TC'}
+examples['AuditWrite']={'requestId':'0b9f2c3e-roster-1','type':'ROSTER_CHANGED','objectType':'class','objectId':'cpm-class-12','target':'导入学生名单','before':{'imported':0},'after':{'imported':30}}
+add('GET','/api/apps/{systemCode}/auth/me','接入应用查询当前身份',None,ref('IdentityCurrent'),access='已登录',purpose='课程系统等接入应用携带用户本人JWT调用；返回有效角色编码（含继承）与该应用内菜单、按钮权限码及其绑定的后端API权限码，授权变化下一次调用即生效。')
+add('GET','/api/apps/{systemCode}/identity/users/{userId}','接入应用按统一身份查人',None,ref('IdentityUser'),access='已登录',purpose='按登录名查询姓名与工号，供课程系统登记教师；应用或用户不存在返回404。')
+add('GET','/api/apps/{systemCode}/auth/audit-logs','查询接入应用审计记录',None,ref('AuditPage'),access='已登录',purpose='管理员或在该应用内拥有有效权限的用户可查询；按操作人、对象、时间筛选，时间倒序分页。')
+add('POST','/api/apps/{systemCode}/auth/audit-logs','写入接入应用审计记录','AuditWrite',ref('AuditEntry'),201,access='已登录',purpose='接入应用在业务事务提交后写入；requestId 幂等，操作人取自JWT并保存姓名与角色快照。')
+add('GET','/api/audit-logs','查看审计记录',None,ref('AuditPage'),purpose='管理员按应用编码查看审计记录；本系统角色继承变更使用应用编码 rbac。')
+
 actual={(verb,route['path']):route for route in routes for verb in route['methods']}
 assert set(actual)==set(operations), {'missing':list(set(actual)-set(operations)),'extra':list(set(operations)-set(actual))}
 paths={}
@@ -189,7 +207,11 @@ for (verb,path),value in sorted(operations.items(),key=lambda item:(item[0][1],i
     runtime=actual[(verb,path)]
     files=list(SRC.glob('controller/**/'+runtime['controller']+'.java'));assert len(files)==1
     source=files[0].relative_to(ROOT).as_posix()
-    params=[{'name':key,'in':'path','required':True,'schema':integer()} for key in re.findall(r'\{(\w+)\}',path)]
+    params=[{'name':key,'in':'path','required':True,'schema':string() if key=='systemCode' or (key=='userId' and path.startswith('/api/apps/')) else integer()} for key in re.findall(r'\{(\w+)\}',path)]
+    if path=='/api/apps/{systemCode}/auth/audit-logs' and verb=='GET':
+        params += [{'name':key,'in':'query','schema':schema} for key,schema in [('actor',string()),('actorId',integer()),('target',string()),('from',string(format='date-time')),('to',string(format='date-time')),('page',{'type':'integer','minimum':1,'default':1}),('pageSize',{'type':'integer','minimum':1,'maximum':100,'default':20})]]
+    if path=='/api/audit-logs':
+        params += [{'name':key,'in':'query','schema':schema} for key,schema in [('system',string(default='rbac')),('target',string()),('page',{'type':'integer','minimum':1,'default':1}),('pageSize',{'type':'integer','minimum':1,'maximum':100,'default':20})]]
     if path=='/api/users' and verb=='GET':
         params += [{'name':'page','in':'query','schema':{'type':'integer','minimum':0,'default':0}}, {'name':'size','in':'query','schema':{'type':'integer','minimum':1,'maximum':100,'default':25}}]
     if path in ['/api/permissions','/api/permissions/tree'] and verb=='GET':
@@ -212,7 +234,7 @@ for (verb,path),value in sorted(operations.items(),key=lambda item:(item[0][1],i
     paths.setdefault(path,{})[verb.lower()]=op
     inventory.append(f'| {verb} | `{path}` | {title}：{purpose} | {body or "—"} | {status} | {access} | [{runtime["controller"]}.{runtime["method"]}](../../{source}) |')
 
-spec={'openapi':'3.0.3','info':{'title':'Cdwy 统一权限管理系统 · RBAC1 增强','version':'2026.11.18','description':'当前实现56个HTTP操作；RBAC1核心双实现、三表导入与无登录会话JWT。课程接口为示例。'},
+spec={'openapi':'3.0.3','info':{'title':'Cdwy 统一权限管理系统 · RBAC1 增强','version':'2026.11.18','description':f'当前实现{len(actual)}个HTTP操作；RBAC1核心双实现、课程项目管理系统接入（统一身份、审计）、三表导入与无登录会话JWT。'},
       'servers':[{'url':'http://127.0.0.1:18081'}],'paths':paths,
       'components':{'securitySchemes':{'bearerAuth':{'type':'http','scheme':'bearer','bearerFormat':'JWT'}},'schemas':schemas}}
 
@@ -249,13 +271,14 @@ definitions={
     'SYS_ROLE':('角色','业务权限集合；enabled控制是否计入有效权限。'),
     'BIZ_SYSTEM':('应用','应用目录；停用影响该应用所有权限和资源。'),
     'SYS_PERMISSION':('前端权限','仅MENU/BUTTON；parent_id菜单树，code全局唯一。'),
-    'API_RESOURCE':('API资源','应用+方法+路径组合唯一；与菜单、按钮不是同一实体。'),
+    'API_RESOURCE':('API资源','应用+方法+路径组合唯一；code为可选后端权限码（接入应用方法级授权）；与菜单、按钮不是同一实体。'),
     'SYS_USER_ROLE':('用户角色关联','用户与角色M:N，组合唯一。'),
     'SYS_ROLE_PERMISSION':('角色权限关联','角色与前端权限M:N，组合唯一。'),
     'PERMISSION_API':('权限API关联','前端权限与API资源M:N；两端应用一致由Service校验。'),
+    'SYS_AUDIT_LOG':('审计日志（技术表）','接入应用写入的关键操作与本系统角色继承变更；不进入核心ER，无外键，操作人与应用以快照保存，(system_code, request_id) 幂等。'),
 }
-dictionary=['# 数据库设计（当前11表模型）','',
-    '概念层是6类核心对象；物理层是11张持久化表。`sys_account`为用户凭证技术拆表，另外4张表达用户角色、角色权限、权限API和角色继承关联。JWT不持久化，无登录会话表。', '',
+dictionary=['# 数据库设计（当前12表模型）','',
+    '概念层是6类核心对象；物理层是11张业务表加1张审计日志技术表。`sys_account`为用户凭证技术拆表，另外4张表达用户角色、角色权限、权限API和角色继承关联；`sys_audit_log`只记录接入应用与角色继承变更的审计，不进入核心ER。JWT不持久化，无登录会话表。', '',
     '## 实体与物理映射','',
     '| 表 | 概念／职责 | 说明 |','|---|---|---|']
 for table in schema:
@@ -302,24 +325,24 @@ assert set(visual['diagrams'])=={item['name'] for item in diagrams}
 evidence={'generatedAt':datetime.now(timezone.utc).isoformat(), 'sourceRevision':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),
           'branch':subprocess.check_output(['git','branch','--show-current'],cwd=ROOT,text=True).strip(), 'includesWorkingTreeChanges':True, 'repository':'https://github.com/yyyjjjj949/ooad',
           'sourceFiles':len(list(SRC.rglob('*.java'))),
-          'springServices':sorted(service_classes),'serviceCount':len(service_classes),'activeServiceCountPerMode':len(service_classes)-11,'backendStrategies':['structured','ddd'],'dualBusinessModules':10,'dualAlgorithmPorts':1,'sharedTechnicalServices':2,'jpaEntities':sorted(entity_classes),
+          'springServices':sorted(service_classes),'serviceCount':len(service_classes),'activeServiceCountPerMode':len(service_classes)-12,'backendStrategies':['structured','ddd'],'dualBusinessModules':11,'dualAlgorithmPorts':1,'sharedTechnicalServices':3,'jpaEntities':sorted(entity_classes),
           'conceptualEntityCount':6,'persistentTableCount':len(schema),'foreignKeyCount':14,'httpOperationCount':len(actual),
           'tests':test_counts,'jacoco':coverage,
           'frontendBuild':'vue-tsc --noEmit && vite build: passed',
           'uiVerification':'../design/phase-two/ui-verification.json', 'browserCheckCount':sum(entry['checks'] for entry in dual_ui.values()),'browserChecksByMode':dual_ui, 'browserScenarioCount':6, 'navigationVerification':'../design/phase-two/navigation-verification.json','importVerification':'../design/phase-two/import-verification.json', 'diagramVerification':'../design/diagram-validation.json',
           'diagramVisualInspection':visual, 'diagramCount':len(diagrams),
-          'mysqlValidation':'isolated H2 MySQL-mode structural comparison only; real MySQL not run',
+          'mysqlValidation':'H2 MySQL-mode structural comparison in tests; additionally applied to a local MySQL 8.4 container and started both strategies with ddl-auto=validate (2026-11-18); production server not yet deployed',
           'companyDataReadOnlyCheck':'../design/phase-two/full-dual-company-readonly.json','serverDeploymentValidated':False,'oldDatabaseMigration':False}
 assert evidence['tests']['tests']>=81 and evidence['tests']['failures']==0 and evidence['tests']['errors']==0
-assert len(service_classes)==24 and len(schema)==11 and len(actual)==56
+assert len(service_classes)==27 and len(schema)==12 and len(actual)==61
 write('verification.json',json.dumps(evidence,ensure_ascii=False,indent=2))
 summary=['# 验证记录','',
     f'- 后端：`mvn verify`，{evidence["tests"]["tests"]}个后端验收及领域测试，失败0、错误0、跳过{evidence["tests"]["skipped"]}。',
     '- 前端：vue-tsc和Vite生产构建通过，静态资源位于`src/main/resources/static/ui`。',
     f'- 浏览器：两种模式各3组真实Edge场景，共{evidence["browserCheckCount"]}项检查；包含连续后退/前进、继承与撤回、三表预览确认及设置员工密码，无未捕获JavaScript异常。[业务记录](../design/phase-two/ui-verification.json)、[导航记录](../design/phase-two/navigation-verification.json)。',
     f'- 图：{len(diagrams)}张图同时生成PNG/SVG；完成自动布局检查及[PNG目视复核](../design/phase-two/visual-review.json)。',
-    '- 数据库：11张持久化表，14外键；MySQL脚本的隔离兼容结构测试通过，未连接真实MySQL或服务器。',
-    '- OpenAPI：56个操作与Spring MVC实际路由逐项集合对比，内部引用完整。', '',
+    f'- 数据库：{len(schema)}张持久化表（11张业务表+1张审计日志技术表），14外键；MySQL脚本的隔离兼容结构测试通过，并在本地 MySQL 8.4 容器执行后以 validate 启动两种模式；尚未部署到服务器。',
+    f'- OpenAPI：{len(actual)}个操作与Spring MVC实际路由逐项集合对比，内部引用完整。', '',
     '| JaCoCo类型 | 已覆盖 | 未覆盖 | 比例 |','|---|---:|---:|---:|']
 for metric in ['line','branch','instruction','method','class']:
     row=coverage[metric];summary.append(f'| {metric} | {row["covered"]} | {row["missed"]} | {row["percent"]}% |')
