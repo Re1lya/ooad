@@ -140,7 +140,7 @@ async function unlink(junior: number) {
         <span><i class="hot"></i>{{ role?.name ?? '选中角色' }}的继承链</span>
         <span><i class="dim"></i>经过停用角色</span>
       </div>
-      <div v-if="loose.length" class="loose" aria-label="未参与继承的角色">
+      <div v-if="loose.length" class="loose" role="group" aria-label="未参与继承的角色">
         <span class="mute">未参与继承</span>
         <button
           v-for="r in loose"

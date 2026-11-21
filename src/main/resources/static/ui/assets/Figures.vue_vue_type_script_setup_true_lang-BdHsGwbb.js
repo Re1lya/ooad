@@ -1,1 +1,0 @@
-import{d as l,c as s,F as o,r as c,j as a,f as r,t as n,n as i}from"./index-BX16n-Qh.js";const u={class:"figures"},m=l({__name:"Figures",props:{items:{}},setup(t){return(p,_)=>(a(),s("div",u,[(a(!0),s(o,null,c(t.items,e=>(a(),s("div",{key:e.label},[r("b",{class:i({r:e.red})},n(e.value),3),r("span",null,n(e.label),1)]))),128))]))}});export{m as _};
