@@ -118,9 +118,15 @@ class CompanyImportTests {
         db.queryForObject(
             "select count(*) from sys_user where display_name='测试甲' and enabled=true",
             Integer.class));
-    assertEquals(5, db.queryForObject("select count(*) from sys_role", Integer.class));
-    assertEquals(0, db.queryForObject("select count(*) from permission_api", Integer.class));
-    assertEquals(0, db.queryForObject("select count(*) from sys_user_role", Integer.class));
+    assertEquals(5, db.queryForObject("select count(*) from sys_role where code <> 'rbac-admin'", Integer.class));
+    assertEquals(0, db.queryForObject(
+            "select count(*) from permission_api pa join api_resource r on r.id = pa.resource_id"
+                + " join biz_system s on s.id = r.system_id where s.code <> 'rbac'",
+            Integer.class));
+    assertEquals(0, db.queryForObject(
+            "select count(*) from sys_user_role ur join sys_role r on r.id = ur.role_id"
+                + " where r.code <> 'rbac-admin'",
+            Integer.class));
     assertEquals(
         1,
         db.queryForObject(

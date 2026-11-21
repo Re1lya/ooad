@@ -31,6 +31,11 @@ public class JpaAssignmentAdapter implements AssignmentRepository {
         .toList();
   }
 
+  /** 单个用户的直接角色，按用户索引查询。 */
+  public List<Long> rolesOf(Long userId) {
+    return users.findAllByUser_Id(userId).stream().map(e -> e.getRole().getId()).toList();
+  }
+
   /** 全部角色到权限关系快照。 */
   public List<Link> rolePermissions() {
     return roles.findAll(org.springframework.data.domain.Sort.by("id")).stream()

@@ -11,7 +11,11 @@ public final class ResourceDtos {
       @NotBlank @Pattern(regexp = "GET|POST|PUT|PATCH|DELETE") String method,
       @NotBlank @Size(max = 255) String path,
       @Pattern(regexp = "[A-Za-z][A-Za-z0-9_:.-]{0,63}", message = "须以字母开头，只含字母、数字和 _:.-")
-          String code) {}
+          String code,
+      @Pattern(
+              regexp = "[A-Za-z_][A-Za-z0-9_.-]{0,127}",
+              message = "须以字母或下划线开头，只含字母、数字和 _.-")
+          String operationId) {}
 
   public record Update(@NotBlank @Size(max = 128) String name) {}
 
@@ -22,5 +26,6 @@ public final class ResourceDtos {
       String method,
       String path,
       boolean active,
-      String code) {}
+      String code,
+      String operationId) {}
 }

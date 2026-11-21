@@ -6,6 +6,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface PermissionRepository extends JpaRepository<Permission, Long> {
   boolean existsByCode(String code);
 
+  java.util.Optional<Permission> findByCode(String code);
+
   boolean existsByParent_Id(Long parentId);
 
   boolean existsBySystem_Id(Long systemId);

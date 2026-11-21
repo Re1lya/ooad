@@ -6,10 +6,12 @@
 CREATE TABLE sys_department (
     id BIGINT NOT NULL AUTO_INCREMENT,
     name VARCHAR(128) NOT NULL,
+    code VARCHAR(64) NULL,
     parent_id BIGINT NULL,
     manager_name VARCHAR(128) NULL,
     PRIMARY KEY (id),
-    CONSTRAINT uk_department_name UNIQUE (name),
+    CONSTRAINT uk_department_sibling UNIQUE (parent_id,name),
+    CONSTRAINT uk_department_code UNIQUE (code),
     CONSTRAINT fk_department_parent FOREIGN KEY (parent_id) REFERENCES sys_department(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_as_cs;
 
@@ -81,11 +83,13 @@ CREATE TABLE api_resource (
     system_id BIGINT NOT NULL,
     name VARCHAR(128) NOT NULL,
     code VARCHAR(64) NULL,
+    operation_id VARCHAR(128) NULL,
     method VARCHAR(8) NOT NULL,
     path VARCHAR(255) NOT NULL,
     active BIT(1) NOT NULL DEFAULT 1,
     PRIMARY KEY (id),
     CONSTRAINT uk_api_route UNIQUE (system_id,method,path),
+    CONSTRAINT uk_api_operation UNIQUE (system_id,operation_id),
     CONSTRAINT fk_resource_system FOREIGN KEY (system_id) REFERENCES biz_system(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_as_cs;
 

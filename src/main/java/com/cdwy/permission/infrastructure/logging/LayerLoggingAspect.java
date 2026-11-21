@@ -1,8 +1,6 @@
 package com.cdwy.permission.infrastructure.logging;
 
-import java.util.Arrays;
 import java.util.Locale;
-import java.util.stream.Collectors;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -42,7 +40,11 @@ public class LayerLoggingAspect {
     // 基础设施适配器与每个请求都会触发的令牌校验只在 DEBUG 输出，INFO 保留业务调用链。
     boolean infrastructure = "Infrastructure".equals(layer) || PER_REQUEST.contains(method);
     if (infrastructure ? !log.isDebugEnabled() : !log.isInfoEnabled()) return joinPoint.proceed();
-    String args = arguments(method, joinPoint.getArgs());
+    String[] names =
+        joinPoint.getSignature() instanceof org.aspectj.lang.reflect.MethodSignature signature
+            ? signature.getParameterNames()
+            : null;
+    String args = arguments(method, names, joinPoint.getArgs());
     long started = System.nanoTime();
     try {
       Object result = joinPoint.proceed();
@@ -73,13 +75,30 @@ public class LayerLoggingAspect {
     return "Infrastructure";
   }
 
-  /** 只输出不敏感的简单参数；密码、登录、令牌相关方法完全隐藏参数。 */
-  static String arguments(String method, Object[] values) {
+  /**
+   * 只输出不敏感的简单参数：密码、登录、令牌相关方法完全隐藏参数；其他方法中参数名含 password、secret、token、credential
+   * 的参数单独打码（例如启动管理员的初始密码）。
+   */
+  static String arguments(String method, String[] names, Object[] values) {
     String lower = method.toLowerCase(Locale.ROOT);
     for (String sensitive : SENSITIVE_METHODS)
       if (lower.contains(sensitive)) return values.length == 0 ? "" : "***";
-    return Arrays.stream(values).map(LayerLoggingAspect::describe).collect(Collectors.joining(", "));
+    java.util.List<String> parts = new java.util.ArrayList<>();
+    for (int i = 0; i < values.length; i++)
+      parts.add(
+          names != null && i < names.length && sensitiveName(names[i])
+              ? "***"
+              : describe(values[i]));
+    return String.join(", ", parts);
   }
+
+  private static boolean sensitiveName(String name) {
+    String lower = name.toLowerCase(Locale.ROOT);
+    return SENSITIVE_PARAMETERS.stream().anyMatch(lower::contains);
+  }
+
+  private static final java.util.List<String> SENSITIVE_PARAMETERS =
+      java.util.List.of("password", "secret", "token", "credential");
 
   private static final java.util.List<String> SENSITIVE_METHODS =
       java.util.List.of(

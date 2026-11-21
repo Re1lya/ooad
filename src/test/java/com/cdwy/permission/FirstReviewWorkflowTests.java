@@ -260,8 +260,14 @@ class FirstReviewWorkflowTests {
   void duplicateAssignmentsAreIdempotentAndGrantUnionSurvivesOneRoleRevocation() throws Exception {
     grant();
     grant();
-    assertEquals(1, db.queryForObject("select count(*) from sys_user_role", Integer.class));
-    assertEquals(1, db.queryForObject("select count(*) from permission_api", Integer.class));
+    assertEquals(
+        1,
+        db.queryForObject(
+            "select count(*) from sys_user_role where user_id = ?", Integer.class, user));
+    assertEquals(
+        1,
+        db.queryForObject(
+            "select count(*) from permission_api where resource_id = ?", Integer.class, resource));
     long second = create("/api/roles", Map.of("code", "assistant", "name", "助教"));
     call("PUT", "/api/users/" + user + "/roles/" + second, admin, null, 204);
     call("PUT", "/api/roles/" + second + "/permissions/" + button, admin, null, 204);

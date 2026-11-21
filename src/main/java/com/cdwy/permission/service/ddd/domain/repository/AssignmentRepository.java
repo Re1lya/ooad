@@ -11,6 +11,9 @@ public interface AssignmentRepository {
   /** 读取或保存领域状态；数据库异常由适配器翻译。 */
   List<Link> userRoles();
 
+  /** 某个用户直接分配的角色标识；按用户查询，不加载全部用户的分配关系。 */
+  List<Long> rolesOf(Long userId);
+
   /** 读取或保存领域状态；数据库异常由适配器翻译。 */
   List<Link> rolePermissions();
 

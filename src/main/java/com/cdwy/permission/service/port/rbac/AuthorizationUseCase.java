@@ -30,6 +30,9 @@ public interface AuthorizationUseCase extends BackendUseCase {
   /** 执行已校验输入对应的业务用例。 */
   List<PermissionData.Tree> menu(Long id);
 
+  /** 用户在指定应用内的有效菜单树（控制台导航按应用 rbac 生成）；应用不存在返回 404。 */
+  List<PermissionData.Tree> menu(Long id, String systemCode);
+
   /** 执行已校验输入对应的业务用例。 */
   List<HierarchyData.PermissionOrigin> origins(Long id);
 

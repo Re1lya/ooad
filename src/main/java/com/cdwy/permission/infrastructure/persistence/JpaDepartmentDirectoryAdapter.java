@@ -64,4 +64,22 @@ public class JpaDepartmentDirectoryAdapter implements DepartmentDirectory {
   public boolean hasChildren(Long id) {
     return data.existsByParent_Id(id);
   }
+
+  /** 数据库分页，按编码排序。 */
+  public com.cdwy.permission.service.port.data.UserData.Page<DepartmentNode> level(
+      Long parentId, String keyword, int page, int size) {
+    org.springframework.data.domain.Page<Department> rows =
+        data.level(
+            parentId,
+            com.cdwy.permission.repository.LikePattern.of(keyword),
+            org.springframework.data.domain.PageRequest.of(
+                page, size, org.springframework.data.domain.Sort.by("code", "id")));
+    return new com.cdwy.permission.service.port.data.UserData.Page<>(
+        rows.map(this::model).getContent(), rows.getTotalElements(), page, size);
+  }
+
+  /** 一次查询判断一页部门是否有子部门。 */
+  public java.util.Set<Long> withChildren(java.util.Collection<Long> ids) {
+    return ids.isEmpty() ? java.util.Set.of() : new java.util.HashSet<>(data.parentsAmong(ids));
+  }
 }

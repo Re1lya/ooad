@@ -10,15 +10,30 @@ class LayerLoggingTests {
   @Test
   @DisplayName("NFR-11 令牌、登录与密码相关参数一律打码，普通标识照常输出")
   void sensitiveArgumentsAreMasked() {
-    assertEquals("***", LayerLoggingAspect.arguments("verify", new Object[] {"Bearer a.b.c"}));
-    assertEquals("***", LayerLoggingAspect.arguments("login", new Object[] {"admin", "secret"}));
+    assertEquals("***", LayerLoggingAspect.arguments("verify", null, new Object[] {"Bearer a.b.c"}));
+    assertEquals("***", LayerLoggingAspect.arguments("login", null, new Object[] {"admin", "secret"}));
     assertEquals(
         "***",
-        LayerLoggingAspect.arguments("lookup", new Object[] {"eyJhbGciOiJI.eyJzdWIiOiIx.sig"}));
-    assertEquals("***", LayerLoggingAspect.arguments("list", new Object[] {"bearer xyz"}));
+        LayerLoggingAspect.arguments("lookup", null, new Object[] {"eyJhbGciOiJI.eyJzdWIiOiIx.sig"}));
+    assertEquals("***", LayerLoggingAspect.arguments("list", null, new Object[] {"bearer xyz"}));
     assertEquals(
-        "\"cpm\", 3, true", LayerLoggingAspect.arguments("current", new Object[] {"cpm", 3L, true}));
-    assertEquals("Object", LayerLoggingAspect.arguments("create", new Object[] {new Object()}));
+        "\"cpm\", 3, true", LayerLoggingAspect.arguments("current", null, new Object[] {"cpm", 3L, true}));
+    assertEquals("Object", LayerLoggingAspect.arguments("create", null, new Object[] {new Object()}));
+  }
+
+  @Test
+  @DisplayName("NFR-11 方法名不敏感时，参数名含 password、secret、token、credential 的参数单独打码")
+  void sensitiveParameterNamesAreMasked() {
+    assertEquals(
+        "\"admin\", ***",
+        LayerLoggingAspect.arguments(
+            "initialize", new String[] {"username", "password"}, new Object[] {"admin", "x"}));
+    assertEquals(
+        "***, 7",
+        LayerLoggingAspect.arguments(
+            "rotate", new String[] {"clientSecret", "days"}, new Object[] {"s", 7}));
+    assertEquals(
+        "\"a\"", LayerLoggingAspect.arguments("find", new String[] {}, new Object[] {"a"}));
   }
 
   @Test

@@ -9,7 +9,35 @@ public final class IdentityMapping {
   private IdentityMapping() {}
 
   public static IdentityDtos.Current view(IdentityData.Current v) {
-    return new IdentityDtos.Current(v.subject(), v.roles(), v.permissions());
+    return new IdentityDtos.Current(v.subject(), v.roles(), v.permissions(), v.name(), v.no());
+  }
+
+  public static IdentityDtos.Page<IdentityDtos.Department> departments(
+      IdentityData.Page<IdentityData.Department> v) {
+    return new IdentityDtos.Page<>(
+        v.page(),
+        v.pageSize(),
+        v.total(),
+        v.items().stream()
+            .map(
+                d ->
+                    new IdentityDtos.Department(
+                        d.id(), d.code(), d.name(), d.parentId(), d.hasChildren()))
+            .toList());
+  }
+
+  public static IdentityDtos.Page<IdentityDtos.DepartmentUser> departmentUsers(
+      IdentityData.Page<IdentityData.DepartmentUser> v) {
+    return new IdentityDtos.Page<>(
+        v.page(),
+        v.pageSize(),
+        v.total(),
+        v.items().stream()
+            .map(
+                u ->
+                    new IdentityDtos.DepartmentUser(
+                        u.userId(), u.no(), u.name(), u.departmentId(), u.departmentName()))
+            .toList());
   }
 
   public static IdentityDtos.User view(IdentityData.User v) {

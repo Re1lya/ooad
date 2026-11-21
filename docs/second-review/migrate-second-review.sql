@@ -25,3 +25,15 @@ CREATE TABLE sys_audit_log (
   PRIMARY KEY (id),
   CONSTRAINT uk_audit_request UNIQUE (system_code,request_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_as_cs;
+
+-- 3) 统一身份接口：部门编码（对外提供，全局唯一）；部门名称改为同一上级下唯一（各分公司都有“综合办公室”“财务部”等同名部门）。
+--    既有部门按 D + 四位标识补编码。MySQL 的唯一键允许多个 NULL，根部门同名由应用层拒绝。
+ALTER TABLE sys_department ADD COLUMN code VARCHAR(64) NULL AFTER name;
+UPDATE sys_department SET code = CONCAT('D', LPAD(id, 4, '0')) WHERE code IS NULL;
+ALTER TABLE sys_department DROP INDEX uk_department_name;
+ALTER TABLE sys_department ADD CONSTRAINT uk_department_sibling UNIQUE (parent_id,name);
+ALTER TABLE sys_department ADD CONSTRAINT uk_department_code UNIQUE (code);
+
+-- 4) API 资源可登记接入应用 OpenAPI 的 operationId（同一应用内唯一），供“能否调用指定接口”的查询。
+ALTER TABLE api_resource ADD COLUMN operation_id VARCHAR(128) NULL AFTER code;
+ALTER TABLE api_resource ADD CONSTRAINT uk_api_operation UNIQUE (system_id,operation_id);

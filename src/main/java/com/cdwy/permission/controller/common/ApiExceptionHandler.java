@@ -17,7 +17,7 @@ public class ApiExceptionHandler {
 
   @ExceptionHandler(ResourceNotFoundException.class)
   public ResponseEntity<Map<String, String>> notFound(ResourceNotFoundException exception) {
-    return response(HttpStatus.NOT_FOUND, exception.getMessage());
+    return response(HttpStatus.NOT_FOUND, exception.code(), exception.getMessage());
   }
 
   @ExceptionHandler(org.springframework.dao.EmptyResultDataAccessException.class)
@@ -69,8 +69,18 @@ public class ApiExceptionHandler {
   }
 
   private ResponseEntity<Map<String, String>> response(HttpStatus status, String message) {
+    return response(status, status.name(), message);
+  }
+
+  /**
+   * 统一错误体 {@code {error, code, message}}：{@code code} 是机器可读的业务错误码（接入应用按它决定文案），
+   * {@code message} 可直接展示。
+   */
+  private ResponseEntity<Map<String, String>> response(
+      HttpStatus status, String code, String message) {
     Map<String, String> body = new LinkedHashMap<>();
     body.put("error", status.getReasonPhrase());
+    body.put("code", code);
     body.put("message", message);
     return ResponseEntity.status(status).body(body);
   }

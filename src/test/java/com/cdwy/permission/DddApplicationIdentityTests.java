@@ -6,13 +6,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
-/** FR-27 ~ FR-30：同一组课程系统接入验收在 DDD 模式下重跑，HTTP 契约与数据库不变。 */
+/** FR-27 ~ FR-37：同一组课程系统接入验收在 DDD 模式下重跑，HTTP 契约与数据库不变。 */
 @SpringBootTest(
     properties = {
       "spring.datasource.url=jdbc:h2:mem:ddd_application_identity_tests;DB_CLOSE_DELAY=-1",
       "permission.jwt.secret=first-review-integration-signing-secret-32-bytes",
       "permission.policy.external-max-days=7",
       "permission.policy.temporary-max-days=3",
+      "permission.cors.allowed-origins=http://course.example, http://127.0.0.1:5173",
       "app.backend-strategy=ddd"
     })
 class DddApplicationIdentityTests extends ApplicationIdentityTests {

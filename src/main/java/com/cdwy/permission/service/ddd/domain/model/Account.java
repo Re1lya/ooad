@@ -52,6 +52,11 @@ public class Account {
     }
   }
 
+  /** 退出登录：递增凭证版本，令牌不需要服务端保存。 */
+  public void logout() {
+    credentialVersion++;
+  }
+
   /** 修改密码后使旧 JWT 失效。 */
   public void resetPassword(String hash) {
     passwordHash = hash;

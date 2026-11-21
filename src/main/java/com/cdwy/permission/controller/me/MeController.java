@@ -40,11 +40,15 @@ public class MeController {
         .toList();
   }
 
+  /** 本人的有效菜单树；带 system 参数时只返回该应用的菜单，控制台导航用 system=rbac。 */
   @GetMapping("/menu")
-  public List<PermissionDtos.Tree> menu(HttpServletRequest request) {
-    return authorization.menu(CurrentUser.from(request).id()).stream()
-        .map(HttpMapping::view)
-        .toList();
+  public List<PermissionDtos.Tree> menu(
+      @RequestParam(required = false) String system, HttpServletRequest request) {
+    Long id = CurrentUser.from(request).id();
+    return (system == null ? authorization.menu(id) : authorization.menu(id, system))
+        .stream()
+            .map(HttpMapping::view)
+            .toList();
   }
 
   @PutMapping("/password")

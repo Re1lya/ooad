@@ -11,6 +11,7 @@ public class ProtectedResource {
   private Long systemId;
   private String name;
   private String code;
+  private String operationId;
   private String method;
   private String path;
   private boolean active = true;
@@ -30,9 +31,21 @@ public class ProtectedResource {
       throw new IllegalArgumentException("权限码须以字母开头，只含字母、数字和 _:.-，最长 64 位");
   }
 
+  /** operationId 可选；登记后用于“能否调用指定接口”的查询。 */
+  public void assertOperationId() {
+    if (operationId != null && !operationId.matches("[A-Za-z_][A-Za-z0-9_.-]{0,127}"))
+      throw new IllegalArgumentException("operationId 须以字母或下划线开头，只含字母、数字和 _.-，最长 128 位");
+  }
+
   /** 启用且登记了权限码的资源才向接入应用提供后端权限码（信息专家：资源自己知道是否有效）。 */
   public java.util.Optional<String> authorityCode() {
     return active && code != null ? java.util.Optional.of(code) : java.util.Optional.empty();
+  }
+
+  /** 启用且绑定的前端权限中至少有一项在用户有效权限内时才可调用（信息专家：资源知道自己是否启用）。 */
+  public boolean callableBy(
+      java.util.Set<Long> grantedPermissions, java.util.Collection<Long> boundPermissions) {
+    return active && boundPermissions.stream().anyMatch(grantedPermissions::contains);
   }
 
   /** 更名不会修改既有 HTTP 资源标识。 */

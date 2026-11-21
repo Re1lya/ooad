@@ -50,7 +50,8 @@ public final class PermissionDirectory {
 
   /** 补全祖先容器，granted 仅由直接或继承授权集合决定。 */
   public List<PermissionData.Tree> tree(Collection<Long> exact) {
-    Set<Long> included = new LinkedHashSet<>();
+    // 按标识排序，导航顺序与菜单的登记顺序一致，不随授权来源的遍历顺序变化。
+    Set<Long> included = new TreeSet<>();
     for (Long id : exact) {
       Set<Long> seen = new HashSet<>();
       for (FrontendPermission n = nodes.get(id);

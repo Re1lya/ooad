@@ -30,6 +30,27 @@ public class ManagedSystem {
       throw new com.cdwy.permission.service.port.error.ConflictException("仍有授权或资源引用，请先解除关联");
   }
 
+  /**
+   * 令牌目标系统：请求声明的 systems 必须包含被调用的应用，且每一项都是已登记的应用；去重并保持顺序。
+   *
+   * @param requested 登录请求中的 systems
+   * @param target 被调用的应用编码
+   * @param known 已登记的全部应用
+   */
+  public static java.util.List<String> audience(
+      java.util.List<String> requested,
+      String target,
+      java.util.Collection<ManagedSystem> known) {
+    if (!requested.contains(target))
+      throw new IllegalArgumentException("systems 必须包含当前应用 " + target);
+    java.util.Set<String> codes = new java.util.HashSet<>();
+    known.forEach(app -> codes.add(app.getCode()));
+    java.util.List<String> distinct = requested.stream().distinct().toList();
+    for (String code : distinct)
+      if (!codes.contains(code)) throw new IllegalArgumentException("未登记的目标系统：" + code);
+    return distinct;
+  }
+
   /** CloneFactory 的布尔 get 访问器约定。 */
   public boolean getEnabled() {
     return enabled;

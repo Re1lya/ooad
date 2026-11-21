@@ -10,4 +10,6 @@ public interface RoleRepository extends JpaRepository<Role, Long> {
   java.util.List<Role> lockHierarchyRoles();
 
   boolean existsByCode(String code);
+
+  java.util.Optional<Role> findByCode(String code);
 }

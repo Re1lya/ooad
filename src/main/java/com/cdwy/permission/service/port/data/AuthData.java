@@ -15,4 +15,10 @@ public final class AuthData {
 
   /** 与 HTTP 表现及数据库技术无关的用例数据。 */
   public record Identity(Long id, boolean administrator) {}
+
+  /**
+   * 接入应用登录：{@code target} 是被调用的应用编码（统一身份基地址中的编码），{@code systems} 是请求声明的令牌目标系统，
+   * 必须包含 target，且都是已登记的应用。
+   */
+  public record AppLogin(String username, String password, java.util.List<String> systems, String target) {}
 }

@@ -15,12 +15,12 @@ public final class HttpMapping {
 
   /** HTTP 与用例数据显式转换，record 不依赖字段写入。 */
   public static DepartmentData.Input command(DepartmentDtos.Input v) {
-    return new DepartmentData.Input(v.name(), v.parentId());
+    return new DepartmentData.Input(v.name(), v.parentId(), v.code());
   }
 
   /** HTTP 与用例数据显式转换，record 不依赖字段写入。 */
   public static DepartmentDtos.View view(DepartmentData.View v) {
-    return new DepartmentDtos.View(v.id(), v.name(), v.parentId(), v.managerName());
+    return new DepartmentDtos.View(v.id(), v.name(), v.parentId(), v.managerName(), v.code());
   }
 
   /** HTTP 与用例数据显式转换，record 不依赖字段写入。 */
@@ -55,7 +55,13 @@ public final class HttpMapping {
 
   /** HTTP 与用例数据显式转换，record 不依赖字段写入。 */
   public static ResourceData.Create command(ResourceDtos.Create v) {
-    return new ResourceData.Create(v.systemId(), v.name(), v.method(), v.path(), blankToNull(v.code()));
+    return new ResourceData.Create(
+        v.systemId(),
+        v.name(),
+        v.method(),
+        v.path(),
+        blankToNull(v.code()),
+        blankToNull(v.operationId()));
   }
 
   /** HTTP 与用例数据显式转换，record 不依赖字段写入。 */
@@ -66,7 +72,7 @@ public final class HttpMapping {
   /** HTTP 与用例数据显式转换，record 不依赖字段写入。 */
   public static ResourceDtos.View view(ResourceData.View v) {
     return new ResourceDtos.View(
-        v.id(), v.systemId(), v.name(), v.method(), v.path(), v.active(), v.code());
+        v.id(), v.systemId(), v.name(), v.method(), v.path(), v.active(), v.code(), v.operationId());
   }
 
   /** HTTP 与用例数据显式转换，record 不依赖字段写入。 */

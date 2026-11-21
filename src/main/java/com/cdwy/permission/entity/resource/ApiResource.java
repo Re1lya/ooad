@@ -9,10 +9,14 @@ import jakarta.persistence.*;
 @Entity
 @Table(
     name = "api_resource",
-    uniqueConstraints =
+    uniqueConstraints = {
         @UniqueConstraint(
             name = "uk_api_route",
-            columnNames = {"system_id", "method", "path"}))
+            columnNames = {"system_id", "method", "path"}),
+        @UniqueConstraint(
+            name = "uk_api_operation",
+            columnNames = {"system_id", "operation_id"})
+    })
 public class ApiResource {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -27,6 +31,12 @@ public class ApiResource {
    */
   @Column(length = 64)
   private String code;
+
+  /** 接入应用 OpenAPI 中的 operationId，供统一身份接口按 operationId 判断能否调用；同一应用内唯一。 */
+  @lombok.Getter
+  @lombok.Setter
+  @Column(name = "operation_id", length = 128)
+  private String operationId;
 
   @Column(nullable = false, length = 8)
   private String method;

@@ -49,7 +49,8 @@ public class ApiResourceService implements ResourceUseCase {
         r.getMethod(),
         r.getPath(),
         r.getActive(),
-        r.getCode());
+        r.getCode(),
+        r.getOperationId());
   }
 
   public List<ResourceData.View> list() {
@@ -68,14 +69,21 @@ public class ApiResourceService implements ResourceUseCase {
     PathPatternParser.defaultInstance.parse(input.path());
     if (input.code() != null && !input.code().matches("[A-Za-z][A-Za-z0-9_:.-]{0,63}"))
       throw new IllegalArgumentException("权限码须以字母开头，只含字母、数字和 _:.-，最长 64 位");
+    if (input.operationId() != null
+        && !input.operationId().matches("[A-Za-z_][A-Za-z0-9_.-]{0,127}"))
+      throw new IllegalArgumentException("operationId 须以字母或下划线开头，只含字母、数字和 _.-，最长 128 位");
     if (resources.existsBySystem_IdAndMethodAndPath(input.systemId(), input.method(), input.path()))
       throw new ConflictException("API 资源已存在");
+    if (input.operationId() != null
+        && resources.existsBySystem_IdAndOperationId(input.systemId(), input.operationId()))
+      throw new ConflictException("该应用已登记相同 operationId 的接口");
     ApiResource r = new ApiResource();
     r.setSystem(systems.require(input.systemId()));
     r.setMethod(input.method());
     r.setPath(input.path());
     r.setName(input.name());
     r.setCode(input.code());
+    r.setOperationId(input.operationId());
     return view(resources.save(r));
   }
 

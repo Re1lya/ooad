@@ -42,7 +42,8 @@ public class DddResourceService implements ResourceUseCase {
         n.getMethod(),
         n.getPath(),
         n.getActive(),
-        n.getCode());
+        n.getCode(),
+        n.getOperationId());
   }
 
   /** 全部注册资源。 */
@@ -59,8 +60,10 @@ public class DddResourceService implements ResourceUseCase {
     n.setMethod(input.method());
     n.setPath(input.path());
     n.setCode(input.code());
+    n.setOperationId(input.operationId());
     n.assertPath();
     n.assertCode();
+    n.assertOperationId();
     matcher.validate(input.path());
     if (resources.all().stream()
         .anyMatch(
@@ -68,6 +71,13 @@ public class DddResourceService implements ResourceUseCase {
                 v.getSystemId().equals(input.systemId())
                     && v.getMethod().equals(input.method())
                     && v.getPath().equals(input.path()))) throw new ConflictException("API 资源已存在");
+    if (input.operationId() != null
+        && resources.all().stream()
+            .anyMatch(
+                v ->
+                    v.getSystemId().equals(input.systemId())
+                        && input.operationId().equals(v.getOperationId())))
+      throw new ConflictException("该应用已登记相同 operationId 的接口");
     systems.find(input.systemId()).orElseThrow(() -> new ResourceNotFoundException("对象不存在"));
     return view(resources.save(n));
   }

@@ -11,6 +11,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 /** 三张原始 Excel 的预览与确认入口；统一 API 拦截器要求管理员。 */
 @RestController
+@com.cdwy.permission.config.BusinessAccess(com.cdwy.permission.service.auth.ConsoleCatalog.SYSTEM)
 @RequiredArgsConstructor
 @RequestMapping("/api/imports/company")
 public class CompanyImportController {

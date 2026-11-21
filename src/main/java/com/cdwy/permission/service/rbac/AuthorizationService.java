@@ -42,6 +42,7 @@ public class AuthorizationService implements AuthorizationUseCase {
   private final UserService users;
   private final RoleService roles;
   private final PermissionService permissions;
+  private final com.cdwy.permission.repository.system.BusinessSystemRepository systems;
 
   public AuthorizationService(
       RoleHierarchyService hierarchy,
@@ -51,7 +52,9 @@ public class AuthorizationService implements AuthorizationUseCase {
       ApiResourceRepository resources,
       UserService users,
       RoleService roles,
-      PermissionService permissions) {
+      PermissionService permissions,
+      com.cdwy.permission.repository.system.BusinessSystemRepository systems) {
+    this.systems = systems;
     this.hierarchy = hierarchy;
     this.userRoles = userRoles;
     this.rolePermissions = rolePermissions;
@@ -177,6 +180,18 @@ public class AuthorizationService implements AuthorizationUseCase {
 
   public List<PermissionData.Tree> menu(Long id) {
     return PermissionService.tree(effective(id));
+  }
+
+  /** 步骤：应用存在 → 有效权限中只保留该应用的 → 组成菜单树。 */
+  public List<PermissionData.Tree> menu(Long id, String systemCode) {
+    com.cdwy.permission.entity.system.BusinessSystem app =
+        systems
+            .findByCode(systemCode)
+            .orElseThrow(() -> new ResourceNotFoundException("SYSTEM_NOT_FOUND", "接入应用不存在"));
+    return PermissionService.tree(
+        effective(id).stream()
+            .filter(p -> p.getSystem().getId().equals(app.getId()))
+            .toList());
   }
 
   public void requireApi(Long userId, String systemCode, String method, String path) {

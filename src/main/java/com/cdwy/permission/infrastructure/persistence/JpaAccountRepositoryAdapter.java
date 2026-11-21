@@ -84,6 +84,19 @@ public class JpaAccountRepositoryAdapter implements AccountRepository {
         values.map(this::model).getContent(), values.getTotalElements(), page, size);
   }
 
+  /** 部门成员数据库分页。 */
+  public com.cdwy.permission.service.port.data.UserData.Page<Account> members(
+      Long departmentId, String keyword, int page, int size) {
+    org.springframework.data.domain.Page<UserAccount> rows =
+        data.members(
+            departmentId,
+            com.cdwy.permission.repository.LikePattern.of(keyword),
+            org.springframework.data.domain.PageRequest.of(
+                page, size, org.springframework.data.domain.Sort.by("username")));
+    return new com.cdwy.permission.service.port.data.UserData.Page<>(
+        rows.map(this::model).getContent(), rows.getTotalElements(), page, size);
+  }
+
   /** 部门删除的反向引用检查。 */
   public boolean inDepartment(Long id) {
     return data.existsByDepartment_Id(id);

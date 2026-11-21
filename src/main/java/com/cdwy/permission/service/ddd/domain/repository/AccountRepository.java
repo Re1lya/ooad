@@ -28,4 +28,8 @@ public interface AccountRepository {
 
   /** 读取或保存领域状态；数据库异常由适配器翻译。 */
   boolean inDepartment(Long id);
+
+  /** 部门下的账号，关键字匹配登录名或姓名；页码从 0 开始，按登录名排序，数据库分页。 */
+  com.cdwy.permission.service.port.data.UserData.Page<Account> members(
+      Long departmentId, String keyword, int page, int size);
 }

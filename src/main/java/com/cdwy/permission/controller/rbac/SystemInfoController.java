@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*;
 
 /** 实际装载模式与业务覆盖清单。 */
 @RestController
+@com.cdwy.permission.config.BusinessAccess(com.cdwy.permission.service.auth.ConsoleCatalog.SYSTEM)
 @RequiredArgsConstructor
 public class SystemInfoController {
   private final RoleGraphUseCase graph;

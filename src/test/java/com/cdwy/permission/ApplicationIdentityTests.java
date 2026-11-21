@@ -22,29 +22,34 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * 课程管理系统接入验收（FR-27 ~ FR-30、NFR-11）：课程系统把 IDENTITY_BASE_URL 指向
- * /api/apps/cpm，按既有契约调用 /auth/me、/identity/users/{userId}、/auth/audit-logs。
+ * 课程管理系统接入验收（FR-27 ~ FR-37、NFR-11）：课程系统把统一身份基地址指向
+ * /api/apps/course-project-management，按其契约（Apifox“统一身份鉴权”目录与课程系统客户端 record）调用 /auth/... 接口。
  *
- * <p>测试数据：cpm 应用下“课程管理”菜单 MCO 绑定 API 权限码 CV，“审核课程”按钮 MCOR 绑定 CR；
- * 角色 course-admin 继承 teacher，用户 lin 只分配 course-admin。
+ * <p>测试数据：应用 course-project-management 下菜单 MCO 绑定 API 权限码 CV，按钮 MCOR 绑定 CR，按钮 MTEC（添加教师）绑定统一身份目录的三个接口；
+ * 角色 course-admin 继承 teacher，用户 lin 只分配 course-admin。部门：总公司（HQ）下有工程管理部与综合办公室，道路工程分公司（RD）下也有综合办公室。
+ *
+ * <p>响应字段按课程系统客户端 record 逐个断言：多一个或少一个字段都会失败。
  */
 @SpringBootTest(
     properties = {
       "spring.datasource.url=jdbc:h2:mem:application_identity_tests;DB_CLOSE_DELAY=-1",
       "permission.jwt.secret=first-review-integration-signing-secret-32-bytes",
       "permission.policy.external-max-days=7",
-      "permission.policy.temporary-max-days=3"
+      "permission.policy.temporary-max-days=3",
+      "permission.cors.allowed-origins=http://course.example, http://127.0.0.1:5173"
     })
 @AutoConfigureMockMvc
 @ExtendWith(OutputCaptureExtension.class)
 class ApplicationIdentityTests {
   static final String PASSWORD = "Review-2026!";
+  static final String CPM = "course-project-management";
+  static final String BASE = "/api/apps/" + CPM;
   @Autowired MockMvc mvc;
   @Autowired JsonMapper json;
   @Autowired JdbcTemplate db;
   @Autowired AdminBootstrapService bootstrap;
   String admin, teacher, outsider;
-  long lin, cpm, other, teacherRole, adminRole, menu, button, otherMenu;
+  long lin, cpm, other, teacherRole, adminRole, menu, button, addTeacher, otherMenu, hq, rd;
 
   @BeforeEach
   void fixture() throws Exception {
@@ -66,116 +71,429 @@ class ApplicationIdentityTests {
     db.execute("SET REFERENTIAL_INTEGRITY TRUE");
     bootstrap.initialize("admin", PASSWORD);
     admin = login("admin", PASSWORD);
-    lin = create("/api/users", Map.of("username", "lin", "displayName", "林老师", "password", PASSWORD));
-    create("/api/users", Map.of("username", "zhou", "displayName", "周同学", "password", PASSWORD));
-    teacher = login("lin", PASSWORD);
-    outsider = login("zhou", PASSWORD);
-    cpm = create("/api/systems", Map.of("code", "cpm", "name", "课程项目管理系统"));
+    hq = create("/api/departments", Map.of("name", "总公司", "code", "HQ"));
+    long engineering = create("/api/departments", Map.of("name", "工程管理部", "parentId", hq, "code", "HQ-ENG"));
+    create("/api/departments", Map.of("name", "综合办公室", "parentId", hq, "code", "HQ-OFF"));
+    rd = create("/api/departments", Map.of("name", "道路工程分公司", "code", "RD"));
+    long roadOffice = create("/api/departments", Map.of("name", "综合办公室", "parentId", rd, "code", "RD-OFF"));
+    lin =
+        create(
+            "/api/users",
+            Map.of(
+                "username", "SG000001", "displayName", "林思远", "password", PASSWORD,
+                "departmentId", engineering));
+    create(
+        "/api/users",
+        Map.of(
+            "username", "SG000191", "displayName", "周雨桐", "password", PASSWORD, "departmentId",
+            roadOffice));
+    cpm = create("/api/systems", Map.of("code", CPM, "name", "课程项目管理"));
     other = create("/api/systems", Map.of("code", "oa", "name", "办公系统"));
     teacherRole = create("/api/roles", Map.of("code", "teacher", "name", "教师"));
     adminRole = create("/api/roles", Map.of("code", "course-admin", "name", "课程管理员"));
-    menu =
-        create(
-            "/api/permissions",
-            Map.of("systemId", cpm, "code", "MCO", "name", "课程管理", "type", "MENU"));
-    button =
-        create(
-            "/api/permissions",
-            Map.of(
-                "systemId", cpm, "code", "MCOR", "name", "审核课程", "type", "BUTTON", "parentId",
-                menu));
+    menu = permission("MCO", "课程管理", "MENU", null);
+    button = permission("MCOR", "审核课程", "BUTTON", menu);
+    addTeacher = permission("MTEC", "添加教师", "BUTTON", menu);
     otherMenu =
         create(
             "/api/permissions",
             Map.of("systemId", other, "code", "OA-HOME", "name", "办公首页", "type", "MENU"));
-    long viewApi =
-        create(
-            "/api/resources",
-            Map.of(
-                "systemId", cpm, "name", "查看课程", "method", "GET", "path", "/courses", "code",
-                "CV"));
-    long reviewApi =
-        create(
-            "/api/resources",
-            Map.of(
-                "systemId",
-                cpm,
-                "name",
-                "审核课程",
-                "method",
-                "PUT",
-                "path",
-                "/courses/{id}/review",
-                "code",
-                "CR"));
-    call("PUT", "/api/permissions/" + menu + "/resources/" + viewApi, admin, null, 204);
-    call("PUT", "/api/permissions/" + button + "/resources/" + reviewApi, admin, null, 204);
+    long viewApi = resource("管理员课程列表", "GET", "/admin/courses", "CV", "listAdminCourses");
+    long reviewApi = resource("审核课程", "POST", "/courses/{courseId}/review", "CR", "reviewCourse");
+    bind(menu, viewApi);
+    bind(button, reviewApi);
+    bind(addTeacher, resource("部门列表", "GET", "/auth/departments", null, "listIdentityDepartments"));
+    bind(
+        addTeacher,
+        resource(
+            "部门用户",
+            "GET",
+            "/auth/departments/{departmentId}/users",
+            null,
+            "listIdentityDepartmentUsers"));
+    bind(addTeacher, resource("查询统一身份用户", "GET", "/auth/users/{userId}", "UL", "lookupIdentityUser"));
     call("PUT", "/api/roles/" + teacherRole + "/permissions/" + menu, admin, null, 204);
     call("PUT", "/api/roles/" + teacherRole + "/permissions/" + otherMenu, admin, null, 204);
     call("PUT", "/api/roles/" + adminRole + "/permissions/" + button, admin, null, 204);
+    call("PUT", "/api/roles/" + adminRole + "/permissions/" + addTeacher, admin, null, 204);
     call("PUT", "/api/roles/" + adminRole + "/inherits/" + teacherRole, admin, null, 204);
     call("PUT", "/api/users/" + lin + "/roles/" + adminRole, admin, null, 204);
+    teacher = appLogin("SG000001", List.of(CPM));
+    outsider = appLogin("SG000191", List.of(CPM));
+  }
+
+  // ---------- 登录、令牌目标系统、退出 ----------
+
+  @Test
+  @DisplayName("FR-31 登录不需要令牌，响应只有 accessToken、tokenType、expiresIn")
+  void FR31_loginReturnsTokenContract() throws Exception {
+    JsonNode token =
+        result(
+            call(
+                "POST",
+                BASE + "/auth/login",
+                null,
+                Map.of("username", "SG000001", "password", PASSWORD, "systems", List.of(CPM)),
+                200));
+    assertEquals(Set.of("accessToken", "tokenType", "expiresIn"), fields(token));
+    assertEquals("Bearer", token.get("tokenType").asString());
+    assertTrue(token.get("expiresIn").asLong() > 0);
+    assertEquals(3, token.get("accessToken").asString().split("\\.").length);
   }
 
   @Test
-  @DisplayName("FR-27 /auth/me 返回继承得到的角色、菜单按钮码与绑定的 API 权限码")
+  @DisplayName("FR-31 密码错误 401 UNAUTHORIZED；systems 缺当前应用、含未登记应用、为空或请求多出字段都 400")
+  void FR31_loginRejectsBadCredentialsAndSystems() throws Exception {
+    JsonNode wrong =
+        result(
+            call(
+                "POST",
+                BASE + "/auth/login",
+                null,
+                Map.of("username", "SG000001", "password", "wrong", "systems", List.of(CPM)),
+                401));
+    assertEquals("UNAUTHORIZED", wrong.get("code").asString());
+    assertFalse(wrong.get("message").asString().isBlank());
+    JsonNode missing =
+        result(
+            call(
+                "POST",
+                BASE + "/auth/login",
+                null,
+                Map.of("username", "SG000001", "password", PASSWORD, "systems", List.of("oa")),
+                400));
+    assertEquals("BAD_REQUEST", missing.get("code").asString());
+    call(
+        "POST",
+        BASE + "/auth/login",
+        null,
+        Map.of("username", "SG000001", "password", PASSWORD, "systems", List.of(CPM, "nowhere")),
+        400);
+    call(
+        "POST",
+        BASE + "/auth/login",
+        null,
+        Map.of("username", "SG000001", "password", PASSWORD, "systems", List.of()),
+        400);
+    call(
+        "POST",
+        BASE + "/auth/login",
+        null,
+        Map.of("username", "SG000001", "password", PASSWORD, "systems", List.of(CPM), "extra", 1),
+        400);
+  }
+
+  @Test
+  @DisplayName("FR-31 令牌只能用于 aud 中的系统：课程令牌不能调控制台，控制台令牌不能调课程身份接口")
+  void FR31_tokenAudienceIsEnforced() throws Exception {
+    call("GET", "/api/me", teacher, null, 401);
+    call("GET", BASE + "/auth/me", login("SG000001", PASSWORD), null, 401);
+    call("GET", "/api/apps/oa/auth/me", teacher, null, 401);
+    String both = appLogin("SG000001", List.of(CPM, "oa"));
+    assertEquals(
+        Set.of("OA-HOME"),
+        texts(result(call("GET", "/api/apps/oa/auth/me", both, null, 200)).get("permissions")));
+    call("GET", BASE + "/auth/me", both, null, 200);
+  }
+
+  @Test
+  @DisplayName("FR-32 退出登录后同一令牌立即失效，重新登录可以继续使用")
+  void FR32_logoutInvalidatesIssuedTokens() throws Exception {
+    MvcResult out = call("POST", BASE + "/auth/logout", teacher, null, 204);
+    assertEquals(0, out.getResponse().getContentLength());
+    call("GET", BASE + "/auth/me", teacher, null, 401);
+    call("POST", BASE + "/auth/logout", null, null, 401);
+    String again = appLogin("SG000001", List.of(CPM));
+    call("GET", BASE + "/auth/me", again, null, 200);
+  }
+
+  // ---------- 当前用户 ----------
+
+  @Test
+  @DisplayName("FR-27 /auth/me 返回 subject、继承得到的角色、菜单按钮码与绑定的 API 权限码、姓名和工号")
   void FR27_currentIdentityIncludesInheritedRolesAndCodes() throws Exception {
-    JsonNode me = result(call("GET", "/api/apps/cpm/auth/me", teacher, null, 200));
-    assertEquals("lin", me.get("subject").asString());
+    JsonNode me = result(call("GET", BASE + "/auth/me", teacher, null, 200));
+    assertEquals(Set.of("subject", "roles", "permissions", "name", "no"), fields(me));
+    assertEquals("SG000001", me.get("subject").asString());
+    assertEquals("SG000001", me.get("no").asString());
+    assertEquals("林思远", me.get("name").asString());
     assertEquals(Set.of("course-admin", "teacher"), texts(me.get("roles")));
-    assertEquals(Set.of("MCO", "MCOR", "CV", "CR"), texts(me.get("permissions")));
+    assertEquals(Set.of("MCO", "MCOR", "MTEC", "CV", "CR", "UL"), texts(me.get("permissions")));
   }
 
   @Test
-  @DisplayName("FR-27 解除继承后同一 Token 的下一次 /auth/me 立即失去继承权限")
+  @DisplayName("FR-27 解除继承后同一令牌的下一次 /auth/me 立即失去继承权限")
   void FR27_inheritanceChangeIsVisibleOnNextCall() throws Exception {
     call("DELETE", "/api/roles/" + adminRole + "/inherits/" + teacherRole, admin, null, 204);
-    JsonNode me = result(call("GET", "/api/apps/cpm/auth/me", teacher, null, 200));
+    JsonNode me = result(call("GET", BASE + "/auth/me", teacher, null, 200));
     assertEquals(Set.of("course-admin"), texts(me.get("roles")));
-    assertEquals(Set.of("MCOR", "CR"), texts(me.get("permissions")));
+    assertEquals(Set.of("MCOR", "MTEC", "CR", "UL"), texts(me.get("permissions")));
     call("PUT", "/api/roles/" + adminRole + "/inherits/" + teacherRole, admin, null, 204);
-    me = result(call("GET", "/api/apps/cpm/auth/me", teacher, null, 200));
-    assertEquals(Set.of("MCO", "MCOR", "CV", "CR"), texts(me.get("permissions")));
+    me = result(call("GET", BASE + "/auth/me", teacher, null, 200));
+    assertEquals(Set.of("MCO", "MCOR", "MTEC", "CV", "CR", "UL"), texts(me.get("permissions")));
   }
 
   @Test
   @DisplayName("FR-27 停用被继承角色阻断路径；停用 API 资源只撤回对应后端权限码")
   void FR27_disabledRoleAndResourceAreExcluded() throws Exception {
     call("PUT", "/api/roles/" + teacherRole + "/status", admin, Map.of("enabled", false), 200);
-    JsonNode me = result(call("GET", "/api/apps/cpm/auth/me", teacher, null, 200));
+    JsonNode me = result(call("GET", BASE + "/auth/me", teacher, null, 200));
     assertEquals(Set.of("course-admin"), texts(me.get("roles")));
-    assertEquals(Set.of("MCOR", "CR"), texts(me.get("permissions")));
+    assertEquals(Set.of("MCOR", "MTEC", "CR", "UL"), texts(me.get("permissions")));
     call("PUT", "/api/roles/" + teacherRole + "/status", admin, Map.of("enabled", true), 200);
-    long reviewApi = 0;
-    for (JsonNode resource : result(call("GET", "/api/resources", admin, null, 200)))
-      if ("CR".equals(resource.get("code").asString())) reviewApi = resource.get("id").asLong();
-    call("PUT", "/api/resources/" + reviewApi + "/status", admin, Map.of("active", false), 200);
-    me = result(call("GET", "/api/apps/cpm/auth/me", teacher, null, 200));
-    assertEquals(Set.of("MCO", "MCOR", "CV"), texts(me.get("permissions")));
+    call("PUT", "/api/resources/" + resourceId("CR") + "/status", admin, Map.of("active", false), 200);
+    me = result(call("GET", BASE + "/auth/me", teacher, null, 200));
+    assertEquals(Set.of("MCO", "MCOR", "MTEC", "CV", "UL"), texts(me.get("permissions")));
   }
 
   @Test
-  @DisplayName("FR-27 只返回本应用权限码；应用停用时不返回角色和权限；未知应用 404、无 Token 401")
-  void FR27_permissionsAreScopedToTheApplication() throws Exception {
-    JsonNode oa = result(call("GET", "/api/apps/oa/auth/me", teacher, null, 200));
-    assertEquals(Set.of("OA-HOME"), texts(oa.get("permissions")));
+  @DisplayName("FR-27 应用停用时不返回角色和权限；未知应用的令牌无法签发，无令牌 401")
+  void FR27_disabledApplicationAndMissingToken() throws Exception {
     call("PUT", "/api/systems/" + cpm + "/status", admin, Map.of("enabled", false), 200);
-    JsonNode me = result(call("GET", "/api/apps/cpm/auth/me", teacher, null, 200));
+    JsonNode me = result(call("GET", BASE + "/auth/me", teacher, null, 200));
     assertEquals(Set.of(), texts(me.get("permissions")));
     assertEquals(Set.of(), texts(me.get("roles")));
-    call("GET", "/api/apps/unknown/auth/me", teacher, null, 404);
-    call("GET", "/api/apps/cpm/auth/me", null, null, 401);
+    JsonNode unauthorized = result(call("GET", BASE + "/auth/me", null, null, 401));
+    assertEquals("UNAUTHORIZED", unauthorized.get("code").asString());
+    call(
+        "POST",
+        "/api/apps/unknown/auth/login",
+        null,
+        Map.of("username", "SG000001", "password", PASSWORD, "systems", List.of("unknown")),
+        400);
+  }
+
+  // ---------- 前端权限与 API 权限校验 ----------
+
+  @Test
+  @DisplayName("FR-33 校验前端菜单/按钮权限码：只返回 allowed；继承得到的菜单为真，后端 API 权限码与无关权限为假")
+  void FR33_permissionCheckCoversMenusAndButtonsOnly() throws Exception {
+    JsonNode inherited = result(call("GET", BASE + "/auth/permissions/MCO", teacher, null, 200));
+    assertEquals(Set.of("allowed"), fields(inherited));
+    assertTrue(inherited.get("allowed").asBoolean());
+    assertTrue(allowed(BASE + "/auth/permissions/MCOR", teacher));
+    assertFalse(allowed(BASE + "/auth/permissions/CV", teacher), "后端 API 权限码不是前端权限");
+    assertFalse(allowed(BASE + "/auth/permissions/OA-HOME", teacher), "其他应用的菜单");
+    assertFalse(allowed(BASE + "/auth/permissions/NOPE", teacher));
+    assertFalse(allowed(BASE + "/auth/permissions/MCO", outsider));
+    call("DELETE", "/api/roles/" + adminRole + "/inherits/" + teacherRole, admin, null, 204);
+    assertFalse(allowed(BASE + "/auth/permissions/MCO", teacher), "撤销后下一次校验立即为假");
+    call("PUT", "/api/systems/" + cpm + "/status", admin, Map.of("enabled", false), 200);
+    assertFalse(allowed(BASE + "/auth/permissions/MCOR", teacher));
   }
 
   @Test
-  @DisplayName("FR-28 按统一身份用户标识查询姓名与工号")
-  void FR28_lookupUserByIdentityId() throws Exception {
-    JsonNode user = result(call("GET", "/api/apps/cpm/identity/users/lin", teacher, null, 200));
-    assertEquals("lin", user.get("userId").asString());
-    assertEquals("lin", user.get("no").asString());
-    assertEquals("林老师", user.get("name").asString());
-    call("GET", "/api/apps/cpm/identity/users/nobody", teacher, null, 404);
+  @DisplayName("FR-34 按 operationId 判断能否调用接口：只返回 operationId 与 allowed；未登记 404 API_OPERATION_NOT_FOUND")
+  void FR34_apiPermissionByOperationId() throws Exception {
+    JsonNode check =
+        result(call("GET", BASE + "/auth/api-permissions/listAdminCourses", teacher, null, 200));
+    assertEquals(Set.of("operationId", "allowed"), fields(check));
+    assertEquals("listAdminCourses", check.get("operationId").asString());
+    assertTrue(check.get("allowed").asBoolean());
+    assertTrue(allowed(BASE + "/auth/api-permissions/reviewCourse", teacher));
+    assertFalse(allowed(BASE + "/auth/api-permissions/reviewCourse", outsider));
+    call("PUT", "/api/resources/" + resourceId("CR") + "/status", admin, Map.of("active", false), 200);
+    assertFalse(allowed(BASE + "/auth/api-permissions/reviewCourse", teacher), "停用的资源不可调用");
+    JsonNode missing =
+        result(call("GET", BASE + "/auth/api-permissions/noSuchOperation", teacher, null, 404));
+    assertEquals("API_OPERATION_NOT_FOUND", missing.get("code").asString());
+    call("PUT", "/api/systems/" + cpm + "/status", admin, Map.of("enabled", false), 200);
+    assertFalse(allowed(BASE + "/auth/api-permissions/listAdminCourses", teacher));
   }
+
+  @Test
+  @DisplayName("FR-34 operationId 在同一应用内唯一，格式不合法时拒绝")
+  void FR34_operationIdIsUniquePerApplication() throws Exception {
+    Map<String, Object> duplicate = new HashMap<>();
+    duplicate.put("systemId", cpm);
+    duplicate.put("name", "重复");
+    duplicate.put("method", "GET");
+    duplicate.put("path", "/admin/courses/again");
+    duplicate.put("operationId", "listAdminCourses");
+    call("POST", "/api/resources", admin, duplicate, 409);
+    duplicate.put("operationId", "1bad id");
+    call("POST", "/api/resources", admin, duplicate, 400);
+    duplicate.put("systemId", other);
+    duplicate.put("operationId", "listAdminCourses");
+    JsonNode created = result(call("POST", "/api/resources", admin, duplicate, 201));
+    assertEquals("listAdminCourses", created.get("operationId").asString());
+  }
+
+  // ---------- 统一身份目录 ----------
+
+  @Test
+  @DisplayName("FR-35 逐层查询部门：不传 parentId 为根部门，传入为直接子部门；字段与分页结构符合契约")
+  void FR35_departmentsAreListedLevelByLevel() throws Exception {
+    JsonNode roots = result(call("GET", BASE + "/auth/departments", teacher, null, 200));
+    assertEquals(Set.of("page", "pageSize", "total", "items"), fields(roots));
+    assertEquals(1, roots.get("page").asInt());
+    assertEquals(20, roots.get("pageSize").asInt());
+    assertEquals(2, roots.get("total").asLong());
+    JsonNode first = roots.get("items").get(0);
+    assertEquals(Set.of("id", "code", "name", "parentId", "hasChildren"), fields(first));
+    assertEquals("HQ", first.get("code").asString());
+    assertTrue(first.get("parentId").isNull());
+    assertTrue(first.get("hasChildren").asBoolean());
+
+    JsonNode children =
+        result(call("GET", BASE + "/auth/departments?parentId=" + hq, teacher, null, 200));
+    assertEquals(List.of("HQ-ENG", "HQ-OFF"), codes(children));
+    assertEquals(hq, children.get("items").get(0).get("parentId").asLong());
+    assertFalse(children.get("items").get(0).get("hasChildren").asBoolean());
+
+    JsonNode paged =
+        result(
+            call(
+                "GET", BASE + "/auth/departments?parentId=" + hq + "&page=2&pageSize=1", teacher, null, 200));
+    assertEquals(2, paged.get("total").asLong());
+    assertEquals(List.of("HQ-OFF"), codes(paged));
+    assertEquals(
+        List.of("RD"),
+        codes(result(call("GET", BASE + "/auth/departments?keyword=道路", teacher, null, 200))));
+    assertEquals(
+        List.of("HQ-ENG"),
+        codes(
+            result(
+                call("GET", BASE + "/auth/departments?parentId=" + hq + "&keyword=eng", teacher, null, 200))));
+    assertEquals(
+        List.of(),
+        codes(result(call("GET", BASE + "/auth/departments?keyword=100%25", teacher, null, 200))),
+        "通配符按字面匹配");
+  }
+
+  @Test
+  @DisplayName("FR-35 部门查询参数校验：页码、每页条数、关键字长度 400；上级部门不存在 404；没有授权 403")
+  void FR35_departmentQueryValidationAndAccess() throws Exception {
+    call("GET", BASE + "/auth/departments?page=0", teacher, null, 400);
+    call("GET", BASE + "/auth/departments?pageSize=0", teacher, null, 400);
+    call("GET", BASE + "/auth/departments?pageSize=101", teacher, null, 400);
+    call("GET", BASE + "/auth/departments?parentId=0", teacher, null, 400);
+    call("GET", BASE + "/auth/departments?keyword=" + "很".repeat(101), teacher, null, 400);
+    JsonNode missing =
+        result(call("GET", BASE + "/auth/departments?parentId=999999", teacher, null, 404));
+    assertEquals("DEPARTMENT_NOT_FOUND", missing.get("code").asString());
+    JsonNode forbidden = result(call("GET", BASE + "/auth/departments", outsider, null, 403));
+    assertEquals("FORBIDDEN", forbidden.get("code").asString());
+  }
+
+  @Test
+  @DisplayName("FR-36 部门下的用户：按工号或姓名查询，字段不含联系方式；部门不存在 404；没有授权 403")
+  void FR36_departmentUsers() throws Exception {
+    long roadOffice =
+        result(call("GET", BASE + "/auth/departments?parentId=" + rd, teacher, null, 200))
+            .get("items")
+            .get(0)
+            .get("id")
+            .asLong();
+    JsonNode page =
+        result(call("GET", BASE + "/auth/departments/" + roadOffice + "/users", teacher, null, 200));
+    assertEquals(Set.of("page", "pageSize", "total", "items"), fields(page));
+    assertEquals(1, page.get("total").asLong());
+    JsonNode user = page.get("items").get(0);
+    assertEquals(Set.of("userId", "no", "name", "departmentId", "departmentName"), fields(user));
+    assertEquals("SG000191", user.get("userId").asString());
+    assertEquals("SG000191", user.get("no").asString());
+    assertEquals("周雨桐", user.get("name").asString());
+    assertEquals(roadOffice, user.get("departmentId").asLong());
+    assertEquals("综合办公室", user.get("departmentName").asString());
+    assertEquals(
+        1,
+        result(
+                call(
+                    "GET",
+                    BASE + "/auth/departments/" + roadOffice + "/users?keyword=雨桐",
+                    teacher,
+                    null,
+                    200))
+            .get("total")
+            .asLong());
+    assertEquals(
+        0,
+        result(
+                call(
+                    "GET",
+                    BASE + "/auth/departments/" + roadOffice + "/users?keyword=SG0000",
+                    teacher,
+                    null,
+                    200))
+            .get("total")
+            .asLong());
+    JsonNode missing =
+        result(call("GET", BASE + "/auth/departments/999999/users", teacher, null, 404));
+    assertEquals("DEPARTMENT_NOT_FOUND", missing.get("code").asString());
+    call("GET", BASE + "/auth/departments/" + roadOffice + "/users", outsider, null, 403);
+  }
+
+  @Test
+  @DisplayName("FR-28 按统一身份用户标识查询姓名与工号；不存在 404 IDENTITY_USER_NOT_FOUND；旧路径已删除")
+  void FR28_lookupUserByIdentityId() throws Exception {
+    JsonNode user = result(call("GET", BASE + "/auth/users/SG000191", teacher, null, 200));
+    assertEquals(Set.of("userId", "no", "name"), fields(user));
+    assertEquals("SG000191", user.get("userId").asString());
+    assertEquals("SG000191", user.get("no").asString());
+    assertEquals("周雨桐", user.get("name").asString());
+    JsonNode missing = result(call("GET", BASE + "/auth/users/nobody", teacher, null, 404));
+    assertEquals("IDENTITY_USER_NOT_FOUND", missing.get("code").asString());
+    call("GET", BASE + "/auth/users/SG000001", outsider, null, 403);
+    call("GET", BASE + "/identity/users/SG000191", teacher, null, 404);
+  }
+
+  @Test
+  @DisplayName("FR-35 部门名称同一上级下唯一、编码全局唯一；未填编码时自动编码")
+  void FR35_departmentNamesAreUniquePerParentAndCodesAreUnique() throws Exception {
+    call("POST", "/api/departments", admin, Map.of("name", "综合办公室", "parentId", hq), 409);
+    call("POST", "/api/departments", admin, Map.of("name", "新部门", "code", "HQ"), 409);
+    call("POST", "/api/departments", admin, Map.of("name", "新部门", "code", "-bad"), 400);
+    JsonNode created =
+        result(call("POST", "/api/departments", admin, Map.of("name", "新部门", "parentId", rd), 201));
+    assertEquals(String.format("D%04d", created.get("id").asLong()), created.get("code").asString());
+    long id = created.get("id").asLong();
+    JsonNode renamed =
+        result(
+            call(
+                "PUT", "/api/departments/" + id, admin, Map.of("name", "养护部", "parentId", rd), 200));
+    assertEquals(created.get("code").asString(), renamed.get("code").asString(), "修改时保留原编码");
+    call(
+        "PUT",
+        "/api/departments/" + id,
+        admin,
+        Map.of("name", "综合办公室", "parentId", rd),
+        409);
+  }
+
+  // ---------- 跨域 ----------
+
+  @Test
+  @DisplayName("FR-37 浏览器直连接口按配置放行课程前端来源：预检允许 Authorization 与 GET，未配置的来源被拒绝")
+  void FR37_corsAllowsConfiguredOrigins() throws Exception {
+    mvc.perform(
+            options(BASE + "/auth/permissions/MCO")
+                .header("Origin", "http://course.example")
+                .header("Access-Control-Request-Method", "GET")
+                .header("Access-Control-Request-Headers", "authorization"))
+        .andExpect(status().isOk())
+        .andExpect(header().string("Access-Control-Allow-Origin", "http://course.example"))
+        .andExpect(header().string("Access-Control-Allow-Headers", org.hamcrest.Matchers.containsStringIgnoringCase("authorization")))
+        .andExpect(header().string("Access-Control-Allow-Methods", org.hamcrest.Matchers.containsString("GET")));
+    mvc.perform(
+            get(BASE + "/auth/permissions/MCO")
+                .header("Origin", "http://course.example")
+                .header("Authorization", "Bearer " + teacher))
+        .andExpect(status().isOk())
+        .andExpect(header().string("Access-Control-Allow-Origin", "http://course.example"));
+    mvc.perform(
+            options(BASE + "/auth/departments")
+                .header("Origin", "http://evil.example")
+                .header("Access-Control-Request-Method", "GET"))
+        .andExpect(status().isForbidden());
+    mvc.perform(
+            options("/api/users")
+                .header("Origin", "http://course.example")
+                .header("Access-Control-Request-Method", "GET"))
+        .andExpect(header().doesNotExist("Access-Control-Allow-Origin"));
+  }
+
+  // ---------- 审计 ----------
 
   @Test
   @DisplayName("FR-29 审计写入按 requestId 幂等，查询按应用隔离并保留操作人快照")
@@ -189,33 +507,32 @@ class ApplicationIdentityTests {
             "target", "导入学生名单",
             "before", Map.of("imported", 0),
             "after", Map.of("imported", 30));
-    JsonNode first = result(call("POST", "/api/apps/cpm/auth/audit-logs", teacher, body, 201));
-    JsonNode again = result(call("POST", "/api/apps/cpm/auth/audit-logs", teacher, body, 201));
+    JsonNode first = result(call("POST", BASE + "/auth/audit-logs", teacher, body, 201));
+    JsonNode again = result(call("POST", BASE + "/auth/audit-logs", teacher, body, 201));
     assertEquals(first.get("id").asLong(), again.get("id").asLong());
-    assertEquals("cpm-class-12", first.get("classId").asString());
-    assertEquals("林老师", first.get("actor").get("name").asString());
+    assertEquals("林思远", first.get("actor").get("name").asString());
     assertEquals(Set.of("course-admin"), texts(first.get("actor").get("roles")));
 
     JsonNode page =
-        result(call("GET", "/api/apps/cpm/auth/audit-logs?page=1&pageSize=100", teacher, null, 200));
+        result(call("GET", BASE + "/auth/audit-logs?page=1&pageSize=100", teacher, null, 200));
+    assertEquals(Set.of("page", "pageSize", "total", "items"), fields(page));
     assertEquals(1, page.get("total").asLong());
     assertEquals(30, page.get("items").get(0).get("after").get("imported").asInt());
+    String both = appLogin("SG000001", List.of(CPM, "oa"));
     assertEquals(
-        0, result(call("GET", "/api/apps/oa/auth/audit-logs", admin, null, 200)).get("total").asLong());
+        0, result(call("GET", "/api/apps/oa/auth/audit-logs", both, null, 200)).get("total").asLong());
     assertEquals(
         1,
-        result(call("GET", "/api/apps/cpm/auth/audit-logs?target=名单", teacher, null, 200))
+        result(call("GET", BASE + "/auth/audit-logs?target=名单", teacher, null, 200))
             .get("total")
             .asLong());
   }
 
   @Test
-  @DisplayName("FR-29 应用内没有任何有效权限的用户不能查询审计；管理员可以")
+  @DisplayName("FR-29 应用内没有任何有效权限的用户不能查询审计；请求体校验 400")
   void FR29_auditQueryRequiresPermissionInApplication() throws Exception {
-    call("GET", "/api/apps/cpm/auth/audit-logs", outsider, null, 403);
-    call("GET", "/api/apps/cpm/auth/audit-logs", admin, null, 200);
-    call("POST", "/api/apps/unknown/auth/audit-logs", teacher, Map.of("type", "X"), 404);
-    call("POST", "/api/apps/cpm/auth/audit-logs", teacher, Map.of("target", "缺少类型"), 400);
+    call("GET", BASE + "/auth/audit-logs", outsider, null, 403);
+    call("POST", BASE + "/auth/audit-logs", teacher, Map.of("target", "缺少类型"), 400);
   }
 
   @Test
@@ -229,7 +546,7 @@ class ApplicationIdentityTests {
     assertEquals("rbac-role-" + adminRole, latest.get("objectId").asString());
     assertEquals("系统管理员", latest.get("actor").get("name").asString());
     assertEquals("ROLE_INHERITANCE_ADDED", page.get("items").get(1).get("type").asString());
-    call("GET", "/api/audit-logs", teacher, null, 403);
+    call("GET", "/api/audit-logs", login("SG000001", PASSWORD), null, 403);
   }
 
   @Test
@@ -249,9 +566,64 @@ class ApplicationIdentityTests {
     assertTrue(log.contains("请求结束 GET /api/systems 状态=200"));
   }
 
+  @Test
+  @DisplayName("NFR-11 登录请求体中的密码不进入任何日志")
+  void NFR11_loginPasswordIsNeverLogged(CapturedOutput output) throws Exception {
+    appLogin("SG000001", List.of(CPM));
+    assertFalse(output.getOut().contains(PASSWORD));
+  }
+
   /** 结构化模式的服务层日志标签。 */
   String layer() {
     return "Service";
+  }
+
+  long permission(String code, String name, String type, Long parent) throws Exception {
+    Map<String, Object> body = new HashMap<>();
+    body.put("systemId", cpm);
+    body.put("code", code);
+    body.put("name", name);
+    body.put("type", type);
+    if (parent != null) body.put("parentId", parent);
+    return create("/api/permissions", body);
+  }
+
+  long resource(String name, String method, String path, String code, String operationId)
+      throws Exception {
+    Map<String, Object> body = new HashMap<>();
+    body.put("systemId", cpm);
+    body.put("name", name);
+    body.put("method", method);
+    body.put("path", path);
+    body.put("operationId", operationId);
+    if (code != null) body.put("code", code);
+    return create("/api/resources", body);
+  }
+
+  void bind(long permission, long resource) throws Exception {
+    call("PUT", "/api/permissions/" + permission + "/resources/" + resource, admin, null, 204);
+  }
+
+  long resourceId(String code) throws Exception {
+    for (JsonNode resource : result(call("GET", "/api/resources", admin, null, 200)))
+      if (code.equals(resource.get("code").asString(null))) return resource.get("id").asLong();
+    throw new AssertionError("没有权限码为 " + code + " 的资源");
+  }
+
+  boolean allowed(String path, String token) throws Exception {
+    return result(call("GET", path, token, null, 200)).get("allowed").asBoolean();
+  }
+
+  Set<String> fields(JsonNode node) {
+    Set<String> names = new TreeSet<>();
+    node.propertyNames().forEach(names::add);
+    return names;
+  }
+
+  List<String> codes(JsonNode page) {
+    List<String> values = new ArrayList<>();
+    page.get("items").forEach(item -> values.add(item.get("code").asString()));
+    return values;
   }
 
   Set<String> texts(JsonNode array) {
@@ -261,8 +633,10 @@ class ApplicationIdentityTests {
   }
 
   JsonNode result(MvcResult result) {
-    return json.readTree(
-        new String(result.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8));
+    byte[] body = result.getResponse().getContentAsByteArray();
+    return body.length == 0
+        ? json.createObjectNode()
+        : json.readTree(new String(body, StandardCharsets.UTF_8));
   }
 
   MockHttpServletRequestBuilder send(String method, String path, String token, Object body) {
@@ -283,6 +657,7 @@ class ApplicationIdentityTests {
     return result(call("POST", path, admin, input, 201)).get("id").asLong();
   }
 
+  /** 控制台登录（令牌目标系统为 rbac）。 */
   String login(String name, String password) throws Exception {
     return result(
             call(
@@ -290,6 +665,19 @@ class ApplicationIdentityTests {
                 "/api/auth/login",
                 null,
                 Map.of("username", name, "password", password),
+                200))
+        .get("accessToken")
+        .asString();
+  }
+
+  /** 接入应用登录（令牌目标系统为 systems）。 */
+  String appLogin(String name, List<String> systems) throws Exception {
+    return result(
+            call(
+                "POST",
+                BASE + "/auth/login",
+                null,
+                Map.of("username", name, "password", PASSWORD, "systems", systems),
                 200))
         .get("accessToken")
         .asString();
