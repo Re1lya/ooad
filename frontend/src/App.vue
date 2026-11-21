@@ -1,19 +1,28 @@
 <script setup lang="ts">
-import {computed,onMounted,onUnmounted,ref} from 'vue';
-import {useConsole,screens,pageInfo} from './console';
-import Icon from './components/Icon.vue';import LoginView from './components/LoginView.vue';import ResourceTable from './components/ResourceTable.vue';import EditorDialog from './components/EditorDialog.vue';import ConfirmDialog from './components/ConfirmDialog.vue';import HierarchyPanel from './components/HierarchyPanel.vue';import GrantsPanel from './components/GrantsPanel.vue';import OverviewPanel from './components/OverviewPanel.vue';import MyPermissions from './components/MyPermissions.vue';import ImportPanel from './components/ImportPanel.vue';
-const c=useConsole();const mobile=ref(false),oldPassword=ref(''),newPassword=ref(''),repeatPassword=ref('');
-const title=computed(()=>screens[c.s.page]?.title||pageInfo[c.s.page]?.[0]||'工作台');
-const caption=computed(()=>screens[c.s.page]?.caption||pageInfo[c.s.page]?.[1]);
-const groups=[{title:'工作空间',items:['overview','imports']},{title:'组织与成员',items:['users','departments']},{title:'权限与资源',items:['systems','roles','hierarchy','permissions','resources','grants']}];
-function name(key:string){return screens[key]?.title||pageInfo[key]?.[0]||key;}
-function icon(key:string){return screens[key]?.icon||pageInfo[key]?.[2]||'grid';}
-function go(key:string){mobile.value=false;void c.select(key);}
-async function changePassword(){if(newPassword.value!==repeatPassword.value){c.message('两次输入的新密码不一致',true);return;}await c.run(async()=>{await c.api('/api/me/password','PUT',{currentPassword:oldPassword.value,newPassword:newPassword.value});oldPassword.value='';newPassword.value='';repeatPassword.value='';c.logout();c.message('密码已更新，请使用新密码登录');});}
-function shortcut(event:KeyboardEvent){const tag=(event.target as HTMLElement)?.tagName;if(event.key==='/'&&!['INPUT','TEXTAREA','SELECT'].includes(tag)&&!c.s.editor&&!c.s.confirm){const input=document.querySelector<HTMLInputElement>('[aria-label="搜索当前列表"]');if(input){event.preventDefault();input.focus();}}if(event.key==='Escape')mobile.value=false;}
-function addressChange(){mobile.value=false;if(c.s.me)void c.select(location.hash.slice(1),false);}
-onMounted(()=>{if(c.s.token)void c.run(c.initialize);document.addEventListener('keydown',shortcut);window.addEventListener('popstate',addressChange);});
-onUnmounted(()=>{document.removeEventListener('keydown',shortcut);window.removeEventListener('popstate',addressChange);});
+import { watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import AppShell from '@/components/AppShell.vue';
+import ConfirmDialog from '@/components/ConfirmDialog.vue';
+import NoticeBar from '@/components/NoticeBar.vue';
+import { session } from '@/stores/session';
+import { ui } from '@/stores/ui';
+
+const route = useRoute();
+const router = useRouter();
+
+// 任何原因退出（主动退出、令牌失效）都回到登录页。
+watch(
+  () => session.token,
+  (token) => {
+    if (!token && route.name !== 'login') void router.replace({ name: 'login' });
+  },
+);
 </script>
 
-<template><LoginView v-if="!c.s.me" :c="c"/><div v-else class="app-layout"><a class="skip-link" href="#main-content">跳到主要内容</a><button v-if="mobile" class="mobile-overlay" aria-label="关闭导航" @click="mobile=false"/><aside :class="['sidebar',{open:mobile}]"><div class="brand"><span class="brand-mark"><i/><i/><i/><i/></span><span>Cdwy <small>ACCESS CONSOLE</small></span></div><div class="workspace-switch"><span class="workspace-square">C</span><div><strong>统一权限管理</strong><small>权限治理工作空间</small></div><span class="workspace-dot"/></div><nav aria-label="主导航"><template v-if="c.s.me.administrator"><div v-for="group in groups" :key="group.title" class="nav-group"><p>{{group.title}}</p><button v-for="key in group.items" :key="key" :class="{selected:c.s.page===key}" :aria-current="c.s.page===key?'page':undefined" :disabled="c.s.busy" @click="go(key)"><Icon :name="icon(key)"/><span>{{name(key)}}</span><span v-if="key==='hierarchy'" class="nav-tag">RBAC1</span><span v-if="key==='overview'&&c.s.page===key" class="nav-dot"/></button></div></template><div class="nav-group personal-nav"><p>个人空间</p><button v-for="key in ['mine','password']" :key="key" :class="{selected:c.s.page===key}" :aria-current="c.s.page===key?'page':undefined" :disabled="c.s.busy" @click="go(key)"><Icon :name="icon(key)"/><span>{{name(key)}}</span></button></div></nav><div class="sidebar-footer"><span class="sidebar-shield"><Icon name="shield"/></span><div><strong>清晰授权 · 有序访问</strong><small>Cdwy Permission System</small></div></div></aside><div class="app-workspace"><header class="topbar"><div class="breadcrumb"><button class="icon-button mobile-menu" aria-label="打开导航" @click="mobile=true"><Icon name="menu"/></button><span>权限管理</span><Icon name="chevron" :size="13"/><strong>{{title}}</strong></div><div class="account-tools"><span class="environment-label"><i/>{{c.s.me.administrator?(c.s.backendStrategy==='ddd'?'面向对象 · RBAC1':'结构化 · RBAC1'):'个人工作区'}}</span><span class="header-divider"/><span class="account-avatar">{{c.s.me.displayName?.slice(0,1)}}</span><div class="account-name"><strong>{{c.s.me.displayName}}</strong><small>{{c.s.me.username}}</small></div><button class="icon-button" aria-label="退出登录" :disabled="c.s.busy" @click="c.logout()"><Icon name="logout" :size="18"/></button></div></header><div v-if="c.s.busy" class="progress-bar" role="progressbar" aria-label="正在处理请求"/><main id="main-content" :aria-busy="c.s.busy"><div class="page-heading"><div><p class="eyebrow">{{c.s.page==='overview'?'WORKSPACE OVERVIEW':c.s.page==='hierarchy'?'ROLE HIERARCHY':c.s.page==='grants'?'ACCESS ASSIGNMENT':'PERMISSION CONSOLE'}}</p><h1>{{title}}<span v-if="screens[c.s.page]" class="heading-count">{{c.s.total}}</span></h1><p>{{caption}}</p></div><div class="heading-actions"><button :disabled="c.s.busy" @click="c.run(c.refresh)"><Icon name="refresh"/>刷新</button><button v-if="screens[c.s.page]" class="primary" :disabled="c.s.busy" @click="c.s.editing=null;c.s.editor=true"><Icon name="plus"/>新增{{screens[c.s.page].noun}}</button></div></div><ImportPanel v-if="c.s.page==='imports'" :c="c"/><OverviewPanel v-else-if="c.s.page==='overview'" :c="c"/><ResourceTable v-else-if="screens[c.s.page]" :c="c"/><HierarchyPanel v-else-if="c.s.page==='hierarchy'" :c="c"/><GrantsPanel v-else-if="c.s.page==='grants'" :c="c"/><MyPermissions v-else-if="c.s.page==='mine'" :c="c"/><section v-else-if="c.s.page==='password'" class="panel security-panel"><span class="security-icon"><Icon name="lock" :size="27"/></span><h2>更新账号密码</h2><p class="muted">修改后当前及其他已签发的旧令牌将失效，需要重新登录。</p><form @submit.prevent="changePassword"><label>当前密码<input v-model="oldPassword" type="password" autocomplete="current-password" required></label><label>新密码<input v-model="newPassword" type="password" autocomplete="new-password" required minlength="8" maxlength="72"><small>至少 8 位，大小写、数字、符号中至少包含三类。</small></label><label>确认新密码<input v-model="repeatPassword" type="password" autocomplete="new-password" required minlength="8" maxlength="72"></label><button class="primary" :disabled="c.s.busy">更新密码<Icon name="arrow"/></button></form></section><footer class="workspace-footer"><span>Cdwy / 统一权限管理系统</span><span>成员 · 角色 · 资源</span></footer></main></div><EditorDialog v-if="screens[c.s.page]" :c="c"/><ConfirmDialog :c="c"/><Transition name="toast"><div v-if="c.s.notice&&!c.s.editor" :class="['toast',c.s.failure?'error':'success']" :role="c.s.failure?'alert':'status'"><Icon :name="c.s.failure?'info':'check'"/><span>{{c.s.notice}}</span><button class="icon-button" aria-label="关闭提示" @click="c.s.notice=''"><Icon name="close" :size="15"/></button></div></Transition></div></template>
+<template>
+  <div v-if="ui.pending > 0" class="progress" role="progressbar" aria-label="正在处理请求"></div>
+  <RouterView v-if="route.meta.public" />
+  <AppShell v-else-if="session.me" />
+  <ConfirmDialog />
+  <NoticeBar />
+</template>
