@@ -12,6 +12,15 @@ public interface UserAccountRepository extends JpaRepository<UserAccount, Long> 
 
   boolean existsByDepartment_Id(Long departmentId);
 
+  /** 按登录名或姓名模糊查询；pattern 为空时不过滤；数据库分页。 */
+  @org.springframework.data.jpa.repository.Query(
+      "select u from UserAccount u where :pattern is null"
+          + " or lower(u.username) like :pattern escape '!'"
+          + " or lower(u.displayName) like :pattern escape '!'")
+  org.springframework.data.domain.Page<UserAccount> search(
+      @org.springframework.data.repository.query.Param("pattern") String pattern,
+      org.springframework.data.domain.Pageable pageable);
+
   /** 部门下的用户：pattern 来自 {@code LikePattern}，匹配登录名（工号/学号）或姓名；数据库分页。 */
   @org.springframework.data.jpa.repository.Query(
       "select u from UserAccount u where u.department.id = :departmentId"

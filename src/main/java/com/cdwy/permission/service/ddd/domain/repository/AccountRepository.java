@@ -17,8 +17,9 @@ public interface AccountRepository {
   /** 读取或保存领域状态；数据库异常由适配器翻译。 */
   List<Account> all();
 
-  /** 读取或保存领域状态；数据库异常由适配器翻译。 */
-  com.cdwy.permission.service.port.data.UserData.Page<Account> page(int page, int size);
+  /** 按登录名或姓名模糊查询，关键字为空时不过滤；页码从 0 开始，数据库分页。 */
+  com.cdwy.permission.service.port.data.UserData.Page<Account> search(
+      String keyword, int page, int size);
 
   /** 读取或保存领域状态；数据库异常由适配器翻译。 */
   Account save(Account value);

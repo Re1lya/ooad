@@ -461,6 +461,40 @@ class ApplicationIdentityTests {
         409);
   }
 
+  @Test
+  @DisplayName("FR-03 用户列表按工号或姓名在数据库层检索并分页；新建用户的所属部门随结果返回")
+  void FR03_userSearchIsPagedInDatabaseAndKeepsDepartment() throws Exception {
+    JsonNode found = result(call("GET", "/api/users?page=0&size=10&keyword=雨桐", admin, null, 200));
+    assertEquals(1, found.get("total").asLong());
+    JsonNode user = found.get("items").get(0);
+    assertEquals("SG000191", user.get("username").asString());
+    long roadOffice =
+        db.queryForObject("select id from sys_department where code = 'RD-OFF'", Long.class);
+    assertEquals(roadOffice, user.get("departmentId").asLong());
+    assertEquals(
+        2,
+        result(call("GET", "/api/users?page=0&size=10&keyword=sg000", admin, null, 200))
+            .get("total")
+            .asLong());
+    JsonNode second =
+        result(call("GET", "/api/users?page=1&size=1&keyword=sg000", admin, null, 200));
+    assertEquals(1, second.get("items").size());
+    assertEquals(
+        3, result(call("GET", "/api/users?page=0&size=10", admin, null, 200)).get("total").asLong());
+    call("GET", "/api/users?keyword=" + "很".repeat(101), admin, null, 400);
+    JsonNode created =
+        result(
+            call(
+                "POST",
+                "/api/users",
+                admin,
+                Map.of(
+                    "username", "SG000192", "displayName", "吴承泽", "password", PASSWORD,
+                    "departmentId", roadOffice),
+                201));
+    assertEquals(roadOffice, created.get("departmentId").asLong());
+  }
+
   // ---------- 跨域 ----------
 
   @Test

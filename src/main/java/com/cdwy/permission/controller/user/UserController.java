@@ -28,8 +28,12 @@ public class UserController {
 
   @GetMapping
   public PageResult<UserView> list(
-      @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "25") int size) {
-    return HttpMapping.view(service.list(page, size));
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "25") int size,
+      @RequestParam(required = false) String keyword) {
+    if (keyword != null && keyword.length() > 100)
+      throw new IllegalArgumentException("keyword 最长 100 个字符");
+    return HttpMapping.view(service.list(page, size, keyword));
   }
 
   @GetMapping("/{id}")

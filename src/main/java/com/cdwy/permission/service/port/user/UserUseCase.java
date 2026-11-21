@@ -9,7 +9,8 @@ public interface UserUseCase extends BackendUseCase {
   UserResult get(Long id);
 
   /** 执行已校验输入对应的业务用例。 */
-  UserData.Page<UserResult> list(int page, int size);
+  /** 按登录名（工号、学号）或姓名模糊查询，数据库分页；关键字为空时不过滤。 */
+  UserData.Page<UserResult> list(int page, int size, String keyword);
 
   /** 执行已校验输入对应的业务用例。 */
   UserResult create(CreateUserCommand input);

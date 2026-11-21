@@ -62,11 +62,14 @@ public class UserService implements UserUseCase {
     return UserViews.view(require(id));
   }
 
-  public UserData.Page<UserResult> list(int page, int size) {
+  /** 步骤：校验分页 → 数据库按关键字分页查询 → 转为视图。 */
+  public UserData.Page<UserResult> list(int page, int size, String keyword) {
     if (page < 0 || size < 1 || size > 100)
       throw new IllegalArgumentException("分页参数不合法，size 为 1 到 100");
     org.springframework.data.domain.Page<UserAccount> result =
-        users.findAll(PageRequest.of(page, size, Sort.by("id")));
+        users.search(
+            com.cdwy.permission.repository.LikePattern.of(keyword),
+            PageRequest.of(page, size, Sort.by("id")));
     return new UserData.Page<>(
         result.map(UserViews::view).getContent(), result.getTotalElements(), page, size);
   }

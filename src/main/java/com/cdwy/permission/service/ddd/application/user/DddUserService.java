@@ -55,11 +55,11 @@ public class DddUserService implements UserUseCase {
     return view(require(id));
   }
 
-  /** 员工列表在数据库分页。 */
-  public UserData.Page<UserResult> list(int page, int size) {
+  /** 员工列表与关键字检索都在数据库分页。 */
+  public UserData.Page<UserResult> list(int page, int size, String keyword) {
     if (page < 0 || size < 1 || size > 100)
       throw new IllegalArgumentException("分页参数不合法，size 为 1 到 100");
-    UserData.Page<Account> values = accounts.page(page, size);
+    UserData.Page<Account> values = accounts.search(keyword, page, size);
     return new UserData.Page<>(
         values.items().stream().map(this::view).toList(), values.total(), page, size);
   }

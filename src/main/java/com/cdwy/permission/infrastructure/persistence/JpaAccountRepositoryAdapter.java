@@ -74,14 +74,16 @@ public class JpaAccountRepositoryAdapter implements AccountRepository {
     return data.findByUsername(name).map(this::model);
   }
 
-  /** 数据库分页，避免全量加载员工。 */
-  public com.cdwy.permission.service.port.data.UserData.Page<Account> page(int page, int size) {
-    org.springframework.data.domain.Page<UserAccount> values =
-        data.findAll(
+  /** 关键字检索的数据库分页。 */
+  public com.cdwy.permission.service.port.data.UserData.Page<Account> search(
+      String keyword, int page, int size) {
+    org.springframework.data.domain.Page<UserAccount> rows =
+        data.search(
+            com.cdwy.permission.repository.LikePattern.of(keyword),
             org.springframework.data.domain.PageRequest.of(
                 page, size, org.springframework.data.domain.Sort.by("id")));
     return new com.cdwy.permission.service.port.data.UserData.Page<>(
-        values.map(this::model).getContent(), values.getTotalElements(), page, size);
+        rows.map(this::model).getContent(), rows.getTotalElements(), page, size);
   }
 
   /** 部门成员数据库分页。 */
