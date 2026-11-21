@@ -118,6 +118,7 @@ add('GET','/api/me/permissions','查询本人有效权限',None,array('Permissio
 add('GET','/api/me/menu','查询本人导航树',None,array('PermissionTree'),access='已登录',purpose='为直接授权节点补齐祖先导航容器；granted=false的容器不获得接口权限。')
 add('PUT','/api/me/password','修改本人密码','PasswordChange',None,204,'已登录','验证原密码，更新BCrypt摘要与凭证版本；全部旧Token失效，需重新登录。')
 
+builtin_note={plural:'权限系统自身的'+what+'不能停用或删除，返回409 CONSOLE_BUILT_IN。' for plural,what in [('systems','内置应用 rbac'),('roles','内置管理员角色 rbac-admin'),('permissions','内置菜单与按钮'),('resources','内置管理接口')]}
 for plural,label,model,create,update in [
     ('users','用户','UserView','UserCreate','UserUpdate'),
     ('departments','部门','DepartmentView','DepartmentInput','DepartmentInput'),
@@ -130,10 +131,10 @@ for plural,label,model,create,update in [
     add('GET',base,'查询'+label+'列表',None,ref('UserPage') if plural=='users' else array(model),purpose='查询'+label+'资源；用户分页，其余为当前小规模演示的完整列表。')
     add('POST',base,'创建'+label,create,ref(model),201,purpose='创建独立'+label+'记录，默认启用；不隐式创建授权关系。')
     add('PUT',base+'/{id}','编辑'+label+'资料',update,ref(model),purpose='修改资料；创建时的身份标识保持固定，enabled/active不在此DTO，夹带将返回400。')
-    add('DELETE',base+'/{id}','删除'+label,None,None,204,purpose='删除该资源；除用户会清理其用户角色关系外，关联引用需要先解除，否则409。')
+    add('DELETE',base+'/{id}','删除'+label,None,None,204,purpose='删除该资源；除用户会清理其用户角色关系外，关联引用需要先解除，否则409。'+builtin_note.get(plural,''))
     if plural!='departments':
         field='active' if plural in ['permissions','resources'] else 'enabled'
-        add('PUT',base+'/{id}/status','单独启停'+label,'Activity' if field=='active' else 'Status',ref(model),purpose='独立改变'+field+'，影响所有关联使用者；保留关系，下一次请求重新计算有效权限。')
+        add('PUT',base+'/{id}/status','单独启停'+label,'Activity' if field=='active' else 'Status',ref(model),purpose='独立改变'+field+'，影响所有关联使用者；保留关系，下一次请求重新计算有效权限。'+builtin_note.get(plural,''))
 
 add('GET','/api/users/{id}','查询单个用户',None,ref('UserView'))
 add('PUT','/api/users/{id}/password','管理员设置用户密码','SetPassword',None,204,purpose='独立凭证资源操作；更新凭证版本，使该用户全部旧Token失效。')

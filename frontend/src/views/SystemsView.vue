@@ -8,6 +8,7 @@ import PageHero from '@/components/PageHero.vue';
 import { catalog, load } from '@/stores/catalog';
 import { can } from '@/stores/session';
 import { act, ask, track } from '@/stores/ui';
+import { BUILT_IN_HINT, isBuiltInSystem } from '@/utils/builtIn';
 
 const writable = computed(() => can('rbac.systems.write'));
 onMounted(() => {
@@ -116,10 +117,18 @@ async function remove(s: System) {
           <td v-if="writable">
             <div class="acts">
               <button class="act" @click="edit(s)">编辑</button>
-              <button class="act" @click="toggle(s)">{{ s.enabled ? '停用' : '启用' }}</button>
-              <button class="act warn" :aria-label="`删除${s.name}`" @click="remove(s)">
+              <button v-if="!isBuiltInSystem(s.code) || !s.enabled" class="act" @click="toggle(s)">
+                {{ s.enabled ? '停用' : '启用' }}
+              </button>
+              <button
+                v-if="!isBuiltInSystem(s.code)"
+                class="act warn"
+                :aria-label="`删除${s.name}`"
+                @click="remove(s)"
+              >
                 删除
               </button>
+              <span v-else class="mute" :title="BUILT_IN_HINT">内置</span>
             </div>
           </td>
         </tr>

@@ -47,15 +47,32 @@ public class FrontendPermission {
     parentId = parent;
   }
 
-  /** 停用仍保留原授权关系，后续计算实时排除。 */
-  public void changeStatus(boolean value) {
+  /**
+   * 启停菜单或按钮，授权关系保留，后续计算实时排除。控制台的内置菜单与按钮不能停用，否则所有人（包括管理员）都用不了对应页面。
+   *
+   * @param value 生效为 true
+   * @param builtIn 是否为控制台的内置菜单或按钮，由应用服务按内置目录判断
+   */
+  public void changeStatus(boolean value, boolean builtIn) {
+    if (!value) assertNotBuiltIn(builtIn);
     active = value;
   }
 
-  /** 关系未解除不允许删除。 */
-  public void assertDeletable(boolean referenced) {
+  /**
+   * 删除前检查：内置菜单与按钮抛 {@code CONSOLE_BUILT_IN}；仍有下级、角色授权或 API 绑定时抛 {@code PERMISSION_IN_USE}（均 409）。
+   *
+   * @param builtIn 是否为控制台的内置菜单或按钮
+   * @param referenced 是否仍有下级、角色授权或 API 绑定
+   */
+  public void assertDeletable(boolean builtIn, boolean referenced) {
+    assertNotBuiltIn(builtIn);
     if (referenced)
       throw new com.cdwy.permission.service.port.error.ConflictException("PERMISSION_IN_USE", "仍有子节点、角色授权或 API 绑定");
+  }
+
+  private static void assertNotBuiltIn(boolean builtIn) {
+    if (builtIn)
+      throw new com.cdwy.permission.service.port.error.ConflictException("CONSOLE_BUILT_IN", "权限管理系统的内置菜单与按钮不能停用或删除");
   }
 
   /** 同一业务系统内才允许绑定前端权限和 API 资源。 */

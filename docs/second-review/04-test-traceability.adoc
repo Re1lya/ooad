@@ -19,7 +19,7 @@ mvn -B clean verify          # 同时生成 target/site/jacoco/index.html
 python3 scripts/build-test-traceability.py   # 按测试源码重新生成本文第 3 节的三张表
 ----
 
-2026-11-21 结果（本机 MySQL 8.4）：182 个测试，失败 0、错误 0、跳过 0。JaCoCo：指令 93.5%、分支 83.5%、行 93.9%、方法 91.8%（含 CloneFactory 生成代码）。
+2026-11-21 结果（本机 MySQL 8.4）：186 个测试，失败 0、错误 0、跳过 0。JaCoCo：指令 93.6%、分支 84.0%、行 94.0%、方法 92.0%（含 CloneFactory 生成代码）。
 
 == 测试约定
 
@@ -52,10 +52,10 @@ python3 scripts/build-test-traceability.py   # 按测试源码重新生成本文
 |===
 |测试类 |设计路线 |测试数
 |`ApplicationIdentityTests` / `DddApplicationIdentityTests` |结构化 + DDD |47
-|`ConsoleRbacTests` / `DddConsoleRbacTests` |结构化 + DDD |10
+|`ConsoleRbacTests` / `DddConsoleRbacTests` |结构化 + DDD |12
 |`DirectorySyncTests` / `DddDirectorySyncTests` |结构化 + DDD |20
 |`DualDesignBoundaryTests` |通用 |5
-|`ErrorCodeContractTests` / `DddErrorCodeContractTests` |结构化 + DDD |36
+|`ErrorCodeContractTests` / `DddErrorCodeContractTests` |结构化 + DDD |38
 |`FirstReviewWorkflowTests` / `DddFullWorkflowTests` |结构化 + DDD |43
 |`LayerLoggingTests` |通用 |5
 |`MySqlSchemaTests` |通用 |1
@@ -159,10 +159,12 @@ python3 scripts/build-test-traceability.py   # 按测试源码重新生成本文
 |FR-37 |浏览器跨域 |`ApplicationIdentityTests.FR37_corsAllowsConfiguredOrigins`：FR-37 浏览器直连接口按配置放行课程前端来源：预检允许 Authorization 与 GET，未配置的来源被拒绝 |结构化 + DDD
 |FR-38 |控制台内置目录 |`ConsoleRbacTests.FR38_catalogCoversEveryConsoleEndpoint`：FR-38 每个标注为 rbac 的管理接口（个人接口除外）都在内置目录中登记，且目录中没有多余接口 +
 `ConsoleRbacTests.FR38_registrationIsIdempotentAndRestoresBuiltInGrants`：FR-38 启动登记幂等：重复初始化不产生重复数据；被删掉的内置授权在下次启动时补齐 +
+`ConsoleRbacTests.FR38_startupRestoresDisabledBuiltIns`：FR-38 内置应用、管理员角色、内置菜单与管理接口被停用时管理员进不了控制台，下次启动登记恢复启用 +
 `ConsoleRbacTests.FR38_administratorSeesEveryConsoleMenu`：FR-38 管理员的导航包含全部 11 个控制台菜单，按钮挂在所属菜单下 +
 `ConsoleRbacTests.FR38_menuAndApisFollowGrants`：FR-38 菜单根据后端授权动态显示：授予后出现、页面接口放行，撤销后下一次请求立即消失并返回 403 +
 `ConsoleRbacTests.FR38_personalEndpointsAndFailClosed`：FR-38 个人接口只要求登录；没有登记访问规则的接口一律拒绝；控制台管理员也不能绕过 +
 `DirectorySyncTests.FR38_syncRequiresDirectorySyncGrant`：FR-38 员工信息同步须拥有“同步员工信息”按钮的授权 +
+`ErrorCodeContractTests.FR38_builtInConsoleObjectsCannotBeDisabledOrDeleted`：FR-38 停用或删除内置应用、内置管理员角色、内置菜单按钮与管理接口都返回 CONSOLE_BUILT_IN，重新启用仍然允许 +
 `frontend/tests/menu.test.cjs`：FR-13 FR-38 菜单根据后端授权动态显示 |浏览器（两条路线各跑一遍）、结构化 + DDD
 |NFR-01 |认证与身份边界 |`ErrorCodeContractTests.NFR01_authenticationAndAuthorizationCodes`：NFR-01 未登录或凭证错误返回 UNAUTHORIZED，普通用户调用管理接口返回 FORBIDDEN +
 `FirstReviewWorkflowTests.NFR01_badCredentialsMissingMalformedExpiredAndForgedTokensReturn401`：NFR-01 错误凭证、缺少或畸形令牌、过期或伪造令牌一律返回 401 +
@@ -214,6 +216,7 @@ python3 scripts/build-test-traceability.py   # 按测试源码重新生成本文
 |`BINDING_SYSTEM_MISMATCH` |400 |`ErrorCodeContractTests.FR12_bindingAcrossSystems`
 |`BUTTON_PARENT_REQUIRED` |400 |`ErrorCodeContractTests.FR08_permissionTreeCodes`
 |`BUTTON_PATH_NOT_ALLOWED` |400 |`ErrorCodeContractTests.FR08_permissionTreeCodes`
+|`CONSOLE_BUILT_IN` |409 |`ErrorCodeContractTests.FR38_builtInConsoleObjectsCannotBeDisabledOrDeleted`
 |`DATA_CONFLICT` |409 |`DddErrorCodeContractTests.NFR03_adapterTranslatesUniqueViolation`、`ErrorCodeContractTests.NFR03_uniqueViolationFallsBackToDataConflict`
 |`DEPARTMENT_CODE_EXISTS` |409 |`ErrorCodeContractTests.FR05_departmentCodes`
 |`DEPARTMENT_CODE_INVALID` |400 |`DddErrorCodeContractTests.FR26_domainObjectsGuardFormats`

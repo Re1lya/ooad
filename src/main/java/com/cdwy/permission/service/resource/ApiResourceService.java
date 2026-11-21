@@ -3,6 +3,7 @@ package com.cdwy.permission.service.resource;
 import com.cdwy.permission.entity.resource.ApiResource;
 import com.cdwy.permission.repository.rbac.PermissionApiRepository;
 import com.cdwy.permission.repository.resource.ApiResourceRepository;
+import com.cdwy.permission.service.auth.ConsoleCatalog;
 import com.cdwy.permission.service.port.data.*;
 import com.cdwy.permission.service.port.error.*;
 import com.cdwy.permission.service.port.resource.ResourceUseCase;
@@ -94,6 +95,7 @@ public class ApiResourceService implements ResourceUseCase {
   @Transactional
   public ResourceData.View status(Long id, boolean active) {
     ApiResource value = require(id);
+    if (!active) protectBuiltIn(value);
     value.setActive(active);
     return view(value);
   }
@@ -102,7 +104,14 @@ public class ApiResourceService implements ResourceUseCase {
   @Transactional
   public void delete(Long id) {
     ApiResource value = require(id);
+    protectBuiltIn(value);
     if (bindings.existsByResource_Id(id)) throw new ConflictException("API_RESOURCE_IN_USE", "API 资源仍绑定前端权限");
     resources.delete(value);
+  }
+
+  /** 控制台的内置管理接口：停用或删除后所有人（包括管理员）都调用不了，抛 {@code CONSOLE_BUILT_IN}（409）。 */
+  private static void protectBuiltIn(ApiResource value) {
+    if (ConsoleCatalog.isApi(value.getSystem().getCode(), value.getMethod(), value.getPath()))
+      throw new ConflictException("CONSOLE_BUILT_IN", "权限管理系统的内置管理接口不能停用或删除");
   }
 }

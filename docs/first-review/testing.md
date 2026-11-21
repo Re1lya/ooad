@@ -1,6 +1,6 @@
 # 验证记录
 
-- 后端：`mvn verify`（连接真实MySQL，每个测试事务回滚），182个后端验收、错误码契约及领域测试，失败0、错误0、跳过0。
+- 后端：`mvn verify`（连接真实MySQL，每个测试事务回滚），186个后端验收、错误码契约及领域测试，失败0、错误0、跳过0。
 - 前端：vue-tsc和Vite生产构建通过，静态资源位于`src/main/resources/static/ui`。
 - 浏览器：两种模式各3组真实Edge场景，共46项检查；包含连续后退/前进、继承与撤回、三表预览确认及设置员工密码，无未捕获JavaScript异常。[业务记录](../design/phase-two/ui-verification.json)、[导航记录](../design/phase-two/navigation-verification.json)。
 - 图：18张图同时生成PNG/SVG；完成自动布局检查及[PNG目视复核](../design/phase-two/visual-review.json)。
@@ -9,10 +9,10 @@
 
 | JaCoCo类型 | 已覆盖 | 未覆盖 | 比例 |
 |---|---:|---:|---:|
-| line | 2947 | 193 | 93.85% |
-| branch | 923 | 183 | 83.45% |
-| instruction | 16373 | 1132 | 93.53% |
-| method | 822 | 73 | 91.84% |
+| line | 3014 | 193 | 93.98% |
+| branch | 968 | 184 | 84.03% |
+| instruction | 16656 | 1135 | 93.62% |
+| method | 836 | 73 | 91.97% |
 | class | 207 | 0 | 100.0% |
 
 当前报告为本分支重新测得，不沿用归档版本的测试数量或覆盖率。统计包括注解处理器生成的CloneFactory类；不代表100%路径已覆盖。

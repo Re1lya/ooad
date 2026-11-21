@@ -9,6 +9,7 @@ import { allowed } from '@/router';
 import { catalog, load, roleName } from '@/stores/catalog';
 import { can } from '@/stores/session';
 import { act, ask, track } from '@/stores/ui';
+import { BUILT_IN_HINT, isBuiltInRole } from '@/utils/builtIn';
 import { juniorsOf } from '@/utils/graph';
 
 const keyword = ref('');
@@ -126,10 +127,18 @@ async function remove(r: Role) {
               >
               <template v-if="writable">
                 <button class="act" @click="edit(r)">编辑</button>
-                <button class="act" @click="toggle(r)">{{ r.enabled ? '停用' : '启用' }}</button>
-                <button class="act warn" :aria-label="`删除${r.name}`" @click="remove(r)">
+                <button v-if="!isBuiltInRole(r.code) || !r.enabled" class="act" @click="toggle(r)">
+                  {{ r.enabled ? '停用' : '启用' }}
+                </button>
+                <button
+                  v-if="!isBuiltInRole(r.code)"
+                  class="act warn"
+                  :aria-label="`删除${r.name}`"
+                  @click="remove(r)"
+                >
                   删除
                 </button>
+                <span v-else class="mute" :title="BUILT_IN_HINT">内置</span>
               </template>
             </div>
           </td>

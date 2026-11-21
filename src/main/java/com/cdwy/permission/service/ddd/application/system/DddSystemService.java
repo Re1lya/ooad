@@ -1,5 +1,6 @@
 package com.cdwy.permission.service.ddd.application.system;
 
+import com.cdwy.permission.service.auth.ConsoleCatalog;
 import com.cdwy.permission.service.ddd.domain.model.*;
 import com.cdwy.permission.service.ddd.domain.repository.*;
 import com.cdwy.permission.service.port.data.*;
@@ -65,7 +66,7 @@ public class DddSystemService implements SystemUseCase {
   @Transactional
   public SystemData.View status(Long id, boolean enabled) {
     ManagedSystem n = require(id);
-    n.changeStatus(enabled);
+    n.changeStatus(enabled, ConsoleCatalog.isSystem(n.getCode()));
     return view(systems.save(n));
   }
 
@@ -73,7 +74,8 @@ public class DddSystemService implements SystemUseCase {
   @Transactional
   public void delete(Long id) {
     ManagedSystem n = require(id);
-    n.assertDeletable(permissions.inSystem(id) || resources.inSystem(id));
+    n.assertDeletable(
+        ConsoleCatalog.isSystem(n.getCode()), permissions.inSystem(id) || resources.inSystem(id));
     systems.delete(id);
   }
 }

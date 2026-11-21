@@ -1,530 +1,530 @@
 [
   {
+    "path": "/api/apps/{systemCode}/auth/api-permissions/{operationId}",
+    "controller": "ApplicationIdentityController",
     "methods": [
       "GET"
     ],
-    "controller": "ApplicationIdentityController",
-    "path": "/api/apps/{systemCode}/auth/api-permissions/{operationId}",
     "method": "api"
   },
   {
+    "path": "/api/apps/{systemCode}/auth/audit-logs",
+    "controller": "ApplicationIdentityController",
     "methods": [
       "GET"
     ],
-    "controller": "ApplicationIdentityController",
-    "path": "/api/apps/{systemCode}/auth/audit-logs",
     "method": "logs"
   },
   {
+    "path": "/api/apps/{systemCode}/auth/audit-logs",
+    "controller": "ApplicationIdentityController",
     "methods": [
       "POST"
     ],
-    "controller": "ApplicationIdentityController",
-    "path": "/api/apps/{systemCode}/auth/audit-logs",
     "method": "write"
   },
   {
+    "path": "/api/apps/{systemCode}/auth/departments",
+    "controller": "ApplicationIdentityController",
     "methods": [
       "GET"
     ],
-    "controller": "ApplicationIdentityController",
-    "path": "/api/apps/{systemCode}/auth/departments",
     "method": "departments"
   },
   {
+    "path": "/api/apps/{systemCode}/auth/departments/{departmentId}/users",
+    "controller": "ApplicationIdentityController",
     "methods": [
       "GET"
     ],
-    "controller": "ApplicationIdentityController",
-    "path": "/api/apps/{systemCode}/auth/departments/{departmentId}/users",
     "method": "departmentUsers"
   },
   {
+    "path": "/api/apps/{systemCode}/auth/login",
+    "controller": "ApplicationIdentityController",
     "methods": [
       "POST"
     ],
-    "controller": "ApplicationIdentityController",
-    "path": "/api/apps/{systemCode}/auth/login",
     "method": "login"
   },
   {
+    "path": "/api/apps/{systemCode}/auth/logout",
+    "controller": "ApplicationIdentityController",
     "methods": [
       "POST"
     ],
-    "controller": "ApplicationIdentityController",
-    "path": "/api/apps/{systemCode}/auth/logout",
     "method": "logout"
   },
   {
+    "path": "/api/apps/{systemCode}/auth/me",
+    "controller": "ApplicationIdentityController",
     "methods": [
       "GET"
     ],
-    "controller": "ApplicationIdentityController",
-    "path": "/api/apps/{systemCode}/auth/me",
     "method": "me"
   },
   {
+    "path": "/api/apps/{systemCode}/auth/permissions/{permission}",
+    "controller": "ApplicationIdentityController",
     "methods": [
       "GET"
     ],
-    "controller": "ApplicationIdentityController",
-    "path": "/api/apps/{systemCode}/auth/permissions/{permission}",
     "method": "permission"
   },
   {
+    "path": "/api/apps/{systemCode}/auth/users/{userId}",
+    "controller": "ApplicationIdentityController",
     "methods": [
       "GET"
     ],
-    "controller": "ApplicationIdentityController",
-    "path": "/api/apps/{systemCode}/auth/users/{userId}",
     "method": "user"
   },
   {
+    "path": "/api/audit-logs",
+    "controller": "AuditLogController",
     "methods": [
       "GET"
     ],
-    "controller": "AuditLogController",
-    "path": "/api/audit-logs",
     "method": "list"
   },
   {
+    "path": "/api/auth/login",
+    "controller": "AuthController",
     "methods": [
       "POST"
     ],
-    "controller": "AuthController",
-    "path": "/api/auth/login",
     "method": "login"
   },
   {
+    "path": "/api/departments",
+    "controller": "DepartmentController",
     "methods": [
       "GET"
     ],
-    "controller": "DepartmentController",
-    "path": "/api/departments",
     "method": "list"
   },
   {
+    "path": "/api/departments",
+    "controller": "DepartmentController",
     "methods": [
       "POST"
     ],
-    "controller": "DepartmentController",
-    "path": "/api/departments",
     "method": "create"
   },
   {
+    "path": "/api/departments/{id}",
+    "controller": "DepartmentController",
     "methods": [
       "DELETE"
     ],
-    "controller": "DepartmentController",
-    "path": "/api/departments/{id}",
     "method": "delete"
   },
   {
+    "path": "/api/departments/{id}",
+    "controller": "DepartmentController",
     "methods": [
       "PUT"
     ],
-    "controller": "DepartmentController",
-    "path": "/api/departments/{id}",
     "method": "update"
   },
   {
+    "path": "/api/directory/sync/commit",
+    "controller": "DirectorySyncController",
     "methods": [
       "POST"
     ],
-    "controller": "DirectorySyncController",
-    "path": "/api/directory/sync/commit",
     "method": "commit"
   },
   {
+    "path": "/api/directory/sync/preview",
+    "controller": "DirectorySyncController",
     "methods": [
       "POST"
     ],
-    "controller": "DirectorySyncController",
-    "path": "/api/directory/sync/preview",
     "method": "preview"
   },
   {
+    "path": "/api/me",
+    "controller": "MeController",
     "methods": [
       "GET"
     ],
-    "controller": "MeController",
-    "path": "/api/me",
     "method": "me"
   },
   {
+    "path": "/api/me/menu",
+    "controller": "MeController",
     "methods": [
       "GET"
     ],
-    "controller": "MeController",
-    "path": "/api/me/menu",
     "method": "menu"
   },
   {
+    "path": "/api/me/password",
+    "controller": "MeController",
     "methods": [
       "PUT"
     ],
-    "controller": "MeController",
-    "path": "/api/me/password",
     "method": "password"
   },
   {
+    "path": "/api/me/permission-origins",
+    "controller": "RoleHierarchyController",
     "methods": [
       "GET"
     ],
-    "controller": "RoleHierarchyController",
-    "path": "/api/me/permission-origins",
     "method": "me"
   },
   {
+    "path": "/api/me/permissions",
+    "controller": "MeController",
     "methods": [
       "GET"
     ],
-    "controller": "MeController",
-    "path": "/api/me/permissions",
     "method": "permissions"
   },
   {
+    "path": "/api/permissions",
+    "controller": "PermissionController",
     "methods": [
       "GET"
     ],
-    "controller": "PermissionController",
-    "path": "/api/permissions",
     "method": "list"
   },
   {
+    "path": "/api/permissions",
+    "controller": "PermissionController",
     "methods": [
       "POST"
     ],
-    "controller": "PermissionController",
-    "path": "/api/permissions",
     "method": "create"
   },
   {
+    "path": "/api/permissions/tree",
+    "controller": "PermissionController",
     "methods": [
       "GET"
     ],
-    "controller": "PermissionController",
-    "path": "/api/permissions/tree",
     "method": "tree"
   },
   {
+    "path": "/api/permissions/{id}",
+    "controller": "PermissionController",
     "methods": [
       "DELETE"
     ],
-    "controller": "PermissionController",
-    "path": "/api/permissions/{id}",
     "method": "delete"
   },
   {
+    "path": "/api/permissions/{id}",
+    "controller": "PermissionController",
     "methods": [
       "PUT"
     ],
-    "controller": "PermissionController",
-    "path": "/api/permissions/{id}",
     "method": "update"
   },
   {
+    "path": "/api/permissions/{id}/resources",
+    "controller": "PermissionController",
     "methods": [
       "GET"
     ],
-    "controller": "PermissionController",
-    "path": "/api/permissions/{id}/resources",
     "method": "resources"
   },
   {
+    "path": "/api/permissions/{id}/resources/{resourceId}",
+    "controller": "PermissionController",
     "methods": [
       "DELETE"
     ],
-    "controller": "PermissionController",
-    "path": "/api/permissions/{id}/resources/{resourceId}",
     "method": "unbind"
   },
   {
+    "path": "/api/permissions/{id}/resources/{resourceId}",
+    "controller": "PermissionController",
     "methods": [
       "PUT"
     ],
-    "controller": "PermissionController",
-    "path": "/api/permissions/{id}/resources/{resourceId}",
     "method": "bind"
   },
   {
+    "path": "/api/permissions/{id}/status",
+    "controller": "PermissionController",
     "methods": [
       "PUT"
     ],
-    "controller": "PermissionController",
-    "path": "/api/permissions/{id}/status",
     "method": "status"
   },
   {
+    "path": "/api/resources",
+    "controller": "ApiResourceController",
     "methods": [
       "GET"
     ],
-    "controller": "ApiResourceController",
-    "path": "/api/resources",
     "method": "list"
   },
   {
+    "path": "/api/resources",
+    "controller": "ApiResourceController",
     "methods": [
       "POST"
     ],
-    "controller": "ApiResourceController",
-    "path": "/api/resources",
     "method": "create"
   },
   {
+    "path": "/api/resources/{id}",
+    "controller": "ApiResourceController",
     "methods": [
       "DELETE"
     ],
-    "controller": "ApiResourceController",
-    "path": "/api/resources/{id}",
     "method": "delete"
   },
   {
+    "path": "/api/resources/{id}",
+    "controller": "ApiResourceController",
     "methods": [
       "PUT"
     ],
-    "controller": "ApiResourceController",
-    "path": "/api/resources/{id}",
     "method": "update"
   },
   {
+    "path": "/api/resources/{id}/status",
+    "controller": "ApiResourceController",
     "methods": [
       "PUT"
     ],
-    "controller": "ApiResourceController",
-    "path": "/api/resources/{id}/status",
     "method": "status"
   },
   {
+    "path": "/api/role-hierarchy",
+    "controller": "RoleHierarchyController",
     "methods": [
       "GET"
     ],
-    "controller": "RoleHierarchyController",
-    "path": "/api/role-hierarchy",
     "method": "edges"
   },
   {
+    "path": "/api/roles",
+    "controller": "RoleController",
     "methods": [
       "GET"
     ],
-    "controller": "RoleController",
-    "path": "/api/roles",
     "method": "list"
   },
   {
+    "path": "/api/roles",
+    "controller": "RoleController",
     "methods": [
       "POST"
     ],
-    "controller": "RoleController",
-    "path": "/api/roles",
     "method": "create"
   },
   {
+    "path": "/api/roles/{id}",
+    "controller": "RoleController",
     "methods": [
       "DELETE"
     ],
-    "controller": "RoleController",
-    "path": "/api/roles/{id}",
     "method": "delete"
   },
   {
+    "path": "/api/roles/{id}",
+    "controller": "RoleController",
     "methods": [
       "PUT"
     ],
-    "controller": "RoleController",
-    "path": "/api/roles/{id}",
     "method": "update"
   },
   {
+    "path": "/api/roles/{id}/status",
+    "controller": "RoleController",
     "methods": [
       "PUT"
     ],
-    "controller": "RoleController",
-    "path": "/api/roles/{id}/status",
     "method": "status"
   },
   {
+    "path": "/api/roles/{roleId}/effective-permissions",
+    "controller": "RoleHierarchyController",
     "methods": [
       "GET"
     ],
-    "controller": "RoleHierarchyController",
-    "path": "/api/roles/{roleId}/effective-permissions",
     "method": "role"
   },
   {
+    "path": "/api/roles/{roleId}/permissions",
+    "controller": "GrantController",
     "methods": [
       "GET"
     ],
-    "controller": "GrantController",
-    "path": "/api/roles/{roleId}/permissions",
     "method": "permissions"
   },
   {
+    "path": "/api/roles/{roleId}/permissions/{permissionId}",
+    "controller": "GrantController",
     "methods": [
       "DELETE"
     ],
-    "controller": "GrantController",
-    "path": "/api/roles/{roleId}/permissions/{permissionId}",
     "method": "revokePermission"
   },
   {
+    "path": "/api/roles/{roleId}/permissions/{permissionId}",
+    "controller": "GrantController",
     "methods": [
       "PUT"
     ],
-    "controller": "GrantController",
-    "path": "/api/roles/{roleId}/permissions/{permissionId}",
     "method": "grantPermission"
   },
   {
+    "path": "/api/roles/{seniorId}/inherits/{inheritedId}",
+    "controller": "RoleHierarchyController",
     "methods": [
       "DELETE"
     ],
-    "controller": "RoleHierarchyController",
-    "path": "/api/roles/{seniorId}/inherits/{inheritedId}",
     "method": "remove"
   },
   {
+    "path": "/api/roles/{seniorId}/inherits/{inheritedId}",
+    "controller": "RoleHierarchyController",
     "methods": [
       "PUT"
     ],
-    "controller": "RoleHierarchyController",
-    "path": "/api/roles/{seniorId}/inherits/{inheritedId}",
     "method": "inherit"
   },
   {
+    "path": "/api/system-info",
+    "controller": "SystemInfoController",
     "methods": [
       "GET"
     ],
-    "controller": "SystemInfoController",
-    "path": "/api/system-info",
     "method": "info"
   },
   {
+    "path": "/api/systems",
+    "controller": "SystemController",
     "methods": [
       "GET"
     ],
-    "controller": "SystemController",
-    "path": "/api/systems",
     "method": "list"
   },
   {
+    "path": "/api/systems",
+    "controller": "SystemController",
     "methods": [
       "POST"
     ],
-    "controller": "SystemController",
-    "path": "/api/systems",
     "method": "create"
   },
   {
+    "path": "/api/systems/{id}",
+    "controller": "SystemController",
     "methods": [
       "DELETE"
     ],
-    "controller": "SystemController",
-    "path": "/api/systems/{id}",
     "method": "delete"
   },
   {
+    "path": "/api/systems/{id}",
+    "controller": "SystemController",
     "methods": [
       "PUT"
     ],
-    "controller": "SystemController",
-    "path": "/api/systems/{id}",
     "method": "update"
   },
   {
+    "path": "/api/systems/{id}/status",
+    "controller": "SystemController",
     "methods": [
       "PUT"
     ],
-    "controller": "SystemController",
-    "path": "/api/systems/{id}/status",
     "method": "status"
   },
   {
+    "path": "/api/users",
+    "controller": "UserController",
     "methods": [
       "GET"
     ],
-    "controller": "UserController",
-    "path": "/api/users",
     "method": "list"
   },
   {
+    "path": "/api/users",
+    "controller": "UserController",
     "methods": [
       "POST"
     ],
-    "controller": "UserController",
-    "path": "/api/users",
     "method": "create"
   },
   {
+    "path": "/api/users/{id}",
+    "controller": "UserController",
     "methods": [
       "DELETE"
     ],
-    "controller": "UserController",
-    "path": "/api/users/{id}",
     "method": "delete"
   },
   {
+    "path": "/api/users/{id}",
+    "controller": "UserController",
     "methods": [
       "GET"
     ],
-    "controller": "UserController",
-    "path": "/api/users/{id}",
     "method": "get"
   },
   {
+    "path": "/api/users/{id}",
+    "controller": "UserController",
     "methods": [
       "PUT"
     ],
-    "controller": "UserController",
-    "path": "/api/users/{id}",
     "method": "update"
   },
   {
+    "path": "/api/users/{id}/password",
+    "controller": "UserController",
     "methods": [
       "PUT"
     ],
-    "controller": "UserController",
-    "path": "/api/users/{id}/password",
     "method": "password"
   },
   {
+    "path": "/api/users/{id}/status",
+    "controller": "UserController",
     "methods": [
       "PUT"
     ],
-    "controller": "UserController",
-    "path": "/api/users/{id}/status",
     "method": "status"
   },
   {
+    "path": "/api/users/{userId}/permission-origins",
+    "controller": "RoleHierarchyController",
     "methods": [
       "GET"
     ],
-    "controller": "RoleHierarchyController",
-    "path": "/api/users/{userId}/permission-origins",
     "method": "user"
   },
   {
+    "path": "/api/users/{userId}/roles",
+    "controller": "GrantController",
     "methods": [
       "GET"
     ],
-    "controller": "GrantController",
-    "path": "/api/users/{userId}/roles",
     "method": "roles"
   },
   {
+    "path": "/api/users/{userId}/roles/{roleId}",
+    "controller": "GrantController",
     "methods": [
       "DELETE"
     ],
-    "controller": "GrantController",
-    "path": "/api/users/{userId}/roles/{roleId}",
     "method": "revokeRole"
   },
   {
+    "path": "/api/users/{userId}/roles/{roleId}",
+    "controller": "GrantController",
     "methods": [
       "PUT"
     ],
-    "controller": "GrantController",
-    "path": "/api/users/{userId}/roles/{roleId}",
     "method": "grantRole"
   }
 ]

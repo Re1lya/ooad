@@ -2,6 +2,8 @@ package com.cdwy.permission.service.auth;
 
 import com.cdwy.permission.service.port.data.PermissionType;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 权限系统自身（应用 rbac）的内置授权目录：控制台每个页面一个菜单，写操作一个按钮，管理接口登记为 API 资源并绑定到菜单或按钮。
@@ -148,4 +150,32 @@ public final class ConsoleCatalog {
           api("撤销权限", "DELETE", "/api/roles/{roleId}/permissions/{permissionId}", "rbac.grants.write"),
           api("用户权限来源", "GET", "/api/users/{userId}/permission-origins", "rbac.effective", USERS),
           api("审计日志", "GET", "/api/audit-logs", "rbac.audit", "rbac.overview"));
+
+  /** 内置菜单与按钮的编码；放在 ENTRIES 之后初始化。 */
+  private static final Set<String> ENTRY_CODES =
+      ENTRIES.stream().map(Entry::code).collect(Collectors.toUnmodifiableSet());
+
+  /** 内置管理接口的“方法 路径”；放在 APIS 之后初始化。 */
+  private static final Set<String> API_KEYS =
+      APIS.stream().map(api -> api.method() + " " + api.path()).collect(Collectors.toUnmodifiableSet());
+
+  /** 是否为权限系统自身的内置应用 rbac。 */
+  public static boolean isSystem(String systemCode) {
+    return SYSTEM.equals(systemCode);
+  }
+
+  /** 是否为内置管理员角色 rbac-admin。 */
+  public static boolean isAdminRole(String roleCode) {
+    return ADMIN_ROLE.equals(roleCode);
+  }
+
+  /** 是否为控制台的内置菜单或按钮。权限编码全局唯一，内置编码只会属于 rbac 应用，所以按编码判断即可。 */
+  public static boolean isEntry(String permissionCode) {
+    return ENTRY_CODES.contains(permissionCode);
+  }
+
+  /** 是否为控制台的内置管理接口：属于 rbac 应用，且方法与路径在内置目录中（不同应用可以登记相同的方法与路径）。 */
+  public static boolean isApi(String systemCode, String method, String path) {
+    return isSystem(systemCode) && API_KEYS.contains(method + " " + path);
+  }
 }

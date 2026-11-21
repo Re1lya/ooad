@@ -384,6 +384,33 @@ class ErrorCodeContractTests {
     expectError(HttpMethod.PUT, ROLE_INHERIT_URL, admin, null, 400, "ROLE_DISABLED", senior, role);
   }
 
+  /** FR-38：权限系统自身的内置应用、管理员角色、内置菜单按钮与管理接口不能停用或删除，否则所有人（包括管理员）都会进不了控制台。 */
+  @Test
+  @DisplayName("FR-38 停用或删除内置应用、内置管理员角色、内置菜单按钮与管理接口都返回 CONSOLE_BUILT_IN，重新启用仍然允许")
+  void FR38_builtInConsoleObjectsCannotBeDisabledOrDeleted() throws Exception {
+    long console = id("select id from biz_system where code = 'rbac'");
+    long adminRole = id("select id from sys_role where code = 'rbac-admin'");
+    long usersMenu = id("select id from sys_permission where code = 'rbac.users'");
+    long usersApi =
+        id("select id from api_resource where system_id = " + console + " and method = 'GET' and path = '/api/users'");
+    expectError(HttpMethod.PUT, SYSTEM_STATUS_URL, admin, Map.of("enabled", false), 409, "CONSOLE_BUILT_IN", console);
+    expectError(HttpMethod.DELETE, SYSTEM_URL, admin, null, 409, "CONSOLE_BUILT_IN", console);
+    expectError(HttpMethod.PUT, ROLE_STATUS_URL, admin, Map.of("enabled", false), 409, "CONSOLE_BUILT_IN", adminRole);
+    expectError(HttpMethod.DELETE, ROLE_URL, admin, null, 409, "CONSOLE_BUILT_IN", adminRole);
+    expectError(
+        HttpMethod.PUT, PERMISSION_STATUS_URL, admin, Map.of("active", false), 409, "CONSOLE_BUILT_IN", usersMenu);
+    expectError(HttpMethod.DELETE, PERMISSION_URL, admin, null, 409, "CONSOLE_BUILT_IN", usersMenu);
+    expectError(
+        HttpMethod.PUT, RESOURCE_STATUS_URL, admin, Map.of("active", false), 409, "CONSOLE_BUILT_IN", usersApi);
+    expectError(HttpMethod.DELETE, RESOURCE_URL, admin, null, 409, "CONSOLE_BUILT_IN", usersApi);
+    call(HttpMethod.PUT, ROLE_STATUS_URL, admin, Map.of("enabled", true), 200, adminRole);
+    call(HttpMethod.GET, USERS_URL, admin, null, 200);
+    // 其他应用的同名接口不是内置接口，照常可以停用
+    long sameRoute =
+        create(RESOURCES_URL, Map.of("systemId", system, "name", "课程侧的用户列表", "method", "GET", "path", "/api/users"));
+    call(HttpMethod.PUT, RESOURCE_STATUS_URL, admin, Map.of("active", false), 200, sameRoute);
+  }
+
   /** FR-31：接入应用登录时，令牌目标 systems 必须包含当前应用，且每个目标都已登记。 */
   @Test
   @DisplayName("FR-31 接入应用登录：systems 不含当前应用 LOGIN_TARGET_NOT_IN_SYSTEMS，含未登记应用 LOGIN_SYSTEM_UNKNOWN")
@@ -508,6 +535,10 @@ class ErrorCodeContractTests {
   private void missing(
       List<Executable> checks, HttpMethod method, String url, Object body, String code, Object... ids) {
     checks.add(() -> expectError(method, url, admin, body, 404, code, ids));
+  }
+
+  private long id(String sql) {
+    return db.queryForObject(sql, Long.class);
   }
 
   private Map<String, Object> user(String username) {

@@ -54,13 +54,30 @@ public class ProtectedResource {
     name = value;
   }
 
-  /** 停用仍优先匹配该资源，不能借更宽泛的授权绕过。 */
-  public void changeStatus(boolean value) {
+  /**
+   * 启停 API 资源；停用后仍优先匹配该资源，不能借更宽泛的授权绕过。控制台的内置管理接口不能停用，否则所有人（包括管理员）都调用不了。
+   *
+   * @param value 生效为 true
+   * @param builtIn 是否为控制台的内置管理接口，由应用服务按内置目录判断
+   */
+  public void changeStatus(boolean value, boolean builtIn) {
+    if (!value) assertNotBuiltIn(builtIn);
     active = value;
   }
 
-  /** 前端绑定解除后才可删除。 */
-  public void assertDeletable(boolean bound) {
+  /**
+   * 删除前检查：内置管理接口抛 {@code CONSOLE_BUILT_IN}；仍绑定前端权限时抛 {@code API_RESOURCE_IN_USE}（均 409）。
+   *
+   * @param builtIn 是否为控制台的内置管理接口
+   * @param bound 是否仍绑定菜单或按钮
+   */
+  public void assertDeletable(boolean builtIn, boolean bound) {
+    assertNotBuiltIn(builtIn);
     if (bound) throw new com.cdwy.permission.service.port.error.ConflictException("API_RESOURCE_IN_USE", "API 资源仍绑定前端权限");
+  }
+
+  private static void assertNotBuiltIn(boolean builtIn) {
+    if (builtIn)
+      throw new com.cdwy.permission.service.port.error.ConflictException("CONSOLE_BUILT_IN", "权限管理系统的内置管理接口不能停用或删除");
   }
 }

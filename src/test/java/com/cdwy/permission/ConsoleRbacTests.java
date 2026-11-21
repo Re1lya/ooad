@@ -142,6 +142,31 @@ class ConsoleRbacTests {
     call("GET", USERS_URL, admin, null, 200);
   }
 
+  /**
+   * FR-38：接口已拒绝停用内置对象，但早先的数据或直接改库仍可能留下停用状态；启动登记要把它们恢复启用，管理员不会被永久锁在外面。
+   */
+  @Test
+  @DisplayName("FR-38 内置应用、管理员角色、内置菜单与管理接口被停用时管理员进不了控制台，下次启动登记恢复启用")
+  void FR38_startupRestoresDisabledBuiltIns() throws Exception {
+    db.update("update biz_system set enabled = 0 where code = 'rbac'");
+    db.update("update sys_role set enabled = 0 where code = 'rbac-admin'");
+    db.update("update sys_permission set active = 0 where code = 'rbac.users'");
+    db.update(
+        "update api_resource set active = 0 where method = 'GET' and path = '/api/users'"
+            + " and system_id = (select id from biz_system where code = 'rbac')");
+    call("GET", USERS_URL, admin, null, 403);
+    bootstrap.initialize("admin", PASSWORD);
+    call("GET", USERS_URL, admin, null, 200);
+    assertEquals(1, count("select count(*) from biz_system where code = 'rbac' and enabled = 1"));
+    assertEquals(1, count("select count(*) from sys_role where code = 'rbac-admin' and enabled = 1"));
+    assertEquals(0, count("select count(*) from sys_permission where code like 'rbac.%' and active = 0"));
+    assertEquals(
+        0,
+        count(
+            "select count(*) from api_resource r join biz_system s on s.id = r.system_id"
+                + " where s.code = 'rbac' and r.active = 0"));
+  }
+
   @Test
   @DisplayName("FR-38 管理员的导航包含全部 11 个控制台菜单，按钮挂在所属菜单下")
   void FR38_administratorSeesEveryConsoleMenu() throws Exception {

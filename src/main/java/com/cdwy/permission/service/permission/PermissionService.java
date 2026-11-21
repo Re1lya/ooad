@@ -4,6 +4,7 @@ import com.cdwy.permission.entity.permission.*;
 import com.cdwy.permission.entity.rbac.PermissionApi;
 import com.cdwy.permission.repository.permission.PermissionRepository;
 import com.cdwy.permission.repository.rbac.*;
+import com.cdwy.permission.service.auth.ConsoleCatalog;
 import com.cdwy.permission.service.port.data.*;
 import com.cdwy.permission.service.port.data.PermissionType;
 import com.cdwy.permission.service.port.error.*;
@@ -125,6 +126,7 @@ public class PermissionService implements PermissionUseCase {
   @Transactional
   public PermissionData.View status(Long id, boolean active) {
     Permission p = require(id);
+    if (!active) protectBuiltIn(p);
     p.setActive(active);
     return view(p);
   }
@@ -136,6 +138,7 @@ public class PermissionService implements PermissionUseCase {
   @Transactional
   public void delete(Long id) {
     Permission p = require(id);
+    protectBuiltIn(p);
     if (permissions.existsByParent_Id(id)
         || grants.existsByPermission_Id(id)
         || bindings.existsByPermission_Id(id)) throw new ConflictException("PERMISSION_IN_USE", "仍有子节点、角色授权或 API 绑定");
@@ -222,5 +225,11 @@ public class PermissionService implements PermissionUseCase {
         (systemId == null
             ? permissions.findAll(org.springframework.data.domain.Sort.by("id"))
             : permissions.findAllBySystem_IdOrderById(systemId)));
+  }
+
+  /** 控制台的内置菜单与按钮：停用或删除后所有人（包括管理员）都用不了对应页面，可能连恢复它的页面也打不开，抛 {@code CONSOLE_BUILT_IN}（409）。 */
+  private static void protectBuiltIn(Permission p) {
+    if (ConsoleCatalog.isEntry(p.getCode()))
+      throw new ConflictException("CONSOLE_BUILT_IN", "权限管理系统的内置菜单与按钮不能停用或删除");
   }
 }

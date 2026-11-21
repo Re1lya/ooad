@@ -1,5 +1,6 @@
 package com.cdwy.permission.service.ddd.application.permission;
 
+import com.cdwy.permission.service.auth.ConsoleCatalog;
 import com.cdwy.permission.service.ddd.domain.model.*;
 import com.cdwy.permission.service.ddd.domain.repository.*;
 import com.cdwy.permission.service.port.data.*;
@@ -102,7 +103,7 @@ public class DddPermissionService implements PermissionUseCase {
   @Transactional
   public PermissionData.View status(Long id, boolean active) {
     FrontendPermission n = require(id);
-    n.changeStatus(active);
+    n.changeStatus(active, ConsoleCatalog.isEntry(n.getCode()));
     return view(permissions.save(n));
   }
 
@@ -111,6 +112,7 @@ public class DddPermissionService implements PermissionUseCase {
   public void delete(Long id) {
     FrontendPermission n = require(id);
     n.assertDeletable(
+        ConsoleCatalog.isEntry(n.getCode()),
         permissions.hasChildren(id)
             || assignments.rolePermissions().stream().anyMatch(e -> e.right().equals(id))
             || assignments.bindings().stream().anyMatch(e -> e.left().equals(id)));

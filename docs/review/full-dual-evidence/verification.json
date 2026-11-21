@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-11-21T13:11:41.121454+00:00",
-  "sourceRevision": "f32d4faed32a7db1cae5cc19af3b0c13666ae3f3",
+  "generatedAt": "2026-11-21T13:38:35.813977+00:00",
+  "sourceRevision": "6c8a72bb63180da76f12afc3f54633cf11041392",
   "branch": "feat/second-review-integration",
   "includesWorkingTreeChanges": true,
   "repository": "https://github.com/yyyjjjj949/ooad",
@@ -62,36 +62,36 @@
   "foreignKeyCount": 14,
   "httpOperationCount": 66,
   "tests": {
-    "tests": 182,
+    "tests": 186,
     "failures": 0,
     "errors": 0,
     "skipped": 0
   },
   "jacoco": {
     "instruction": {
-      "covered": 16373,
-      "missed": 1132,
-      "percent": 93.53
+      "covered": 16656,
+      "missed": 1135,
+      "percent": 93.62
     },
     "branch": {
-      "covered": 923,
-      "missed": 183,
-      "percent": 83.45
+      "covered": 968,
+      "missed": 184,
+      "percent": 84.03
     },
     "line": {
-      "covered": 2947,
+      "covered": 3014,
       "missed": 193,
-      "percent": 93.85
+      "percent": 93.98
     },
     "complexity": {
-      "covered": 1207,
-      "missed": 241,
-      "percent": 83.36
+      "covered": 1243,
+      "missed": 242,
+      "percent": 83.7
     },
     "method": {
-      "covered": 822,
+      "covered": 836,
       "missed": 73,
-      "percent": 91.84
+      "percent": 91.97
     },
     "class": {
       "covered": 207,

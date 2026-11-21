@@ -1,5 +1,6 @@
 package com.cdwy.permission.service.ddd.application.resource;
 
+import com.cdwy.permission.service.auth.ConsoleCatalog;
 import com.cdwy.permission.service.ddd.domain.model.*;
 import com.cdwy.permission.service.ddd.domain.repository.*;
 import com.cdwy.permission.service.port.data.*;
@@ -94,7 +95,7 @@ public class DddResourceService implements ResourceUseCase {
   @Transactional
   public ResourceData.View status(Long id, boolean active) {
     ProtectedResource n = require(id);
-    n.changeStatus(active);
+    n.changeStatus(active, builtIn(n));
     return view(resources.save(n));
   }
 
@@ -102,7 +103,13 @@ public class DddResourceService implements ResourceUseCase {
   @Transactional
   public void delete(Long id) {
     ProtectedResource n = require(id);
-    n.assertDeletable(assignments.bindings().stream().anyMatch(e -> e.right().equals(id)));
+    n.assertDeletable(builtIn(n), assignments.bindings().stream().anyMatch(e -> e.right().equals(id)));
     resources.delete(id);
+  }
+
+  /** 控制台的内置管理接口：属于内置应用 rbac，且方法与路径在内置目录中。 */
+  private boolean builtIn(ProtectedResource n) {
+    String systemCode = systems.find(n.getSystemId()).map(ManagedSystem::getCode).orElse(null);
+    return ConsoleCatalog.isApi(systemCode, n.getMethod(), n.getPath());
   }
 }

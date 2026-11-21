@@ -801,391 +801,402 @@
 <span class="line" id="code-9-L4"><a href="#code-9-L4">  4</a> import com.cdwy.permission.entity.rbac.PermissionApi;</span>
 <span class="line" id="code-9-L5"><a href="#code-9-L5">  5</a> import com.cdwy.permission.repository.permission.PermissionRepository;</span>
 <span class="line" id="code-9-L6"><a href="#code-9-L6">  6</a> import com.cdwy.permission.repository.rbac.*;</span>
-<span class="line" id="code-9-L7"><a href="#code-9-L7">  7</a> import com.cdwy.permission.service.port.data.*;</span>
-<span class="line" id="code-9-L8"><a href="#code-9-L8">  8</a> import com.cdwy.permission.service.port.data.PermissionType;</span>
-<span class="line" id="code-9-L9"><a href="#code-9-L9">  9</a> import com.cdwy.permission.service.port.error.*;</span>
-<span class="line" id="code-9-L10"><a href="#code-9-L10"> 10</a> import com.cdwy.permission.service.port.permission.PermissionUseCase;</span>
-<span class="line" id="code-9-L11"><a href="#code-9-L11"> 11</a> import com.cdwy.permission.service.resource.ApiResourceService;</span>
-<span class="line" id="code-9-L12"><a href="#code-9-L12"> 12</a> import com.cdwy.permission.service.system.SystemService;</span>
-<span class="line" id="code-9-L13"><a href="#code-9-L13"> 13</a> import java.util.*;</span>
-<span class="line" id="code-9-L14"><a href="#code-9-L14"> 14</a> import lombok.RequiredArgsConstructor;</span>
-<span class="line" id="code-9-L15"><a href="#code-9-L15"> 15</a> import org.springframework.stereotype.Service;</span>
-<span class="line" id="code-9-L16"><a href="#code-9-L16"> 16</a> import org.springframework.transaction.annotation.Transactional;</span>
-<span class="line" id="code-9-L17"><a href="#code-9-L17"> 17</a> </span>
-<span class="line" id="code-9-L18"><a href="#code-9-L18"> 18</a> /** 结构化事务脚本：按查询、业务校验、写入和结果转换组织处理步骤。 */</span>
-<span class="line" id="code-9-L19"><a href="#code-9-L19"> 19</a> @Service</span>
-<span class="line" id="code-9-L20"><a href="#code-9-L20"> 20</a> @RequiredArgsConstructor</span>
-<span class="line" id="code-9-L21"><a href="#code-9-L21"> 21</a> @org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(</span>
-<span class="line" id="code-9-L22"><a href="#code-9-L22"> 22</a>     name = &quot;app.backend-strategy&quot;,</span>
-<span class="line" id="code-9-L23"><a href="#code-9-L23"> 23</a>     havingValue = &quot;structured&quot;,</span>
-<span class="line" id="code-9-L24"><a href="#code-9-L24"> 24</a>     matchIfMissing = true)</span>
-<span class="line" id="code-9-L25"><a href="#code-9-L25"> 25</a> @Transactional(readOnly = true)</span>
-<span class="line" id="code-9-L26"><a href="#code-9-L26"> 26</a> public class PermissionService implements PermissionUseCase {</span>
-<span class="line" id="code-9-L27"><a href="#code-9-L27"> 27</a>   /** 返回事务脚本实现标识。 */</span>
-<span class="line" id="code-9-L28"><a href="#code-9-L28"> 28</a>   @Override</span>
-<span class="line" id="code-9-L29"><a href="#code-9-L29"> 29</a>   public String strategy() {</span>
-<span class="line" id="code-9-L30"><a href="#code-9-L30"> 30</a>     return &quot;structured&quot;;</span>
-<span class="line" id="code-9-L31"><a href="#code-9-L31"> 31</a>   }</span>
-<span class="line" id="code-9-L32"><a href="#code-9-L32"> 32</a> </span>
-<span class="line" id="code-9-L33"><a href="#code-9-L33"> 33</a>   private final PermissionRepository permissions;</span>
-<span class="line" id="code-9-L34"><a href="#code-9-L34"> 34</a>   private final RolePermissionRepository grants;</span>
-<span class="line" id="code-9-L35"><a href="#code-9-L35"> 35</a>   private final PermissionApiRepository bindings;</span>
-<span class="line" id="code-9-L36"><a href="#code-9-L36"> 36</a>   private final SystemService systems;</span>
-<span class="line" id="code-9-L37"><a href="#code-9-L37"> 37</a>   private final ApiResourceService resources;</span>
-<span class="line" id="code-9-L38"><a href="#code-9-L38"> 38</a> </span>
-<span class="line" id="code-9-L39"><a href="#code-9-L39"> 39</a>   /** 按标识读取前端权限（菜单或按钮），不存在抛 {@code PERMISSION_NOT_FOUND}；授权服务也复用此方法。 */</span>
-<span class="line" id="code-9-L40"><a href="#code-9-L40"> 40</a>   public Permission require(Long id) {</span>
-<span class="line" id="code-9-L41"><a href="#code-9-L41"> 41</a>     return permissions.findById(id).orElseThrow(() -&gt; new ResourceNotFoundException(&quot;PERMISSION_NOT_FOUND&quot;, &quot;前端权限不存在&quot;));</span>
-<span class="line" id="code-9-L42"><a href="#code-9-L42"> 42</a>   }</span>
-<span class="line" id="code-9-L43"><a href="#code-9-L43"> 43</a> </span>
-<span class="line" id="code-9-L44"><a href="#code-9-L44"> 44</a>   /** 实体转为用例结果：类型取枚举名，根节点的 {@code parentId} 为 null；授权服务输出权限时也用它。 */</span>
-<span class="line" id="code-9-L45"><a href="#code-9-L45"> 45</a>   public static PermissionData.View view(Permission p) {</span>
-<span class="line" id="code-9-L46"><a href="#code-9-L46"> 46</a>     return new PermissionData.View(</span>
-<span class="line" id="code-9-L47"><a href="#code-9-L47"> 47</a>         p.getId(),</span>
-<span class="line" id="code-9-L48"><a href="#code-9-L48"> 48</a>         p.getSystem().getId(),</span>
-<span class="line" id="code-9-L49"><a href="#code-9-L49"> 49</a>         p.getCode(),</span>
-<span class="line" id="code-9-L50"><a href="#code-9-L50"> 50</a>         p.getName(),</span>
-<span class="line" id="code-9-L51"><a href="#code-9-L51"> 51</a>         p.getType().name(),</span>
-<span class="line" id="code-9-L52"><a href="#code-9-L52"> 52</a>         p.getMenuPath(),</span>
-<span class="line" id="code-9-L53"><a href="#code-9-L53"> 53</a>         p.getParent() == null ? null : p.getParent().getId(),</span>
-<span class="line" id="code-9-L54"><a href="#code-9-L54"> 54</a>         p.getActive());</span>
-<span class="line" id="code-9-L55"><a href="#code-9-L55"> 55</a>   }</span>
-<span class="line" id="code-9-L56"><a href="#code-9-L56"> 56</a> </span>
-<span class="line" id="code-9-L57"><a href="#code-9-L57"> 57</a>   /** 按标识顺序列出菜单与按钮，含已失效节点；{@code systemId} 为空时返回全部应用，未知应用得到空列表。 */</span>
-<span class="line" id="code-9-L58"><a href="#code-9-L58"> 58</a>   public List&lt;PermissionData.View&gt; list(Long systemId) {</span>
-<span class="line" id="code-9-L59"><a href="#code-9-L59"> 59</a>     return (systemId == null</span>
-<span class="line" id="code-9-L60"><a href="#code-9-L60"> 60</a>             ? permissions.findAll(org.springframework.data.domain.Sort.by(&quot;id&quot;))</span>
-<span class="line" id="code-9-L61"><a href="#code-9-L61"> 61</a>             : permissions.findAllBySystem_IdOrderById(systemId))</span>
-<span class="line" id="code-9-L62"><a href="#code-9-L62"> 62</a>         .stream().map(PermissionService::view).toList();</span>
-<span class="line" id="code-9-L63"><a href="#code-9-L63"> 63</a>   }</span>
-<span class="line" id="code-9-L64"><a href="#code-9-L64"> 64</a> </span>
-<span class="line" id="code-9-L65"><a href="#code-9-L65"> 65</a>   /**</span>
-<span class="line" id="code-9-L66"><a href="#code-9-L66"> 66</a>    * 新建与修改共用的结构校验，依次为：上级须存在（{@code PERMISSION_NOT_FOUND}）；按钮必须有上级</span>
-<span class="line" id="code-9-L67"><a href="#code-9-L67"> 67</a>    * （{@code BUTTON_PARENT_REQUIRED}）；上级须是同一应用的菜单（{@code PERMISSION_PARENT_INVALID}）；</span>
-<span class="line" id="code-9-L68"><a href="#code-9-L68"> 68</a>    * 沿上级链向上不能回到自身，以自身为上级也算成环（{@code PERMISSION_CYCLE}）；已有下级的菜单不能改为按钮</span>
-<span class="line" id="code-9-L69"><a href="#code-9-L69"> 69</a>    * （冲突 {@code PERMISSION_HAS_CHILDREN}）；按钮不能填菜单地址（{@code BUTTON_PATH_NOT_ALLOWED}）。</span>
-<span class="line" id="code-9-L70"><a href="#code-9-L70"> 70</a>    * 全部通过后才写入名称、类型、地址和上级，空白地址存为 null。</span>
-<span class="line" id="code-9-L71"><a href="#code-9-L71"> 71</a>    */</span>
-<span class="line" id="code-9-L72"><a href="#code-9-L72"> 72</a>   private void apply(Permission p, String name, PermissionType type, String path, Long parentId) {</span>
-<span class="line" id="code-9-L73"><a href="#code-9-L73"> 73</a>     Permission parent = parentId == null ? null : require(parentId);</span>
-<span class="line" id="code-9-L74"><a href="#code-9-L74"> 74</a>     if (type == PermissionType.BUTTON &amp;&amp; parent == null)</span>
-<span class="line" id="code-9-L75"><a href="#code-9-L75"> 75</a>       throw new InvalidDataException(&quot;BUTTON_PARENT_REQUIRED&quot;, &quot;按钮必须隶属菜单&quot;);</span>
-<span class="line" id="code-9-L76"><a href="#code-9-L76"> 76</a>     if (parent != null</span>
-<span class="line" id="code-9-L77"><a href="#code-9-L77"> 77</a>         &amp;&amp; (parent.getType() != PermissionType.MENU</span>
-<span class="line" id="code-9-L78"><a href="#code-9-L78"> 78</a>             || !parent.getSystem().getId().equals(p.getSystem().getId())))</span>
-<span class="line" id="code-9-L79"><a href="#code-9-L79"> 79</a>       throw new InvalidDataException(&quot;PERMISSION_PARENT_INVALID&quot;, &quot;父节点必须是同一应用的菜单&quot;);</span>
-<span class="line" id="code-9-L80"><a href="#code-9-L80"> 80</a>     for (Permission next = parent; next != null; next = next.getParent())</span>
-<span class="line" id="code-9-L81"><a href="#code-9-L81"> 81</a>       if (Objects.equals(next.getId(), p.getId())) throw new InvalidDataException(&quot;PERMISSION_CYCLE&quot;, &quot;权限树不能形成循环&quot;);</span>
-<span class="line" id="code-9-L82"><a href="#code-9-L82"> 82</a>     if (type == PermissionType.BUTTON</span>
-<span class="line" id="code-9-L83"><a href="#code-9-L83"> 83</a>         &amp;&amp; p.getId() != null</span>
-<span class="line" id="code-9-L84"><a href="#code-9-L84"> 84</a>         &amp;&amp; permissions.existsByParent_Id(p.getId())) throw new ConflictException(&quot;PERMISSION_HAS_CHILDREN&quot;, &quot;有子节点的菜单不能改为按钮&quot;);</span>
-<span class="line" id="code-9-L85"><a href="#code-9-L85"> 85</a>     if (type == PermissionType.BUTTON &amp;&amp; path != null &amp;&amp; !path.isBlank())</span>
-<span class="line" id="code-9-L86"><a href="#code-9-L86"> 86</a>       throw new InvalidDataException(&quot;BUTTON_PATH_NOT_ALLOWED&quot;, &quot;按钮不设置菜单地址&quot;);</span>
-<span class="line" id="code-9-L87"><a href="#code-9-L87"> 87</a>     p.setName(name);</span>
-<span class="line" id="code-9-L88"><a href="#code-9-L88"> 88</a>     p.setType(type);</span>
-<span class="line" id="code-9-L89"><a href="#code-9-L89"> 89</a>     p.setMenuPath(path == null || path.isBlank() ? null : path);</span>
-<span class="line" id="code-9-L90"><a href="#code-9-L90"> 90</a>     p.setParent(parent);</span>
-<span class="line" id="code-9-L91"><a href="#code-9-L91"> 91</a>   }</span>
-<span class="line" id="code-9-L92"><a href="#code-9-L92"> 92</a> </span>
-<span class="line" id="code-9-L93"><a href="#code-9-L93"> 93</a>   /**</span>
-<span class="line" id="code-9-L94"><a href="#code-9-L94"> 94</a>    * 新建菜单或按钮并返回含新标识的视图：编码全局唯一（冲突 {@code PERMISSION_CODE_EXISTS}），所属应用须存在</span>
-<span class="line" id="code-9-L95"><a href="#code-9-L95"> 95</a>    * （{@code SYSTEM_NOT_FOUND}），结构规则见 {@code apply}。新节点默认生效，授予角色后才进入有效权限；不写审计日志。</span>
-<span class="line" id="code-9-L96"><a href="#code-9-L96"> 96</a>    */</span>
-<span class="line" id="code-9-L97"><a href="#code-9-L97"> 97</a>   @Transactional</span>
-<span class="line" id="code-9-L98"><a href="#code-9-L98"> 98</a>   public PermissionData.View create(PermissionData.Input input) {</span>
-<span class="line" id="code-9-L99"><a href="#code-9-L99"> 99</a>     if (permissions.existsByCode(input.code())) throw new ConflictException(&quot;PERMISSION_CODE_EXISTS&quot;, &quot;前端权限编码已存在&quot;);</span>
-<span class="line" id="code-9-L100"><a href="#code-9-L100">100</a>     Permission p = new Permission();</span>
-<span class="line" id="code-9-L101"><a href="#code-9-L101">101</a>     p.setCode(input.code());</span>
-<span class="line" id="code-9-L102"><a href="#code-9-L102">102</a>     p.setSystem(systems.require(input.systemId()));</span>
-<span class="line" id="code-9-L103"><a href="#code-9-L103">103</a>     apply(</span>
-<span class="line" id="code-9-L104"><a href="#code-9-L104">104</a>         p, input.name(), PermissionType.valueOf(input.type()), input.menuPath(), input.parentId());</span>
-<span class="line" id="code-9-L105"><a href="#code-9-L105">105</a>     return view(permissions.save(p));</span>
-<span class="line" id="code-9-L106"><a href="#code-9-L106">106</a>   }</span>
-<span class="line" id="code-9-L107"><a href="#code-9-L107">107</a> </span>
-<span class="line" id="code-9-L108"><a href="#code-9-L108">108</a>   /**</span>
-<span class="line" id="code-9-L109"><a href="#code-9-L109">109</a>    * 修改名称、类型、菜单地址与上级，编码、所属应用和生效状态不变；不存在抛 {@code PERMISSION_NOT_FOUND}，</span>
-<span class="line" id="code-9-L110"><a href="#code-9-L110">110</a>    * 结构规则见 {@code apply}。已有角色授权和 API 绑定保留；改动在事务提交时由脏检查写回，不写审计日志。</span>
-<span class="line" id="code-9-L111"><a href="#code-9-L111">111</a>    */</span>
-<span class="line" id="code-9-L112"><a href="#code-9-L112">112</a>   @Transactional</span>
-<span class="line" id="code-9-L113"><a href="#code-9-L113">113</a>   public PermissionData.View update(Long id, PermissionData.Update input) {</span>
-<span class="line" id="code-9-L114"><a href="#code-9-L114">114</a>     Permission p = require(id);</span>
-<span class="line" id="code-9-L115"><a href="#code-9-L115">115</a>     apply(</span>
-<span class="line" id="code-9-L116"><a href="#code-9-L116">116</a>         p, input.name(), PermissionType.valueOf(input.type()), input.menuPath(), input.parentId());</span>
-<span class="line" id="code-9-L117"><a href="#code-9-L117">117</a>     return view(p);</span>
-<span class="line" id="code-9-L118"><a href="#code-9-L118">118</a>   }</span>
-<span class="line" id="code-9-L119"><a href="#code-9-L119">119</a> </span>
-<span class="line" id="code-9-L120"><a href="#code-9-L120">120</a>   /**</span>
-<span class="line" id="code-9-L121"><a href="#code-9-L121">121</a>    * 设置生效状态，重复设置无副作用；不存在抛 {@code PERMISSION_NOT_FOUND}。失效后该节点及全部下级都不再计入</span>
-<span class="line" id="code-9-L122"><a href="#code-9-L122">122</a>    * 任何人的有效权限，也不能再授予角色；已有授权、绑定和下级的状态字段都保留，重新生效即恢复。鉴权按请求实时计算，</span>
-<span class="line" id="code-9-L123"><a href="#code-9-L123">123</a>    * 已签发令牌的下一次请求即受影响，凭证版本不变；事务提交时写回，不写审计日志。</span>
-<span class="line" id="code-9-L124"><a href="#code-9-L124">124</a>    */</span>
-<span class="line" id="code-9-L125"><a href="#code-9-L125">125</a>   @Transactional</span>
-<span class="line" id="code-9-L126"><a href="#code-9-L126">126</a>   public PermissionData.View status(Long id, boolean active) {</span>
-<span class="line" id="code-9-L127"><a href="#code-9-L127">127</a>     Permission p = require(id);</span>
-<span class="line" id="code-9-L128"><a href="#code-9-L128">128</a>     p.setActive(active);</span>
-<span class="line" id="code-9-L129"><a href="#code-9-L129">129</a>     return view(p);</span>
-<span class="line" id="code-9-L130"><a href="#code-9-L130">130</a>   }</span>
-<span class="line" id="code-9-L131"><a href="#code-9-L131">131</a> </span>
-<span class="line" id="code-9-L132"><a href="#code-9-L132">132</a>   /**</span>
-<span class="line" id="code-9-L133"><a href="#code-9-L133">133</a>    * 删除菜单或按钮：不存在抛 {@code PERMISSION_NOT_FOUND}；仍有下级、角色授权或 API 绑定时抛</span>
-<span class="line" id="code-9-L134"><a href="#code-9-L134">134</a>    * {@code PERMISSION_IN_USE}（冲突），不做级联删除。不写审计日志。</span>
-<span class="line" id="code-9-L135"><a href="#code-9-L135">135</a>    */</span>
-<span class="line" id="code-9-L136"><a href="#code-9-L136">136</a>   @Transactional</span>
-<span class="line" id="code-9-L137"><a href="#code-9-L137">137</a>   public void delete(Long id) {</span>
-<span class="line" id="code-9-L138"><a href="#code-9-L138">138</a>     Permission p = require(id);</span>
-<span class="line" id="code-9-L139"><a href="#code-9-L139">139</a>     if (permissions.existsByParent_Id(id)</span>
-<span class="line" id="code-9-L140"><a href="#code-9-L140">140</a>         || grants.existsByPermission_Id(id)</span>
-<span class="line" id="code-9-L141"><a href="#code-9-L141">141</a>         || bindings.existsByPermission_Id(id)) throw new ConflictException(&quot;PERMISSION_IN_USE&quot;, &quot;仍有子节点、角色授权或 API 绑定&quot;);</span>
-<span class="line" id="code-9-L142"><a href="#code-9-L142">142</a>     permissions.delete(p);</span>
-<span class="line" id="code-9-L143"><a href="#code-9-L143">143</a>   }</span>
-<span class="line" id="code-9-L144"><a href="#code-9-L144">144</a> </span>
-<span class="line" id="code-9-L145"><a href="#code-9-L145">145</a>   /**</span>
-<span class="line" id="code-9-L146"><a href="#code-9-L146">146</a>    * 把 API 资源绑定到菜单或按钮：两端须存在（{@code PERMISSION_NOT_FOUND}、{@code API_RESOURCE_NOT_FOUND}）</span>
-<span class="line" id="code-9-L147"><a href="#code-9-L147">147</a>    * 且属于同一应用（{@code BINDING_SYSTEM_MISMATCH}），不检查两端是否生效；已绑定时幂等。</span>
-<span class="line" id="code-9-L148"><a href="#code-9-L148">148</a>    * 持有该权限的用户下一次请求即可调用该资源；不写审计日志。</span>
-<span class="line" id="code-9-L149"><a href="#code-9-L149">149</a>    */</span>
-<span class="line" id="code-9-L150"><a href="#code-9-L150">150</a>   @Transactional</span>
-<span class="line" id="code-9-L151"><a href="#code-9-L151">151</a>   public void bind(Long permissionId, Long resourceId) {</span>
-<span class="line" id="code-9-L152"><a href="#code-9-L152">152</a>     Permission permission = require(permissionId);</span>
-<span class="line" id="code-9-L153"><a href="#code-9-L153">153</a>     com.cdwy.permission.entity.resource.ApiResource resource = resources.require(resourceId);</span>
-<span class="line" id="code-9-L154"><a href="#code-9-L154">154</a>     if (!permission.getSystem().getId().equals(resource.getSystem().getId()))</span>
-<span class="line" id="code-9-L155"><a href="#code-9-L155">155</a>       throw new InvalidDataException(&quot;BINDING_SYSTEM_MISMATCH&quot;, &quot;前端权限与 API 资源必须属于同一应用&quot;);</span>
-<span class="line" id="code-9-L156"><a href="#code-9-L156">156</a>     if (!bindings.existsByPermission_IdAndResource_Id(permissionId, resourceId))</span>
-<span class="line" id="code-9-L157"><a href="#code-9-L157">157</a>       bindings.save(new PermissionApi(permission, resource));</span>
-<span class="line" id="code-9-L158"><a href="#code-9-L158">158</a>   }</span>
-<span class="line" id="code-9-L159"><a href="#code-9-L159">159</a> </span>
-<span class="line" id="code-9-L160"><a href="#code-9-L160">160</a>   /**</span>
-<span class="line" id="code-9-L161"><a href="#code-9-L161">161</a>    * 解除绑定，保留 API 资源登记：两端须存在（{@code PERMISSION_NOT_FOUND}、{@code API_RESOURCE_NOT_FOUND}），</span>
-<span class="line" id="code-9-L162"><a href="#code-9-L162">162</a>    * 未绑定时幂等。已签发令牌的下一次请求即失去经此绑定得到的访问；不写审计日志。</span>
-<span class="line" id="code-9-L163"><a href="#code-9-L163">163</a>    */</span>
-<span class="line" id="code-9-L164"><a href="#code-9-L164">164</a>   @Transactional</span>
-<span class="line" id="code-9-L165"><a href="#code-9-L165">165</a>   public void unbind(Long permissionId, Long resourceId) {</span>
-<span class="line" id="code-9-L166"><a href="#code-9-L166">166</a>     require(permissionId);</span>
-<span class="line" id="code-9-L167"><a href="#code-9-L167">167</a>     resources.require(resourceId);</span>
-<span class="line" id="code-9-L168"><a href="#code-9-L168">168</a>     bindings.deleteByPermission_IdAndResource_Id(permissionId, resourceId);</span>
-<span class="line" id="code-9-L169"><a href="#code-9-L169">169</a>   }</span>
-<span class="line" id="code-9-L170"><a href="#code-9-L170">170</a> </span>
-<span class="line" id="code-9-L171"><a href="#code-9-L171">171</a>   /** 该权限绑定的 API 资源，含已停用的；权限不存在抛 {@code PERMISSION_NOT_FOUND}。 */</span>
-<span class="line" id="code-9-L172"><a href="#code-9-L172">172</a>   public List&lt;ResourceData.View&gt; resources(Long permissionId) {</span>
-<span class="line" id="code-9-L173"><a href="#code-9-L173">173</a>     require(permissionId);</span>
-<span class="line" id="code-9-L174"><a href="#code-9-L174">174</a>     return bindings.findAllByPermission_Id(permissionId).stream()</span>
-<span class="line" id="code-9-L175"><a href="#code-9-L175">175</a>         .map(b -&gt; ApiResourceService.view(b.getResource()))</span>
-<span class="line" id="code-9-L176"><a href="#code-9-L176">176</a>         .toList();</span>
-<span class="line" id="code-9-L177"><a href="#code-9-L177">177</a>   }</span>
-<span class="line" id="code-9-L178"><a href="#code-9-L178">178</a> </span>
-<span class="line" id="code-9-L179"><a href="#code-9-L179">179</a>   /** 自身及每一级上级都生效且所属应用启用才算可用；授予与有效权限计算都以此为准，祖先失效会屏蔽整棵子树。 */</span>
-<span class="line" id="code-9-L180"><a href="#code-9-L180">180</a>   public static boolean usable(Permission p) {</span>
-<span class="line" id="code-9-L181"><a href="#code-9-L181">181</a>     for (Permission n = p; n != null; n = n.getParent())</span>
-<span class="line" id="code-9-L182"><a href="#code-9-L182">182</a>       if (!n.getActive() || !n.getSystem().getEnabled()) return false;</span>
-<span class="line" id="code-9-L183"><a href="#code-9-L183">183</a>     return true;</span>
-<span class="line" id="code-9-L184"><a href="#code-9-L184">184</a>   }</span>
-<span class="line" id="code-9-L185"><a href="#code-9-L185">185</a> </span>
-<span class="line" id="code-9-L186"><a href="#code-9-L186">186</a>   /**</span>
-<span class="line" id="code-9-L187"><a href="#code-9-L187">187</a>    * 把权限集合组装成森林，沿上级链补齐祖先作为导航容器：只有集合内的节点 {@code granted} 为 true，</span>
-<span class="line" id="code-9-L188"><a href="#code-9-L188">188</a>    * 补出的祖先不代表拥有其授权或 API。本方法不按生效状态过滤，由调用方先筛选。同级节点按标识升序，与 DDD 路线一致，</span>
-<span class="line" id="code-9-L189"><a href="#code-9-L189">189</a>    * 不随授权来源的遍历顺序变化。</span>
-<span class="line" id="code-9-L190"><a href="#code-9-L190">190</a>    */</span>
-<span class="line" id="code-9-L191"><a href="#code-9-L191">191</a>   public static List&lt;PermissionData.Tree&gt; tree(Collection&lt;Permission&gt; granted) {</span>
-<span class="line" id="code-9-L192"><a href="#code-9-L192">192</a>     Map&lt;Long, Permission&gt; nodes = new TreeMap&lt;&gt;();</span>
-<span class="line" id="code-9-L193"><a href="#code-9-L193">193</a>     Set&lt;Long&gt; exact = new HashSet&lt;&gt;();</span>
-<span class="line" id="code-9-L194"><a href="#code-9-L194">194</a>     for (Permission p : granted) {</span>
-<span class="line" id="code-9-L195"><a href="#code-9-L195">195</a>       exact.add(p.getId());</span>
-<span class="line" id="code-9-L196"><a href="#code-9-L196">196</a>       for (Permission n = p; n != null; n = n.getParent()) nodes.putIfAbsent(n.getId(), n);</span>
-<span class="line" id="code-9-L197"><a href="#code-9-L197">197</a>     }</span>
-<span class="line" id="code-9-L198"><a href="#code-9-L198">198</a>     return nodes.values().stream()</span>
-<span class="line" id="code-9-L199"><a href="#code-9-L199">199</a>         .filter(p -&gt; p.getParent() == null)</span>
-<span class="line" id="code-9-L200"><a href="#code-9-L200">200</a>         .map(p -&gt; branch(p, nodes.values(), exact))</span>
-<span class="line" id="code-9-L201"><a href="#code-9-L201">201</a>         .toList();</span>
-<span class="line" id="code-9-L202"><a href="#code-9-L202">202</a>   }</span>
-<span class="line" id="code-9-L203"><a href="#code-9-L203">203</a> </span>
-<span class="line" id="code-9-L204"><a href="#code-9-L204">204</a>   /** 递归构造以 {@code p} 为根的子树；下级沿用 {@code nodes} 的标识升序。 */</span>
-<span class="line" id="code-9-L205"><a href="#code-9-L205">205</a>   private static PermissionData.Tree branch(</span>
-<span class="line" id="code-9-L206"><a href="#code-9-L206">206</a>       Permission p, Collection&lt;Permission&gt; nodes, Set&lt;Long&gt; exact) {</span>
-<span class="line" id="code-9-L207"><a href="#code-9-L207">207</a>     return new PermissionData.Tree(</span>
-<span class="line" id="code-9-L208"><a href="#code-9-L208">208</a>         view(p),</span>
-<span class="line" id="code-9-L209"><a href="#code-9-L209">209</a>         exact.contains(p.getId()),</span>
-<span class="line" id="code-9-L210"><a href="#code-9-L210">210</a>         nodes.stream()</span>
-<span class="line" id="code-9-L211"><a href="#code-9-L211">211</a>             .filter(n -&gt; n.getParent() != null &amp;&amp; n.getParent().getId().equals(p.getId()))</span>
-<span class="line" id="code-9-L212"><a href="#code-9-L212">212</a>             .map(n -&gt; branch(n, nodes, exact))</span>
-<span class="line" id="code-9-L213"><a href="#code-9-L213">213</a>             .toList());</span>
-<span class="line" id="code-9-L214"><a href="#code-9-L214">214</a>   }</span>
-<span class="line" id="code-9-L215"><a href="#code-9-L215">215</a> </span>
-<span class="line" id="code-9-L216"><a href="#code-9-L216">216</a>   /**</span>
-<span class="line" id="code-9-L217"><a href="#code-9-L217">217</a>    * 管理端权限目录树，含已失效节点；传入的就是全部节点，所以每个节点的 {@code granted} 都为 true。</span>
-<span class="line" id="code-9-L218"><a href="#code-9-L218">218</a>    * {@code systemId} 为空时返回全部应用，不校验应用是否存在。</span>
-<span class="line" id="code-9-L219"><a href="#code-9-L219">219</a>    */</span>
-<span class="line" id="code-9-L220"><a href="#code-9-L220">220</a>   public List&lt;PermissionData.Tree&gt; tree(Long systemId) {</span>
-<span class="line" id="code-9-L221"><a href="#code-9-L221">221</a>     return tree(</span>
-<span class="line" id="code-9-L222"><a href="#code-9-L222">222</a>         (systemId == null</span>
-<span class="line" id="code-9-L223"><a href="#code-9-L223">223</a>             ? permissions.findAll(org.springframework.data.domain.Sort.by(&quot;id&quot;))</span>
-<span class="line" id="code-9-L224"><a href="#code-9-L224">224</a>             : permissions.findAllBySystem_IdOrderById(systemId)));</span>
-<span class="line" id="code-9-L225"><a href="#code-9-L225">225</a>   }</span>
-<span class="line" id="code-9-L226"><a href="#code-9-L226">226</a> }</span></pre></details></section><section id="code-10"><h2>面向对象权限实现</h2><p>service/ddd/application/permission/DddPermissionService.java · <a href="../../src/main/java/com/cdwy/permission/service/ddd/application/permission/DddPermissionService.java">打开原文件</a></p><details><summary>展开源码（带行号）</summary><pre class="source"><span class="line" id="code-10-L1"><a href="#code-10-L1">  1</a> package com.cdwy.permission.service.ddd.application.permission;</span>
+<span class="line" id="code-9-L7"><a href="#code-9-L7">  7</a> import com.cdwy.permission.service.auth.ConsoleCatalog;</span>
+<span class="line" id="code-9-L8"><a href="#code-9-L8">  8</a> import com.cdwy.permission.service.port.data.*;</span>
+<span class="line" id="code-9-L9"><a href="#code-9-L9">  9</a> import com.cdwy.permission.service.port.data.PermissionType;</span>
+<span class="line" id="code-9-L10"><a href="#code-9-L10"> 10</a> import com.cdwy.permission.service.port.error.*;</span>
+<span class="line" id="code-9-L11"><a href="#code-9-L11"> 11</a> import com.cdwy.permission.service.port.permission.PermissionUseCase;</span>
+<span class="line" id="code-9-L12"><a href="#code-9-L12"> 12</a> import com.cdwy.permission.service.resource.ApiResourceService;</span>
+<span class="line" id="code-9-L13"><a href="#code-9-L13"> 13</a> import com.cdwy.permission.service.system.SystemService;</span>
+<span class="line" id="code-9-L14"><a href="#code-9-L14"> 14</a> import java.util.*;</span>
+<span class="line" id="code-9-L15"><a href="#code-9-L15"> 15</a> import lombok.RequiredArgsConstructor;</span>
+<span class="line" id="code-9-L16"><a href="#code-9-L16"> 16</a> import org.springframework.stereotype.Service;</span>
+<span class="line" id="code-9-L17"><a href="#code-9-L17"> 17</a> import org.springframework.transaction.annotation.Transactional;</span>
+<span class="line" id="code-9-L18"><a href="#code-9-L18"> 18</a> </span>
+<span class="line" id="code-9-L19"><a href="#code-9-L19"> 19</a> /** 结构化事务脚本：按查询、业务校验、写入和结果转换组织处理步骤。 */</span>
+<span class="line" id="code-9-L20"><a href="#code-9-L20"> 20</a> @Service</span>
+<span class="line" id="code-9-L21"><a href="#code-9-L21"> 21</a> @RequiredArgsConstructor</span>
+<span class="line" id="code-9-L22"><a href="#code-9-L22"> 22</a> @org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(</span>
+<span class="line" id="code-9-L23"><a href="#code-9-L23"> 23</a>     name = &quot;app.backend-strategy&quot;,</span>
+<span class="line" id="code-9-L24"><a href="#code-9-L24"> 24</a>     havingValue = &quot;structured&quot;,</span>
+<span class="line" id="code-9-L25"><a href="#code-9-L25"> 25</a>     matchIfMissing = true)</span>
+<span class="line" id="code-9-L26"><a href="#code-9-L26"> 26</a> @Transactional(readOnly = true)</span>
+<span class="line" id="code-9-L27"><a href="#code-9-L27"> 27</a> public class PermissionService implements PermissionUseCase {</span>
+<span class="line" id="code-9-L28"><a href="#code-9-L28"> 28</a>   /** 返回事务脚本实现标识。 */</span>
+<span class="line" id="code-9-L29"><a href="#code-9-L29"> 29</a>   @Override</span>
+<span class="line" id="code-9-L30"><a href="#code-9-L30"> 30</a>   public String strategy() {</span>
+<span class="line" id="code-9-L31"><a href="#code-9-L31"> 31</a>     return &quot;structured&quot;;</span>
+<span class="line" id="code-9-L32"><a href="#code-9-L32"> 32</a>   }</span>
+<span class="line" id="code-9-L33"><a href="#code-9-L33"> 33</a> </span>
+<span class="line" id="code-9-L34"><a href="#code-9-L34"> 34</a>   private final PermissionRepository permissions;</span>
+<span class="line" id="code-9-L35"><a href="#code-9-L35"> 35</a>   private final RolePermissionRepository grants;</span>
+<span class="line" id="code-9-L36"><a href="#code-9-L36"> 36</a>   private final PermissionApiRepository bindings;</span>
+<span class="line" id="code-9-L37"><a href="#code-9-L37"> 37</a>   private final SystemService systems;</span>
+<span class="line" id="code-9-L38"><a href="#code-9-L38"> 38</a>   private final ApiResourceService resources;</span>
+<span class="line" id="code-9-L39"><a href="#code-9-L39"> 39</a> </span>
+<span class="line" id="code-9-L40"><a href="#code-9-L40"> 40</a>   /** 按标识读取前端权限（菜单或按钮），不存在抛 {@code PERMISSION_NOT_FOUND}；授权服务也复用此方法。 */</span>
+<span class="line" id="code-9-L41"><a href="#code-9-L41"> 41</a>   public Permission require(Long id) {</span>
+<span class="line" id="code-9-L42"><a href="#code-9-L42"> 42</a>     return permissions.findById(id).orElseThrow(() -&gt; new ResourceNotFoundException(&quot;PERMISSION_NOT_FOUND&quot;, &quot;前端权限不存在&quot;));</span>
+<span class="line" id="code-9-L43"><a href="#code-9-L43"> 43</a>   }</span>
+<span class="line" id="code-9-L44"><a href="#code-9-L44"> 44</a> </span>
+<span class="line" id="code-9-L45"><a href="#code-9-L45"> 45</a>   /** 实体转为用例结果：类型取枚举名，根节点的 {@code parentId} 为 null；授权服务输出权限时也用它。 */</span>
+<span class="line" id="code-9-L46"><a href="#code-9-L46"> 46</a>   public static PermissionData.View view(Permission p) {</span>
+<span class="line" id="code-9-L47"><a href="#code-9-L47"> 47</a>     return new PermissionData.View(</span>
+<span class="line" id="code-9-L48"><a href="#code-9-L48"> 48</a>         p.getId(),</span>
+<span class="line" id="code-9-L49"><a href="#code-9-L49"> 49</a>         p.getSystem().getId(),</span>
+<span class="line" id="code-9-L50"><a href="#code-9-L50"> 50</a>         p.getCode(),</span>
+<span class="line" id="code-9-L51"><a href="#code-9-L51"> 51</a>         p.getName(),</span>
+<span class="line" id="code-9-L52"><a href="#code-9-L52"> 52</a>         p.getType().name(),</span>
+<span class="line" id="code-9-L53"><a href="#code-9-L53"> 53</a>         p.getMenuPath(),</span>
+<span class="line" id="code-9-L54"><a href="#code-9-L54"> 54</a>         p.getParent() == null ? null : p.getParent().getId(),</span>
+<span class="line" id="code-9-L55"><a href="#code-9-L55"> 55</a>         p.getActive());</span>
+<span class="line" id="code-9-L56"><a href="#code-9-L56"> 56</a>   }</span>
+<span class="line" id="code-9-L57"><a href="#code-9-L57"> 57</a> </span>
+<span class="line" id="code-9-L58"><a href="#code-9-L58"> 58</a>   /** 按标识顺序列出菜单与按钮，含已失效节点；{@code systemId} 为空时返回全部应用，未知应用得到空列表。 */</span>
+<span class="line" id="code-9-L59"><a href="#code-9-L59"> 59</a>   public List&lt;PermissionData.View&gt; list(Long systemId) {</span>
+<span class="line" id="code-9-L60"><a href="#code-9-L60"> 60</a>     return (systemId == null</span>
+<span class="line" id="code-9-L61"><a href="#code-9-L61"> 61</a>             ? permissions.findAll(org.springframework.data.domain.Sort.by(&quot;id&quot;))</span>
+<span class="line" id="code-9-L62"><a href="#code-9-L62"> 62</a>             : permissions.findAllBySystem_IdOrderById(systemId))</span>
+<span class="line" id="code-9-L63"><a href="#code-9-L63"> 63</a>         .stream().map(PermissionService::view).toList();</span>
+<span class="line" id="code-9-L64"><a href="#code-9-L64"> 64</a>   }</span>
+<span class="line" id="code-9-L65"><a href="#code-9-L65"> 65</a> </span>
+<span class="line" id="code-9-L66"><a href="#code-9-L66"> 66</a>   /**</span>
+<span class="line" id="code-9-L67"><a href="#code-9-L67"> 67</a>    * 新建与修改共用的结构校验，依次为：上级须存在（{@code PERMISSION_NOT_FOUND}）；按钮必须有上级</span>
+<span class="line" id="code-9-L68"><a href="#code-9-L68"> 68</a>    * （{@code BUTTON_PARENT_REQUIRED}）；上级须是同一应用的菜单（{@code PERMISSION_PARENT_INVALID}）；</span>
+<span class="line" id="code-9-L69"><a href="#code-9-L69"> 69</a>    * 沿上级链向上不能回到自身，以自身为上级也算成环（{@code PERMISSION_CYCLE}）；已有下级的菜单不能改为按钮</span>
+<span class="line" id="code-9-L70"><a href="#code-9-L70"> 70</a>    * （冲突 {@code PERMISSION_HAS_CHILDREN}）；按钮不能填菜单地址（{@code BUTTON_PATH_NOT_ALLOWED}）。</span>
+<span class="line" id="code-9-L71"><a href="#code-9-L71"> 71</a>    * 全部通过后才写入名称、类型、地址和上级，空白地址存为 null。</span>
+<span class="line" id="code-9-L72"><a href="#code-9-L72"> 72</a>    */</span>
+<span class="line" id="code-9-L73"><a href="#code-9-L73"> 73</a>   private void apply(Permission p, String name, PermissionType type, String path, Long parentId) {</span>
+<span class="line" id="code-9-L74"><a href="#code-9-L74"> 74</a>     Permission parent = parentId == null ? null : require(parentId);</span>
+<span class="line" id="code-9-L75"><a href="#code-9-L75"> 75</a>     if (type == PermissionType.BUTTON &amp;&amp; parent == null)</span>
+<span class="line" id="code-9-L76"><a href="#code-9-L76"> 76</a>       throw new InvalidDataException(&quot;BUTTON_PARENT_REQUIRED&quot;, &quot;按钮必须隶属菜单&quot;);</span>
+<span class="line" id="code-9-L77"><a href="#code-9-L77"> 77</a>     if (parent != null</span>
+<span class="line" id="code-9-L78"><a href="#code-9-L78"> 78</a>         &amp;&amp; (parent.getType() != PermissionType.MENU</span>
+<span class="line" id="code-9-L79"><a href="#code-9-L79"> 79</a>             || !parent.getSystem().getId().equals(p.getSystem().getId())))</span>
+<span class="line" id="code-9-L80"><a href="#code-9-L80"> 80</a>       throw new InvalidDataException(&quot;PERMISSION_PARENT_INVALID&quot;, &quot;父节点必须是同一应用的菜单&quot;);</span>
+<span class="line" id="code-9-L81"><a href="#code-9-L81"> 81</a>     for (Permission next = parent; next != null; next = next.getParent())</span>
+<span class="line" id="code-9-L82"><a href="#code-9-L82"> 82</a>       if (Objects.equals(next.getId(), p.getId())) throw new InvalidDataException(&quot;PERMISSION_CYCLE&quot;, &quot;权限树不能形成循环&quot;);</span>
+<span class="line" id="code-9-L83"><a href="#code-9-L83"> 83</a>     if (type == PermissionType.BUTTON</span>
+<span class="line" id="code-9-L84"><a href="#code-9-L84"> 84</a>         &amp;&amp; p.getId() != null</span>
+<span class="line" id="code-9-L85"><a href="#code-9-L85"> 85</a>         &amp;&amp; permissions.existsByParent_Id(p.getId())) throw new ConflictException(&quot;PERMISSION_HAS_CHILDREN&quot;, &quot;有子节点的菜单不能改为按钮&quot;);</span>
+<span class="line" id="code-9-L86"><a href="#code-9-L86"> 86</a>     if (type == PermissionType.BUTTON &amp;&amp; path != null &amp;&amp; !path.isBlank())</span>
+<span class="line" id="code-9-L87"><a href="#code-9-L87"> 87</a>       throw new InvalidDataException(&quot;BUTTON_PATH_NOT_ALLOWED&quot;, &quot;按钮不设置菜单地址&quot;);</span>
+<span class="line" id="code-9-L88"><a href="#code-9-L88"> 88</a>     p.setName(name);</span>
+<span class="line" id="code-9-L89"><a href="#code-9-L89"> 89</a>     p.setType(type);</span>
+<span class="line" id="code-9-L90"><a href="#code-9-L90"> 90</a>     p.setMenuPath(path == null || path.isBlank() ? null : path);</span>
+<span class="line" id="code-9-L91"><a href="#code-9-L91"> 91</a>     p.setParent(parent);</span>
+<span class="line" id="code-9-L92"><a href="#code-9-L92"> 92</a>   }</span>
+<span class="line" id="code-9-L93"><a href="#code-9-L93"> 93</a> </span>
+<span class="line" id="code-9-L94"><a href="#code-9-L94"> 94</a>   /**</span>
+<span class="line" id="code-9-L95"><a href="#code-9-L95"> 95</a>    * 新建菜单或按钮并返回含新标识的视图：编码全局唯一（冲突 {@code PERMISSION_CODE_EXISTS}），所属应用须存在</span>
+<span class="line" id="code-9-L96"><a href="#code-9-L96"> 96</a>    * （{@code SYSTEM_NOT_FOUND}），结构规则见 {@code apply}。新节点默认生效，授予角色后才进入有效权限；不写审计日志。</span>
+<span class="line" id="code-9-L97"><a href="#code-9-L97"> 97</a>    */</span>
+<span class="line" id="code-9-L98"><a href="#code-9-L98"> 98</a>   @Transactional</span>
+<span class="line" id="code-9-L99"><a href="#code-9-L99"> 99</a>   public PermissionData.View create(PermissionData.Input input) {</span>
+<span class="line" id="code-9-L100"><a href="#code-9-L100">100</a>     if (permissions.existsByCode(input.code())) throw new ConflictException(&quot;PERMISSION_CODE_EXISTS&quot;, &quot;前端权限编码已存在&quot;);</span>
+<span class="line" id="code-9-L101"><a href="#code-9-L101">101</a>     Permission p = new Permission();</span>
+<span class="line" id="code-9-L102"><a href="#code-9-L102">102</a>     p.setCode(input.code());</span>
+<span class="line" id="code-9-L103"><a href="#code-9-L103">103</a>     p.setSystem(systems.require(input.systemId()));</span>
+<span class="line" id="code-9-L104"><a href="#code-9-L104">104</a>     apply(</span>
+<span class="line" id="code-9-L105"><a href="#code-9-L105">105</a>         p, input.name(), PermissionType.valueOf(input.type()), input.menuPath(), input.parentId());</span>
+<span class="line" id="code-9-L106"><a href="#code-9-L106">106</a>     return view(permissions.save(p));</span>
+<span class="line" id="code-9-L107"><a href="#code-9-L107">107</a>   }</span>
+<span class="line" id="code-9-L108"><a href="#code-9-L108">108</a> </span>
+<span class="line" id="code-9-L109"><a href="#code-9-L109">109</a>   /**</span>
+<span class="line" id="code-9-L110"><a href="#code-9-L110">110</a>    * 修改名称、类型、菜单地址与上级，编码、所属应用和生效状态不变；不存在抛 {@code PERMISSION_NOT_FOUND}，</span>
+<span class="line" id="code-9-L111"><a href="#code-9-L111">111</a>    * 结构规则见 {@code apply}。已有角色授权和 API 绑定保留；改动在事务提交时由脏检查写回，不写审计日志。</span>
+<span class="line" id="code-9-L112"><a href="#code-9-L112">112</a>    */</span>
+<span class="line" id="code-9-L113"><a href="#code-9-L113">113</a>   @Transactional</span>
+<span class="line" id="code-9-L114"><a href="#code-9-L114">114</a>   public PermissionData.View update(Long id, PermissionData.Update input) {</span>
+<span class="line" id="code-9-L115"><a href="#code-9-L115">115</a>     Permission p = require(id);</span>
+<span class="line" id="code-9-L116"><a href="#code-9-L116">116</a>     apply(</span>
+<span class="line" id="code-9-L117"><a href="#code-9-L117">117</a>         p, input.name(), PermissionType.valueOf(input.type()), input.menuPath(), input.parentId());</span>
+<span class="line" id="code-9-L118"><a href="#code-9-L118">118</a>     return view(p);</span>
+<span class="line" id="code-9-L119"><a href="#code-9-L119">119</a>   }</span>
+<span class="line" id="code-9-L120"><a href="#code-9-L120">120</a> </span>
+<span class="line" id="code-9-L121"><a href="#code-9-L121">121</a>   /**</span>
+<span class="line" id="code-9-L122"><a href="#code-9-L122">122</a>    * 设置生效状态，重复设置无副作用；不存在抛 {@code PERMISSION_NOT_FOUND}。失效后该节点及全部下级都不再计入</span>
+<span class="line" id="code-9-L123"><a href="#code-9-L123">123</a>    * 任何人的有效权限，也不能再授予角色；已有授权、绑定和下级的状态字段都保留，重新生效即恢复。鉴权按请求实时计算，</span>
+<span class="line" id="code-9-L124"><a href="#code-9-L124">124</a>    * 已签发令牌的下一次请求即受影响，凭证版本不变；事务提交时写回，不写审计日志。</span>
+<span class="line" id="code-9-L125"><a href="#code-9-L125">125</a>    */</span>
+<span class="line" id="code-9-L126"><a href="#code-9-L126">126</a>   @Transactional</span>
+<span class="line" id="code-9-L127"><a href="#code-9-L127">127</a>   public PermissionData.View status(Long id, boolean active) {</span>
+<span class="line" id="code-9-L128"><a href="#code-9-L128">128</a>     Permission p = require(id);</span>
+<span class="line" id="code-9-L129"><a href="#code-9-L129">129</a>     if (!active) protectBuiltIn(p);</span>
+<span class="line" id="code-9-L130"><a href="#code-9-L130">130</a>     p.setActive(active);</span>
+<span class="line" id="code-9-L131"><a href="#code-9-L131">131</a>     return view(p);</span>
+<span class="line" id="code-9-L132"><a href="#code-9-L132">132</a>   }</span>
+<span class="line" id="code-9-L133"><a href="#code-9-L133">133</a> </span>
+<span class="line" id="code-9-L134"><a href="#code-9-L134">134</a>   /**</span>
+<span class="line" id="code-9-L135"><a href="#code-9-L135">135</a>    * 删除菜单或按钮：不存在抛 {@code PERMISSION_NOT_FOUND}；仍有下级、角色授权或 API 绑定时抛</span>
+<span class="line" id="code-9-L136"><a href="#code-9-L136">136</a>    * {@code PERMISSION_IN_USE}（冲突），不做级联删除。不写审计日志。</span>
+<span class="line" id="code-9-L137"><a href="#code-9-L137">137</a>    */</span>
+<span class="line" id="code-9-L138"><a href="#code-9-L138">138</a>   @Transactional</span>
+<span class="line" id="code-9-L139"><a href="#code-9-L139">139</a>   public void delete(Long id) {</span>
+<span class="line" id="code-9-L140"><a href="#code-9-L140">140</a>     Permission p = require(id);</span>
+<span class="line" id="code-9-L141"><a href="#code-9-L141">141</a>     protectBuiltIn(p);</span>
+<span class="line" id="code-9-L142"><a href="#code-9-L142">142</a>     if (permissions.existsByParent_Id(id)</span>
+<span class="line" id="code-9-L143"><a href="#code-9-L143">143</a>         || grants.existsByPermission_Id(id)</span>
+<span class="line" id="code-9-L144"><a href="#code-9-L144">144</a>         || bindings.existsByPermission_Id(id)) throw new ConflictException(&quot;PERMISSION_IN_USE&quot;, &quot;仍有子节点、角色授权或 API 绑定&quot;);</span>
+<span class="line" id="code-9-L145"><a href="#code-9-L145">145</a>     permissions.delete(p);</span>
+<span class="line" id="code-9-L146"><a href="#code-9-L146">146</a>   }</span>
+<span class="line" id="code-9-L147"><a href="#code-9-L147">147</a> </span>
+<span class="line" id="code-9-L148"><a href="#code-9-L148">148</a>   /**</span>
+<span class="line" id="code-9-L149"><a href="#code-9-L149">149</a>    * 把 API 资源绑定到菜单或按钮：两端须存在（{@code PERMISSION_NOT_FOUND}、{@code API_RESOURCE_NOT_FOUND}）</span>
+<span class="line" id="code-9-L150"><a href="#code-9-L150">150</a>    * 且属于同一应用（{@code BINDING_SYSTEM_MISMATCH}），不检查两端是否生效；已绑定时幂等。</span>
+<span class="line" id="code-9-L151"><a href="#code-9-L151">151</a>    * 持有该权限的用户下一次请求即可调用该资源；不写审计日志。</span>
+<span class="line" id="code-9-L152"><a href="#code-9-L152">152</a>    */</span>
+<span class="line" id="code-9-L153"><a href="#code-9-L153">153</a>   @Transactional</span>
+<span class="line" id="code-9-L154"><a href="#code-9-L154">154</a>   public void bind(Long permissionId, Long resourceId) {</span>
+<span class="line" id="code-9-L155"><a href="#code-9-L155">155</a>     Permission permission = require(permissionId);</span>
+<span class="line" id="code-9-L156"><a href="#code-9-L156">156</a>     com.cdwy.permission.entity.resource.ApiResource resource = resources.require(resourceId);</span>
+<span class="line" id="code-9-L157"><a href="#code-9-L157">157</a>     if (!permission.getSystem().getId().equals(resource.getSystem().getId()))</span>
+<span class="line" id="code-9-L158"><a href="#code-9-L158">158</a>       throw new InvalidDataException(&quot;BINDING_SYSTEM_MISMATCH&quot;, &quot;前端权限与 API 资源必须属于同一应用&quot;);</span>
+<span class="line" id="code-9-L159"><a href="#code-9-L159">159</a>     if (!bindings.existsByPermission_IdAndResource_Id(permissionId, resourceId))</span>
+<span class="line" id="code-9-L160"><a href="#code-9-L160">160</a>       bindings.save(new PermissionApi(permission, resource));</span>
+<span class="line" id="code-9-L161"><a href="#code-9-L161">161</a>   }</span>
+<span class="line" id="code-9-L162"><a href="#code-9-L162">162</a> </span>
+<span class="line" id="code-9-L163"><a href="#code-9-L163">163</a>   /**</span>
+<span class="line" id="code-9-L164"><a href="#code-9-L164">164</a>    * 解除绑定，保留 API 资源登记：两端须存在（{@code PERMISSION_NOT_FOUND}、{@code API_RESOURCE_NOT_FOUND}），</span>
+<span class="line" id="code-9-L165"><a href="#code-9-L165">165</a>    * 未绑定时幂等。已签发令牌的下一次请求即失去经此绑定得到的访问；不写审计日志。</span>
+<span class="line" id="code-9-L166"><a href="#code-9-L166">166</a>    */</span>
+<span class="line" id="code-9-L167"><a href="#code-9-L167">167</a>   @Transactional</span>
+<span class="line" id="code-9-L168"><a href="#code-9-L168">168</a>   public void unbind(Long permissionId, Long resourceId) {</span>
+<span class="line" id="code-9-L169"><a href="#code-9-L169">169</a>     require(permissionId);</span>
+<span class="line" id="code-9-L170"><a href="#code-9-L170">170</a>     resources.require(resourceId);</span>
+<span class="line" id="code-9-L171"><a href="#code-9-L171">171</a>     bindings.deleteByPermission_IdAndResource_Id(permissionId, resourceId);</span>
+<span class="line" id="code-9-L172"><a href="#code-9-L172">172</a>   }</span>
+<span class="line" id="code-9-L173"><a href="#code-9-L173">173</a> </span>
+<span class="line" id="code-9-L174"><a href="#code-9-L174">174</a>   /** 该权限绑定的 API 资源，含已停用的；权限不存在抛 {@code PERMISSION_NOT_FOUND}。 */</span>
+<span class="line" id="code-9-L175"><a href="#code-9-L175">175</a>   public List&lt;ResourceData.View&gt; resources(Long permissionId) {</span>
+<span class="line" id="code-9-L176"><a href="#code-9-L176">176</a>     require(permissionId);</span>
+<span class="line" id="code-9-L177"><a href="#code-9-L177">177</a>     return bindings.findAllByPermission_Id(permissionId).stream()</span>
+<span class="line" id="code-9-L178"><a href="#code-9-L178">178</a>         .map(b -&gt; ApiResourceService.view(b.getResource()))</span>
+<span class="line" id="code-9-L179"><a href="#code-9-L179">179</a>         .toList();</span>
+<span class="line" id="code-9-L180"><a href="#code-9-L180">180</a>   }</span>
+<span class="line" id="code-9-L181"><a href="#code-9-L181">181</a> </span>
+<span class="line" id="code-9-L182"><a href="#code-9-L182">182</a>   /** 自身及每一级上级都生效且所属应用启用才算可用；授予与有效权限计算都以此为准，祖先失效会屏蔽整棵子树。 */</span>
+<span class="line" id="code-9-L183"><a href="#code-9-L183">183</a>   public static boolean usable(Permission p) {</span>
+<span class="line" id="code-9-L184"><a href="#code-9-L184">184</a>     for (Permission n = p; n != null; n = n.getParent())</span>
+<span class="line" id="code-9-L185"><a href="#code-9-L185">185</a>       if (!n.getActive() || !n.getSystem().getEnabled()) return false;</span>
+<span class="line" id="code-9-L186"><a href="#code-9-L186">186</a>     return true;</span>
+<span class="line" id="code-9-L187"><a href="#code-9-L187">187</a>   }</span>
+<span class="line" id="code-9-L188"><a href="#code-9-L188">188</a> </span>
+<span class="line" id="code-9-L189"><a href="#code-9-L189">189</a>   /**</span>
+<span class="line" id="code-9-L190"><a href="#code-9-L190">190</a>    * 把权限集合组装成森林，沿上级链补齐祖先作为导航容器：只有集合内的节点 {@code granted} 为 true，</span>
+<span class="line" id="code-9-L191"><a href="#code-9-L191">191</a>    * 补出的祖先不代表拥有其授权或 API。本方法不按生效状态过滤，由调用方先筛选。同级节点按标识升序，与 DDD 路线一致，</span>
+<span class="line" id="code-9-L192"><a href="#code-9-L192">192</a>    * 不随授权来源的遍历顺序变化。</span>
+<span class="line" id="code-9-L193"><a href="#code-9-L193">193</a>    */</span>
+<span class="line" id="code-9-L194"><a href="#code-9-L194">194</a>   public static List&lt;PermissionData.Tree&gt; tree(Collection&lt;Permission&gt; granted) {</span>
+<span class="line" id="code-9-L195"><a href="#code-9-L195">195</a>     Map&lt;Long, Permission&gt; nodes = new TreeMap&lt;&gt;();</span>
+<span class="line" id="code-9-L196"><a href="#code-9-L196">196</a>     Set&lt;Long&gt; exact = new HashSet&lt;&gt;();</span>
+<span class="line" id="code-9-L197"><a href="#code-9-L197">197</a>     for (Permission p : granted) {</span>
+<span class="line" id="code-9-L198"><a href="#code-9-L198">198</a>       exact.add(p.getId());</span>
+<span class="line" id="code-9-L199"><a href="#code-9-L199">199</a>       for (Permission n = p; n != null; n = n.getParent()) nodes.putIfAbsent(n.getId(), n);</span>
+<span class="line" id="code-9-L200"><a href="#code-9-L200">200</a>     }</span>
+<span class="line" id="code-9-L201"><a href="#code-9-L201">201</a>     return nodes.values().stream()</span>
+<span class="line" id="code-9-L202"><a href="#code-9-L202">202</a>         .filter(p -&gt; p.getParent() == null)</span>
+<span class="line" id="code-9-L203"><a href="#code-9-L203">203</a>         .map(p -&gt; branch(p, nodes.values(), exact))</span>
+<span class="line" id="code-9-L204"><a href="#code-9-L204">204</a>         .toList();</span>
+<span class="line" id="code-9-L205"><a href="#code-9-L205">205</a>   }</span>
+<span class="line" id="code-9-L206"><a href="#code-9-L206">206</a> </span>
+<span class="line" id="code-9-L207"><a href="#code-9-L207">207</a>   /** 递归构造以 {@code p} 为根的子树；下级沿用 {@code nodes} 的标识升序。 */</span>
+<span class="line" id="code-9-L208"><a href="#code-9-L208">208</a>   private static PermissionData.Tree branch(</span>
+<span class="line" id="code-9-L209"><a href="#code-9-L209">209</a>       Permission p, Collection&lt;Permission&gt; nodes, Set&lt;Long&gt; exact) {</span>
+<span class="line" id="code-9-L210"><a href="#code-9-L210">210</a>     return new PermissionData.Tree(</span>
+<span class="line" id="code-9-L211"><a href="#code-9-L211">211</a>         view(p),</span>
+<span class="line" id="code-9-L212"><a href="#code-9-L212">212</a>         exact.contains(p.getId()),</span>
+<span class="line" id="code-9-L213"><a href="#code-9-L213">213</a>         nodes.stream()</span>
+<span class="line" id="code-9-L214"><a href="#code-9-L214">214</a>             .filter(n -&gt; n.getParent() != null &amp;&amp; n.getParent().getId().equals(p.getId()))</span>
+<span class="line" id="code-9-L215"><a href="#code-9-L215">215</a>             .map(n -&gt; branch(n, nodes, exact))</span>
+<span class="line" id="code-9-L216"><a href="#code-9-L216">216</a>             .toList());</span>
+<span class="line" id="code-9-L217"><a href="#code-9-L217">217</a>   }</span>
+<span class="line" id="code-9-L218"><a href="#code-9-L218">218</a> </span>
+<span class="line" id="code-9-L219"><a href="#code-9-L219">219</a>   /**</span>
+<span class="line" id="code-9-L220"><a href="#code-9-L220">220</a>    * 管理端权限目录树，含已失效节点；传入的就是全部节点，所以每个节点的 {@code granted} 都为 true。</span>
+<span class="line" id="code-9-L221"><a href="#code-9-L221">221</a>    * {@code systemId} 为空时返回全部应用，不校验应用是否存在。</span>
+<span class="line" id="code-9-L222"><a href="#code-9-L222">222</a>    */</span>
+<span class="line" id="code-9-L223"><a href="#code-9-L223">223</a>   public List&lt;PermissionData.Tree&gt; tree(Long systemId) {</span>
+<span class="line" id="code-9-L224"><a href="#code-9-L224">224</a>     return tree(</span>
+<span class="line" id="code-9-L225"><a href="#code-9-L225">225</a>         (systemId == null</span>
+<span class="line" id="code-9-L226"><a href="#code-9-L226">226</a>             ? permissions.findAll(org.springframework.data.domain.Sort.by(&quot;id&quot;))</span>
+<span class="line" id="code-9-L227"><a href="#code-9-L227">227</a>             : permissions.findAllBySystem_IdOrderById(systemId)));</span>
+<span class="line" id="code-9-L228"><a href="#code-9-L228">228</a>   }</span>
+<span class="line" id="code-9-L229"><a href="#code-9-L229">229</a> </span>
+<span class="line" id="code-9-L230"><a href="#code-9-L230">230</a>   /** 控制台的内置菜单与按钮：停用或删除后所有人（包括管理员）都用不了对应页面，可能连恢复它的页面也打不开，抛 {@code CONSOLE_BUILT_IN}（409）。 */</span>
+<span class="line" id="code-9-L231"><a href="#code-9-L231">231</a>   private static void protectBuiltIn(Permission p) {</span>
+<span class="line" id="code-9-L232"><a href="#code-9-L232">232</a>     if (ConsoleCatalog.isEntry(p.getCode()))</span>
+<span class="line" id="code-9-L233"><a href="#code-9-L233">233</a>       throw new ConflictException(&quot;CONSOLE_BUILT_IN&quot;, &quot;权限管理系统的内置菜单与按钮不能停用或删除&quot;);</span>
+<span class="line" id="code-9-L234"><a href="#code-9-L234">234</a>   }</span>
+<span class="line" id="code-9-L235"><a href="#code-9-L235">235</a> }</span></pre></details></section><section id="code-10"><h2>面向对象权限实现</h2><p>service/ddd/application/permission/DddPermissionService.java · <a href="../../src/main/java/com/cdwy/permission/service/ddd/application/permission/DddPermissionService.java">打开原文件</a></p><details><summary>展开源码（带行号）</summary><pre class="source"><span class="line" id="code-10-L1"><a href="#code-10-L1">  1</a> package com.cdwy.permission.service.ddd.application.permission;</span>
 <span class="line" id="code-10-L2"><a href="#code-10-L2">  2</a> </span>
-<span class="line" id="code-10-L3"><a href="#code-10-L3">  3</a> import com.cdwy.permission.service.ddd.domain.model.*;</span>
-<span class="line" id="code-10-L4"><a href="#code-10-L4">  4</a> import com.cdwy.permission.service.ddd.domain.repository.*;</span>
-<span class="line" id="code-10-L5"><a href="#code-10-L5">  5</a> import com.cdwy.permission.service.port.data.*;</span>
-<span class="line" id="code-10-L6"><a href="#code-10-L6">  6</a> import com.cdwy.permission.service.port.error.*;</span>
-<span class="line" id="code-10-L7"><a href="#code-10-L7">  7</a> import com.cdwy.permission.service.port.permission.PermissionUseCase;</span>
-<span class="line" id="code-10-L8"><a href="#code-10-L8">  8</a> import java.util.*;</span>
-<span class="line" id="code-10-L9"><a href="#code-10-L9">  9</a> import lombok.RequiredArgsConstructor;</span>
-<span class="line" id="code-10-L10"><a href="#code-10-L10"> 10</a> import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;</span>
-<span class="line" id="code-10-L11"><a href="#code-10-L11"> 11</a> import org.springframework.stereotype.Service;</span>
-<span class="line" id="code-10-L12"><a href="#code-10-L12"> 12</a> import org.springframework.transaction.annotation.Transactional;</span>
-<span class="line" id="code-10-L13"><a href="#code-10-L13"> 13</a> </span>
-<span class="line" id="code-10-L14"><a href="#code-10-L14"> 14</a> /** DddPermissionService 应用服务：编排领域对象与仓储端口，禁止依赖 JPA。 */</span>
-<span class="line" id="code-10-L15"><a href="#code-10-L15"> 15</a> @Service</span>
-<span class="line" id="code-10-L16"><a href="#code-10-L16"> 16</a> @RequiredArgsConstructor</span>
-<span class="line" id="code-10-L17"><a href="#code-10-L17"> 17</a> @Transactional(readOnly = true)</span>
-<span class="line" id="code-10-L18"><a href="#code-10-L18"> 18</a> @ConditionalOnProperty(name = &quot;app.backend-strategy&quot;, havingValue = &quot;ddd&quot;)</span>
-<span class="line" id="code-10-L19"><a href="#code-10-L19"> 19</a> public class DddPermissionService implements PermissionUseCase {</span>
-<span class="line" id="code-10-L20"><a href="#code-10-L20"> 20</a>   /** 返回实际装载模式。 */</span>
-<span class="line" id="code-10-L21"><a href="#code-10-L21"> 21</a>   @Override</span>
-<span class="line" id="code-10-L22"><a href="#code-10-L22"> 22</a>   public String strategy() {</span>
-<span class="line" id="code-10-L23"><a href="#code-10-L23"> 23</a>     return &quot;ddd&quot;;</span>
-<span class="line" id="code-10-L24"><a href="#code-10-L24"> 24</a>   }</span>
-<span class="line" id="code-10-L25"><a href="#code-10-L25"> 25</a> </span>
-<span class="line" id="code-10-L26"><a href="#code-10-L26"> 26</a>   private final PermissionCatalog permissions;</span>
-<span class="line" id="code-10-L27"><a href="#code-10-L27"> 27</a>   private final SystemCatalog systems;</span>
-<span class="line" id="code-10-L28"><a href="#code-10-L28"> 28</a>   private final ResourceCatalog resources;</span>
-<span class="line" id="code-10-L29"><a href="#code-10-L29"> 29</a>   private final AssignmentRepository assignments;</span>
-<span class="line" id="code-10-L30"><a href="#code-10-L30"> 30</a> </span>
-<span class="line" id="code-10-L31"><a href="#code-10-L31"> 31</a>   /** 当前权限图。 */</span>
-<span class="line" id="code-10-L32"><a href="#code-10-L32"> 32</a>   private Map&lt;Long, FrontendPermission&gt; nodes() {</span>
-<span class="line" id="code-10-L33"><a href="#code-10-L33"> 33</a>     Map&lt;Long, FrontendPermission&gt; nodes = new LinkedHashMap&lt;&gt;();</span>
-<span class="line" id="code-10-L34"><a href="#code-10-L34"> 34</a>     permissions.all().forEach(n -&gt; nodes.put(n.getId(), n));</span>
-<span class="line" id="code-10-L35"><a href="#code-10-L35"> 35</a>     return nodes;</span>
-<span class="line" id="code-10-L36"><a href="#code-10-L36"> 36</a>   }</span>
-<span class="line" id="code-10-L37"><a href="#code-10-L37"> 37</a> </span>
-<span class="line" id="code-10-L38"><a href="#code-10-L38"> 38</a>   /** 当前目录领域快照。 */</span>
-<span class="line" id="code-10-L39"><a href="#code-10-L39"> 39</a>   private PermissionDirectory directory() {</span>
-<span class="line" id="code-10-L40"><a href="#code-10-L40"> 40</a>     return new PermissionDirectory(permissions.all(), systems.all());</span>
-<span class="line" id="code-10-L41"><a href="#code-10-L41"> 41</a>   }</span>
-<span class="line" id="code-10-L42"><a href="#code-10-L42"> 42</a> </span>
-<span class="line" id="code-10-L43"><a href="#code-10-L43"> 43</a>   /** 读取前端权限。 */</span>
-<span class="line" id="code-10-L44"><a href="#code-10-L44"> 44</a>   private FrontendPermission require(Long id) {</span>
-<span class="line" id="code-10-L45"><a href="#code-10-L45"> 45</a>     return permissions.find(id).orElseThrow(() -&gt; new ResourceNotFoundException(&quot;PERMISSION_NOT_FOUND&quot;, &quot;前端权限不存在&quot;));</span>
-<span class="line" id="code-10-L46"><a href="#code-10-L46"> 46</a>   }</span>
-<span class="line" id="code-10-L47"><a href="#code-10-L47"> 47</a> </span>
-<span class="line" id="code-10-L48"><a href="#code-10-L48"> 48</a>   /** 读取 API 资源。 */</span>
-<span class="line" id="code-10-L49"><a href="#code-10-L49"> 49</a>   private ProtectedResource resource(Long id) {</span>
-<span class="line" id="code-10-L50"><a href="#code-10-L50"> 50</a>     return resources.find(id).orElseThrow(() -&gt; new ResourceNotFoundException(&quot;API_RESOURCE_NOT_FOUND&quot;, &quot;API 资源不存在&quot;));</span>
-<span class="line" id="code-10-L51"><a href="#code-10-L51"> 51</a>   }</span>
-<span class="line" id="code-10-L52"><a href="#code-10-L52"> 52</a> </span>
-<span class="line" id="code-10-L53"><a href="#code-10-L53"> 53</a>   /** 不重复访问数据库的结果转换。 */</span>
-<span class="line" id="code-10-L54"><a href="#code-10-L54"> 54</a>   private PermissionData.View view(FrontendPermission n) {</span>
-<span class="line" id="code-10-L55"><a href="#code-10-L55"> 55</a>     return new PermissionData.View(</span>
-<span class="line" id="code-10-L56"><a href="#code-10-L56"> 56</a>         n.getId(),</span>
-<span class="line" id="code-10-L57"><a href="#code-10-L57"> 57</a>         n.getSystemId(),</span>
-<span class="line" id="code-10-L58"><a href="#code-10-L58"> 58</a>         n.getCode(),</span>
-<span class="line" id="code-10-L59"><a href="#code-10-L59"> 59</a>         n.getName(),</span>
-<span class="line" id="code-10-L60"><a href="#code-10-L60"> 60</a>         n.getKind(),</span>
-<span class="line" id="code-10-L61"><a href="#code-10-L61"> 61</a>         n.getMenuPath(),</span>
-<span class="line" id="code-10-L62"><a href="#code-10-L62"> 62</a>         n.getParentId(),</span>
-<span class="line" id="code-10-L63"><a href="#code-10-L63"> 63</a>         n.getActive());</span>
-<span class="line" id="code-10-L64"><a href="#code-10-L64"> 64</a>   }</span>
-<span class="line" id="code-10-L65"><a href="#code-10-L65"> 65</a> </span>
-<span class="line" id="code-10-L66"><a href="#code-10-L66"> 66</a>   /** 根据应用过滤权限。 */</span>
-<span class="line" id="code-10-L67"><a href="#code-10-L67"> 67</a>   public List&lt;PermissionData.View&gt; list(Long systemId) {</span>
-<span class="line" id="code-10-L68"><a href="#code-10-L68"> 68</a>     return permissions.all().stream()</span>
-<span class="line" id="code-10-L69"><a href="#code-10-L69"> 69</a>         .filter(n -&gt; systemId == null || n.getSystemId().equals(systemId))</span>
-<span class="line" id="code-10-L70"><a href="#code-10-L70"> 70</a>         .map(this::view)</span>
-<span class="line" id="code-10-L71"><a href="#code-10-L71"> 71</a>         .toList();</span>
-<span class="line" id="code-10-L72"><a href="#code-10-L72"> 72</a>   }</span>
-<span class="line" id="code-10-L73"><a href="#code-10-L73"> 73</a> </span>
-<span class="line" id="code-10-L74"><a href="#code-10-L74"> 74</a>   /** 对象维护菜单按钮规则，仓储处理唯一约束。 */</span>
-<span class="line" id="code-10-L75"><a href="#code-10-L75"> 75</a>   @Transactional</span>
-<span class="line" id="code-10-L76"><a href="#code-10-L76"> 76</a>   public PermissionData.View create(PermissionData.Input input) {</span>
-<span class="line" id="code-10-L77"><a href="#code-10-L77"> 77</a>     if (permissions.all().stream().anyMatch(n -&gt; n.getCode().equals(input.code())))</span>
-<span class="line" id="code-10-L78"><a href="#code-10-L78"> 78</a>       throw new ConflictException(&quot;PERMISSION_CODE_EXISTS&quot;, &quot;前端权限编码已存在&quot;);</span>
-<span class="line" id="code-10-L79"><a href="#code-10-L79"> 79</a>     systems.find(input.systemId()).orElseThrow(() -&gt; new ResourceNotFoundException(&quot;SYSTEM_NOT_FOUND&quot;, &quot;应用不存在&quot;));</span>
-<span class="line" id="code-10-L80"><a href="#code-10-L80"> 80</a>     FrontendPermission n = new FrontendPermission();</span>
-<span class="line" id="code-10-L81"><a href="#code-10-L81"> 81</a>     n.setSystemId(input.systemId());</span>
-<span class="line" id="code-10-L82"><a href="#code-10-L82"> 82</a>     n.setCode(input.code());</span>
-<span class="line" id="code-10-L83"><a href="#code-10-L83"> 83</a>     n.edit(input.name(), input.type(), input.menuPath(), input.parentId(), nodes(), false);</span>
-<span class="line" id="code-10-L84"><a href="#code-10-L84"> 84</a>     return view(permissions.save(n));</span>
-<span class="line" id="code-10-L85"><a href="#code-10-L85"> 85</a>   }</span>
-<span class="line" id="code-10-L86"><a href="#code-10-L86"> 86</a> </span>
-<span class="line" id="code-10-L87"><a href="#code-10-L87"> 87</a>   /** 修改父级时重新检查整条路径。 */</span>
-<span class="line" id="code-10-L88"><a href="#code-10-L88"> 88</a>   @Transactional</span>
-<span class="line" id="code-10-L89"><a href="#code-10-L89"> 89</a>   public PermissionData.View update(Long id, PermissionData.Update input) {</span>
-<span class="line" id="code-10-L90"><a href="#code-10-L90"> 90</a>     FrontendPermission n = require(id);</span>
-<span class="line" id="code-10-L91"><a href="#code-10-L91"> 91</a>     n.edit(</span>
-<span class="line" id="code-10-L92"><a href="#code-10-L92"> 92</a>         input.name(),</span>
-<span class="line" id="code-10-L93"><a href="#code-10-L93"> 93</a>         input.type(),</span>
-<span class="line" id="code-10-L94"><a href="#code-10-L94"> 94</a>         input.menuPath(),</span>
-<span class="line" id="code-10-L95"><a href="#code-10-L95"> 95</a>         input.parentId(),</span>
-<span class="line" id="code-10-L96"><a href="#code-10-L96"> 96</a>         nodes(),</span>
-<span class="line" id="code-10-L97"><a href="#code-10-L97"> 97</a>         permissions.hasChildren(id));</span>
-<span class="line" id="code-10-L98"><a href="#code-10-L98"> 98</a>     return view(permissions.save(n));</span>
-<span class="line" id="code-10-L99"><a href="#code-10-L99"> 99</a>   }</span>
-<span class="line" id="code-10-L100"><a href="#code-10-L100">100</a> </span>
-<span class="line" id="code-10-L101"><a href="#code-10-L101">101</a>   /** 停用权限保留来源信息。 */</span>
-<span class="line" id="code-10-L102"><a href="#code-10-L102">102</a>   @Transactional</span>
-<span class="line" id="code-10-L103"><a href="#code-10-L103">103</a>   public PermissionData.View status(Long id, boolean active) {</span>
-<span class="line" id="code-10-L104"><a href="#code-10-L104">104</a>     FrontendPermission n = require(id);</span>
-<span class="line" id="code-10-L105"><a href="#code-10-L105">105</a>     n.changeStatus(active);</span>
-<span class="line" id="code-10-L106"><a href="#code-10-L106">106</a>     return view(permissions.save(n));</span>
-<span class="line" id="code-10-L107"><a href="#code-10-L107">107</a>   }</span>
-<span class="line" id="code-10-L108"><a href="#code-10-L108">108</a> </span>
-<span class="line" id="code-10-L109"><a href="#code-10-L109">109</a>   /** 先解除子节点、角色授权与 API 绑定。 */</span>
-<span class="line" id="code-10-L110"><a href="#code-10-L110">110</a>   @Transactional</span>
-<span class="line" id="code-10-L111"><a href="#code-10-L111">111</a>   public void delete(Long id) {</span>
-<span class="line" id="code-10-L112"><a href="#code-10-L112">112</a>     FrontendPermission n = require(id);</span>
-<span class="line" id="code-10-L113"><a href="#code-10-L113">113</a>     n.assertDeletable(</span>
-<span class="line" id="code-10-L114"><a href="#code-10-L114">114</a>         permissions.hasChildren(id)</span>
-<span class="line" id="code-10-L115"><a href="#code-10-L115">115</a>             || assignments.rolePermissions().stream().anyMatch(e -&gt; e.right().equals(id))</span>
-<span class="line" id="code-10-L116"><a href="#code-10-L116">116</a>             || assignments.bindings().stream().anyMatch(e -&gt; e.left().equals(id)));</span>
-<span class="line" id="code-10-L117"><a href="#code-10-L117">117</a>     permissions.delete(id);</span>
-<span class="line" id="code-10-L118"><a href="#code-10-L118">118</a>   }</span>
-<span class="line" id="code-10-L119"><a href="#code-10-L119">119</a> </span>
-<span class="line" id="code-10-L120"><a href="#code-10-L120">120</a>   /** 对象维护同应用绑定规则。 */</span>
-<span class="line" id="code-10-L121"><a href="#code-10-L121">121</a>   @Transactional</span>
-<span class="line" id="code-10-L122"><a href="#code-10-L122">122</a>   public void bind(Long permissionId, Long resourceId) {</span>
-<span class="line" id="code-10-L123"><a href="#code-10-L123">123</a>     FrontendPermission n = require(permissionId);</span>
-<span class="line" id="code-10-L124"><a href="#code-10-L124">124</a>     ProtectedResource r = resource(resourceId);</span>
-<span class="line" id="code-10-L125"><a href="#code-10-L125">125</a>     n.assertBindable(r);</span>
-<span class="line" id="code-10-L126"><a href="#code-10-L126">126</a>     assignments.bind(permissionId, resourceId);</span>
-<span class="line" id="code-10-L127"><a href="#code-10-L127">127</a>   }</span>
-<span class="line" id="code-10-L128"><a href="#code-10-L128">128</a> </span>
-<span class="line" id="code-10-L129"><a href="#code-10-L129">129</a>   /** 幂等解除绑定。 */</span>
-<span class="line" id="code-10-L130"><a href="#code-10-L130">130</a>   @Transactional</span>
-<span class="line" id="code-10-L131"><a href="#code-10-L131">131</a>   public void unbind(Long permissionId, Long resourceId) {</span>
-<span class="line" id="code-10-L132"><a href="#code-10-L132">132</a>     require(permissionId);</span>
-<span class="line" id="code-10-L133"><a href="#code-10-L133">133</a>     resource(resourceId);</span>
-<span class="line" id="code-10-L134"><a href="#code-10-L134">134</a>     assignments.unbind(permissionId, resourceId);</span>
-<span class="line" id="code-10-L135"><a href="#code-10-L135">135</a>   }</span>
-<span class="line" id="code-10-L136"><a href="#code-10-L136">136</a> </span>
-<span class="line" id="code-10-L137"><a href="#code-10-L137">137</a>   /** 查询已绑定 API。 */</span>
-<span class="line" id="code-10-L138"><a href="#code-10-L138">138</a>   public List&lt;ResourceData.View&gt; resources(Long id) {</span>
-<span class="line" id="code-10-L139"><a href="#code-10-L139">139</a>     require(id);</span>
-<span class="line" id="code-10-L140"><a href="#code-10-L140">140</a>     return assignments.bindings().stream()</span>
-<span class="line" id="code-10-L141"><a href="#code-10-L141">141</a>         .filter(e -&gt; e.left().equals(id))</span>
-<span class="line" id="code-10-L142"><a href="#code-10-L142">142</a>         .map(e -&gt; resource(e.right()))</span>
-<span class="line" id="code-10-L143"><a href="#code-10-L143">143</a>         .map(</span>
-<span class="line" id="code-10-L144"><a href="#code-10-L144">144</a>             n -&gt;</span>
-<span class="line" id="code-10-L145"><a href="#code-10-L145">145</a>                 new ResourceData.View(</span>
-<span class="line" id="code-10-L146"><a href="#code-10-L146">146</a>                     n.getId(),</span>
-<span class="line" id="code-10-L147"><a href="#code-10-L147">147</a>                     n.getSystemId(),</span>
-<span class="line" id="code-10-L148"><a href="#code-10-L148">148</a>                     n.getName(),</span>
-<span class="line" id="code-10-L149"><a href="#code-10-L149">149</a>                     n.getMethod(),</span>
-<span class="line" id="code-10-L150"><a href="#code-10-L150">150</a>                     n.getPath(),</span>
-<span class="line" id="code-10-L151"><a href="#code-10-L151">151</a>                     n.getActive(),</span>
-<span class="line" id="code-10-L152"><a href="#code-10-L152">152</a>                     n.getCode(),</span>
-<span class="line" id="code-10-L153"><a href="#code-10-L153">153</a>                     n.getOperationId()))</span>
-<span class="line" id="code-10-L154"><a href="#code-10-L154">154</a>         .toList();</span>
-<span class="line" id="code-10-L155"><a href="#code-10-L155">155</a>   }</span>
-<span class="line" id="code-10-L156"><a href="#code-10-L156">156</a> </span>
-<span class="line" id="code-10-L157"><a href="#code-10-L157">157</a>   /** 管理目录展示不把未授权祖先当成实际授权。 */</span>
-<span class="line" id="code-10-L158"><a href="#code-10-L158">158</a>   public List&lt;PermissionData.Tree&gt; tree(Long systemId) {</span>
-<span class="line" id="code-10-L159"><a href="#code-10-L159">159</a>     List&lt;Long&gt; ids =</span>
-<span class="line" id="code-10-L160"><a href="#code-10-L160">160</a>         permissions.all().stream()</span>
-<span class="line" id="code-10-L161"><a href="#code-10-L161">161</a>             .filter(n -&gt; systemId == null || n.getSystemId().equals(systemId))</span>
-<span class="line" id="code-10-L162"><a href="#code-10-L162">162</a>             .map(FrontendPermission::getId)</span>
-<span class="line" id="code-10-L163"><a href="#code-10-L163">163</a>             .toList();</span>
-<span class="line" id="code-10-L164"><a href="#code-10-L164">164</a>     return directory().tree(ids);</span>
-<span class="line" id="code-10-L165"><a href="#code-10-L165">165</a>   }</span>
-<span class="line" id="code-10-L166"><a href="#code-10-L166">166</a> }</span></pre></details></section><section id="code-11"><h2>权限领域对象</h2><p>service/ddd/domain/model/FrontendPermission.java · <a href="../../src/main/java/com/cdwy/permission/service/ddd/domain/model/FrontendPermission.java">打开原文件</a></p><details><summary>展开源码（带行号）</summary><pre class="source"><span class="line" id="code-11-L1"><a href="#code-11-L1">  1</a> package com.cdwy.permission.service.ddd.domain.model;</span>
+<span class="line" id="code-10-L3"><a href="#code-10-L3">  3</a> import com.cdwy.permission.service.auth.ConsoleCatalog;</span>
+<span class="line" id="code-10-L4"><a href="#code-10-L4">  4</a> import com.cdwy.permission.service.ddd.domain.model.*;</span>
+<span class="line" id="code-10-L5"><a href="#code-10-L5">  5</a> import com.cdwy.permission.service.ddd.domain.repository.*;</span>
+<span class="line" id="code-10-L6"><a href="#code-10-L6">  6</a> import com.cdwy.permission.service.port.data.*;</span>
+<span class="line" id="code-10-L7"><a href="#code-10-L7">  7</a> import com.cdwy.permission.service.port.error.*;</span>
+<span class="line" id="code-10-L8"><a href="#code-10-L8">  8</a> import com.cdwy.permission.service.port.permission.PermissionUseCase;</span>
+<span class="line" id="code-10-L9"><a href="#code-10-L9">  9</a> import java.util.*;</span>
+<span class="line" id="code-10-L10"><a href="#code-10-L10"> 10</a> import lombok.RequiredArgsConstructor;</span>
+<span class="line" id="code-10-L11"><a href="#code-10-L11"> 11</a> import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;</span>
+<span class="line" id="code-10-L12"><a href="#code-10-L12"> 12</a> import org.springframework.stereotype.Service;</span>
+<span class="line" id="code-10-L13"><a href="#code-10-L13"> 13</a> import org.springframework.transaction.annotation.Transactional;</span>
+<span class="line" id="code-10-L14"><a href="#code-10-L14"> 14</a> </span>
+<span class="line" id="code-10-L15"><a href="#code-10-L15"> 15</a> /** DddPermissionService 应用服务：编排领域对象与仓储端口，禁止依赖 JPA。 */</span>
+<span class="line" id="code-10-L16"><a href="#code-10-L16"> 16</a> @Service</span>
+<span class="line" id="code-10-L17"><a href="#code-10-L17"> 17</a> @RequiredArgsConstructor</span>
+<span class="line" id="code-10-L18"><a href="#code-10-L18"> 18</a> @Transactional(readOnly = true)</span>
+<span class="line" id="code-10-L19"><a href="#code-10-L19"> 19</a> @ConditionalOnProperty(name = &quot;app.backend-strategy&quot;, havingValue = &quot;ddd&quot;)</span>
+<span class="line" id="code-10-L20"><a href="#code-10-L20"> 20</a> public class DddPermissionService implements PermissionUseCase {</span>
+<span class="line" id="code-10-L21"><a href="#code-10-L21"> 21</a>   /** 返回实际装载模式。 */</span>
+<span class="line" id="code-10-L22"><a href="#code-10-L22"> 22</a>   @Override</span>
+<span class="line" id="code-10-L23"><a href="#code-10-L23"> 23</a>   public String strategy() {</span>
+<span class="line" id="code-10-L24"><a href="#code-10-L24"> 24</a>     return &quot;ddd&quot;;</span>
+<span class="line" id="code-10-L25"><a href="#code-10-L25"> 25</a>   }</span>
+<span class="line" id="code-10-L26"><a href="#code-10-L26"> 26</a> </span>
+<span class="line" id="code-10-L27"><a href="#code-10-L27"> 27</a>   private final PermissionCatalog permissions;</span>
+<span class="line" id="code-10-L28"><a href="#code-10-L28"> 28</a>   private final SystemCatalog systems;</span>
+<span class="line" id="code-10-L29"><a href="#code-10-L29"> 29</a>   private final ResourceCatalog resources;</span>
+<span class="line" id="code-10-L30"><a href="#code-10-L30"> 30</a>   private final AssignmentRepository assignments;</span>
+<span class="line" id="code-10-L31"><a href="#code-10-L31"> 31</a> </span>
+<span class="line" id="code-10-L32"><a href="#code-10-L32"> 32</a>   /** 当前权限图。 */</span>
+<span class="line" id="code-10-L33"><a href="#code-10-L33"> 33</a>   private Map&lt;Long, FrontendPermission&gt; nodes() {</span>
+<span class="line" id="code-10-L34"><a href="#code-10-L34"> 34</a>     Map&lt;Long, FrontendPermission&gt; nodes = new LinkedHashMap&lt;&gt;();</span>
+<span class="line" id="code-10-L35"><a href="#code-10-L35"> 35</a>     permissions.all().forEach(n -&gt; nodes.put(n.getId(), n));</span>
+<span class="line" id="code-10-L36"><a href="#code-10-L36"> 36</a>     return nodes;</span>
+<span class="line" id="code-10-L37"><a href="#code-10-L37"> 37</a>   }</span>
+<span class="line" id="code-10-L38"><a href="#code-10-L38"> 38</a> </span>
+<span class="line" id="code-10-L39"><a href="#code-10-L39"> 39</a>   /** 当前目录领域快照。 */</span>
+<span class="line" id="code-10-L40"><a href="#code-10-L40"> 40</a>   private PermissionDirectory directory() {</span>
+<span class="line" id="code-10-L41"><a href="#code-10-L41"> 41</a>     return new PermissionDirectory(permissions.all(), systems.all());</span>
+<span class="line" id="code-10-L42"><a href="#code-10-L42"> 42</a>   }</span>
+<span class="line" id="code-10-L43"><a href="#code-10-L43"> 43</a> </span>
+<span class="line" id="code-10-L44"><a href="#code-10-L44"> 44</a>   /** 读取前端权限。 */</span>
+<span class="line" id="code-10-L45"><a href="#code-10-L45"> 45</a>   private FrontendPermission require(Long id) {</span>
+<span class="line" id="code-10-L46"><a href="#code-10-L46"> 46</a>     return permissions.find(id).orElseThrow(() -&gt; new ResourceNotFoundException(&quot;PERMISSION_NOT_FOUND&quot;, &quot;前端权限不存在&quot;));</span>
+<span class="line" id="code-10-L47"><a href="#code-10-L47"> 47</a>   }</span>
+<span class="line" id="code-10-L48"><a href="#code-10-L48"> 48</a> </span>
+<span class="line" id="code-10-L49"><a href="#code-10-L49"> 49</a>   /** 读取 API 资源。 */</span>
+<span class="line" id="code-10-L50"><a href="#code-10-L50"> 50</a>   private ProtectedResource resource(Long id) {</span>
+<span class="line" id="code-10-L51"><a href="#code-10-L51"> 51</a>     return resources.find(id).orElseThrow(() -&gt; new ResourceNotFoundException(&quot;API_RESOURCE_NOT_FOUND&quot;, &quot;API 资源不存在&quot;));</span>
+<span class="line" id="code-10-L52"><a href="#code-10-L52"> 52</a>   }</span>
+<span class="line" id="code-10-L53"><a href="#code-10-L53"> 53</a> </span>
+<span class="line" id="code-10-L54"><a href="#code-10-L54"> 54</a>   /** 不重复访问数据库的结果转换。 */</span>
+<span class="line" id="code-10-L55"><a href="#code-10-L55"> 55</a>   private PermissionData.View view(FrontendPermission n) {</span>
+<span class="line" id="code-10-L56"><a href="#code-10-L56"> 56</a>     return new PermissionData.View(</span>
+<span class="line" id="code-10-L57"><a href="#code-10-L57"> 57</a>         n.getId(),</span>
+<span class="line" id="code-10-L58"><a href="#code-10-L58"> 58</a>         n.getSystemId(),</span>
+<span class="line" id="code-10-L59"><a href="#code-10-L59"> 59</a>         n.getCode(),</span>
+<span class="line" id="code-10-L60"><a href="#code-10-L60"> 60</a>         n.getName(),</span>
+<span class="line" id="code-10-L61"><a href="#code-10-L61"> 61</a>         n.getKind(),</span>
+<span class="line" id="code-10-L62"><a href="#code-10-L62"> 62</a>         n.getMenuPath(),</span>
+<span class="line" id="code-10-L63"><a href="#code-10-L63"> 63</a>         n.getParentId(),</span>
+<span class="line" id="code-10-L64"><a href="#code-10-L64"> 64</a>         n.getActive());</span>
+<span class="line" id="code-10-L65"><a href="#code-10-L65"> 65</a>   }</span>
+<span class="line" id="code-10-L66"><a href="#code-10-L66"> 66</a> </span>
+<span class="line" id="code-10-L67"><a href="#code-10-L67"> 67</a>   /** 根据应用过滤权限。 */</span>
+<span class="line" id="code-10-L68"><a href="#code-10-L68"> 68</a>   public List&lt;PermissionData.View&gt; list(Long systemId) {</span>
+<span class="line" id="code-10-L69"><a href="#code-10-L69"> 69</a>     return permissions.all().stream()</span>
+<span class="line" id="code-10-L70"><a href="#code-10-L70"> 70</a>         .filter(n -&gt; systemId == null || n.getSystemId().equals(systemId))</span>
+<span class="line" id="code-10-L71"><a href="#code-10-L71"> 71</a>         .map(this::view)</span>
+<span class="line" id="code-10-L72"><a href="#code-10-L72"> 72</a>         .toList();</span>
+<span class="line" id="code-10-L73"><a href="#code-10-L73"> 73</a>   }</span>
+<span class="line" id="code-10-L74"><a href="#code-10-L74"> 74</a> </span>
+<span class="line" id="code-10-L75"><a href="#code-10-L75"> 75</a>   /** 对象维护菜单按钮规则，仓储处理唯一约束。 */</span>
+<span class="line" id="code-10-L76"><a href="#code-10-L76"> 76</a>   @Transactional</span>
+<span class="line" id="code-10-L77"><a href="#code-10-L77"> 77</a>   public PermissionData.View create(PermissionData.Input input) {</span>
+<span class="line" id="code-10-L78"><a href="#code-10-L78"> 78</a>     if (permissions.all().stream().anyMatch(n -&gt; n.getCode().equals(input.code())))</span>
+<span class="line" id="code-10-L79"><a href="#code-10-L79"> 79</a>       throw new ConflictException(&quot;PERMISSION_CODE_EXISTS&quot;, &quot;前端权限编码已存在&quot;);</span>
+<span class="line" id="code-10-L80"><a href="#code-10-L80"> 80</a>     systems.find(input.systemId()).orElseThrow(() -&gt; new ResourceNotFoundException(&quot;SYSTEM_NOT_FOUND&quot;, &quot;应用不存在&quot;));</span>
+<span class="line" id="code-10-L81"><a href="#code-10-L81"> 81</a>     FrontendPermission n = new FrontendPermission();</span>
+<span class="line" id="code-10-L82"><a href="#code-10-L82"> 82</a>     n.setSystemId(input.systemId());</span>
+<span class="line" id="code-10-L83"><a href="#code-10-L83"> 83</a>     n.setCode(input.code());</span>
+<span class="line" id="code-10-L84"><a href="#code-10-L84"> 84</a>     n.edit(input.name(), input.type(), input.menuPath(), input.parentId(), nodes(), false);</span>
+<span class="line" id="code-10-L85"><a href="#code-10-L85"> 85</a>     return view(permissions.save(n));</span>
+<span class="line" id="code-10-L86"><a href="#code-10-L86"> 86</a>   }</span>
+<span class="line" id="code-10-L87"><a href="#code-10-L87"> 87</a> </span>
+<span class="line" id="code-10-L88"><a href="#code-10-L88"> 88</a>   /** 修改父级时重新检查整条路径。 */</span>
+<span class="line" id="code-10-L89"><a href="#code-10-L89"> 89</a>   @Transactional</span>
+<span class="line" id="code-10-L90"><a href="#code-10-L90"> 90</a>   public PermissionData.View update(Long id, PermissionData.Update input) {</span>
+<span class="line" id="code-10-L91"><a href="#code-10-L91"> 91</a>     FrontendPermission n = require(id);</span>
+<span class="line" id="code-10-L92"><a href="#code-10-L92"> 92</a>     n.edit(</span>
+<span class="line" id="code-10-L93"><a href="#code-10-L93"> 93</a>         input.name(),</span>
+<span class="line" id="code-10-L94"><a href="#code-10-L94"> 94</a>         input.type(),</span>
+<span class="line" id="code-10-L95"><a href="#code-10-L95"> 95</a>         input.menuPath(),</span>
+<span class="line" id="code-10-L96"><a href="#code-10-L96"> 96</a>         input.parentId(),</span>
+<span class="line" id="code-10-L97"><a href="#code-10-L97"> 97</a>         nodes(),</span>
+<span class="line" id="code-10-L98"><a href="#code-10-L98"> 98</a>         permissions.hasChildren(id));</span>
+<span class="line" id="code-10-L99"><a href="#code-10-L99"> 99</a>     return view(permissions.save(n));</span>
+<span class="line" id="code-10-L100"><a href="#code-10-L100">100</a>   }</span>
+<span class="line" id="code-10-L101"><a href="#code-10-L101">101</a> </span>
+<span class="line" id="code-10-L102"><a href="#code-10-L102">102</a>   /** 停用权限保留来源信息。 */</span>
+<span class="line" id="code-10-L103"><a href="#code-10-L103">103</a>   @Transactional</span>
+<span class="line" id="code-10-L104"><a href="#code-10-L104">104</a>   public PermissionData.View status(Long id, boolean active) {</span>
+<span class="line" id="code-10-L105"><a href="#code-10-L105">105</a>     FrontendPermission n = require(id);</span>
+<span class="line" id="code-10-L106"><a href="#code-10-L106">106</a>     n.changeStatus(active, ConsoleCatalog.isEntry(n.getCode()));</span>
+<span class="line" id="code-10-L107"><a href="#code-10-L107">107</a>     return view(permissions.save(n));</span>
+<span class="line" id="code-10-L108"><a href="#code-10-L108">108</a>   }</span>
+<span class="line" id="code-10-L109"><a href="#code-10-L109">109</a> </span>
+<span class="line" id="code-10-L110"><a href="#code-10-L110">110</a>   /** 先解除子节点、角色授权与 API 绑定。 */</span>
+<span class="line" id="code-10-L111"><a href="#code-10-L111">111</a>   @Transactional</span>
+<span class="line" id="code-10-L112"><a href="#code-10-L112">112</a>   public void delete(Long id) {</span>
+<span class="line" id="code-10-L113"><a href="#code-10-L113">113</a>     FrontendPermission n = require(id);</span>
+<span class="line" id="code-10-L114"><a href="#code-10-L114">114</a>     n.assertDeletable(</span>
+<span class="line" id="code-10-L115"><a href="#code-10-L115">115</a>         ConsoleCatalog.isEntry(n.getCode()),</span>
+<span class="line" id="code-10-L116"><a href="#code-10-L116">116</a>         permissions.hasChildren(id)</span>
+<span class="line" id="code-10-L117"><a href="#code-10-L117">117</a>             || assignments.rolePermissions().stream().anyMatch(e -&gt; e.right().equals(id))</span>
+<span class="line" id="code-10-L118"><a href="#code-10-L118">118</a>             || assignments.bindings().stream().anyMatch(e -&gt; e.left().equals(id)));</span>
+<span class="line" id="code-10-L119"><a href="#code-10-L119">119</a>     permissions.delete(id);</span>
+<span class="line" id="code-10-L120"><a href="#code-10-L120">120</a>   }</span>
+<span class="line" id="code-10-L121"><a href="#code-10-L121">121</a> </span>
+<span class="line" id="code-10-L122"><a href="#code-10-L122">122</a>   /** 对象维护同应用绑定规则。 */</span>
+<span class="line" id="code-10-L123"><a href="#code-10-L123">123</a>   @Transactional</span>
+<span class="line" id="code-10-L124"><a href="#code-10-L124">124</a>   public void bind(Long permissionId, Long resourceId) {</span>
+<span class="line" id="code-10-L125"><a href="#code-10-L125">125</a>     FrontendPermission n = require(permissionId);</span>
+<span class="line" id="code-10-L126"><a href="#code-10-L126">126</a>     ProtectedResource r = resource(resourceId);</span>
+<span class="line" id="code-10-L127"><a href="#code-10-L127">127</a>     n.assertBindable(r);</span>
+<span class="line" id="code-10-L128"><a href="#code-10-L128">128</a>     assignments.bind(permissionId, resourceId);</span>
+<span class="line" id="code-10-L129"><a href="#code-10-L129">129</a>   }</span>
+<span class="line" id="code-10-L130"><a href="#code-10-L130">130</a> </span>
+<span class="line" id="code-10-L131"><a href="#code-10-L131">131</a>   /** 幂等解除绑定。 */</span>
+<span class="line" id="code-10-L132"><a href="#code-10-L132">132</a>   @Transactional</span>
+<span class="line" id="code-10-L133"><a href="#code-10-L133">133</a>   public void unbind(Long permissionId, Long resourceId) {</span>
+<span class="line" id="code-10-L134"><a href="#code-10-L134">134</a>     require(permissionId);</span>
+<span class="line" id="code-10-L135"><a href="#code-10-L135">135</a>     resource(resourceId);</span>
+<span class="line" id="code-10-L136"><a href="#code-10-L136">136</a>     assignments.unbind(permissionId, resourceId);</span>
+<span class="line" id="code-10-L137"><a href="#code-10-L137">137</a>   }</span>
+<span class="line" id="code-10-L138"><a href="#code-10-L138">138</a> </span>
+<span class="line" id="code-10-L139"><a href="#code-10-L139">139</a>   /** 查询已绑定 API。 */</span>
+<span class="line" id="code-10-L140"><a href="#code-10-L140">140</a>   public List&lt;ResourceData.View&gt; resources(Long id) {</span>
+<span class="line" id="code-10-L141"><a href="#code-10-L141">141</a>     require(id);</span>
+<span class="line" id="code-10-L142"><a href="#code-10-L142">142</a>     return assignments.bindings().stream()</span>
+<span class="line" id="code-10-L143"><a href="#code-10-L143">143</a>         .filter(e -&gt; e.left().equals(id))</span>
+<span class="line" id="code-10-L144"><a href="#code-10-L144">144</a>         .map(e -&gt; resource(e.right()))</span>
+<span class="line" id="code-10-L145"><a href="#code-10-L145">145</a>         .map(</span>
+<span class="line" id="code-10-L146"><a href="#code-10-L146">146</a>             n -&gt;</span>
+<span class="line" id="code-10-L147"><a href="#code-10-L147">147</a>                 new ResourceData.View(</span>
+<span class="line" id="code-10-L148"><a href="#code-10-L148">148</a>                     n.getId(),</span>
+<span class="line" id="code-10-L149"><a href="#code-10-L149">149</a>                     n.getSystemId(),</span>
+<span class="line" id="code-10-L150"><a href="#code-10-L150">150</a>                     n.getName(),</span>
+<span class="line" id="code-10-L151"><a href="#code-10-L151">151</a>                     n.getMethod(),</span>
+<span class="line" id="code-10-L152"><a href="#code-10-L152">152</a>                     n.getPath(),</span>
+<span class="line" id="code-10-L153"><a href="#code-10-L153">153</a>                     n.getActive(),</span>
+<span class="line" id="code-10-L154"><a href="#code-10-L154">154</a>                     n.getCode(),</span>
+<span class="line" id="code-10-L155"><a href="#code-10-L155">155</a>                     n.getOperationId()))</span>
+<span class="line" id="code-10-L156"><a href="#code-10-L156">156</a>         .toList();</span>
+<span class="line" id="code-10-L157"><a href="#code-10-L157">157</a>   }</span>
+<span class="line" id="code-10-L158"><a href="#code-10-L158">158</a> </span>
+<span class="line" id="code-10-L159"><a href="#code-10-L159">159</a>   /** 管理目录展示不把未授权祖先当成实际授权。 */</span>
+<span class="line" id="code-10-L160"><a href="#code-10-L160">160</a>   public List&lt;PermissionData.Tree&gt; tree(Long systemId) {</span>
+<span class="line" id="code-10-L161"><a href="#code-10-L161">161</a>     List&lt;Long&gt; ids =</span>
+<span class="line" id="code-10-L162"><a href="#code-10-L162">162</a>         permissions.all().stream()</span>
+<span class="line" id="code-10-L163"><a href="#code-10-L163">163</a>             .filter(n -&gt; systemId == null || n.getSystemId().equals(systemId))</span>
+<span class="line" id="code-10-L164"><a href="#code-10-L164">164</a>             .map(FrontendPermission::getId)</span>
+<span class="line" id="code-10-L165"><a href="#code-10-L165">165</a>             .toList();</span>
+<span class="line" id="code-10-L166"><a href="#code-10-L166">166</a>     return directory().tree(ids);</span>
+<span class="line" id="code-10-L167"><a href="#code-10-L167">167</a>   }</span>
+<span class="line" id="code-10-L168"><a href="#code-10-L168">168</a> }</span></pre></details></section><section id="code-11"><h2>权限领域对象</h2><p>service/ddd/domain/model/FrontendPermission.java · <a href="../../src/main/java/com/cdwy/permission/service/ddd/domain/model/FrontendPermission.java">打开原文件</a></p><details><summary>展开源码（带行号）</summary><pre class="source"><span class="line" id="code-11-L1"><a href="#code-11-L1">  1</a> package com.cdwy.permission.service.ddd.domain.model;</span>
 <span class="line" id="code-11-L2"><a href="#code-11-L2">  2</a> </span>
 <span class="line" id="code-11-L3"><a href="#code-11-L3">  3</a> import lombok.Getter;</span>
 <span class="line" id="code-11-L4"><a href="#code-11-L4">  4</a> import lombok.Setter;</span>
@@ -1234,23 +1245,40 @@
 <span class="line" id="code-11-L47"><a href="#code-11-L47"> 47</a>     parentId = parent;</span>
 <span class="line" id="code-11-L48"><a href="#code-11-L48"> 48</a>   }</span>
 <span class="line" id="code-11-L49"><a href="#code-11-L49"> 49</a> </span>
-<span class="line" id="code-11-L50"><a href="#code-11-L50"> 50</a>   /** 停用仍保留原授权关系，后续计算实时排除。 */</span>
-<span class="line" id="code-11-L51"><a href="#code-11-L51"> 51</a>   public void changeStatus(boolean value) {</span>
-<span class="line" id="code-11-L52"><a href="#code-11-L52"> 52</a>     active = value;</span>
-<span class="line" id="code-11-L53"><a href="#code-11-L53"> 53</a>   }</span>
-<span class="line" id="code-11-L54"><a href="#code-11-L54"> 54</a> </span>
-<span class="line" id="code-11-L55"><a href="#code-11-L55"> 55</a>   /** 关系未解除不允许删除。 */</span>
-<span class="line" id="code-11-L56"><a href="#code-11-L56"> 56</a>   public void assertDeletable(boolean referenced) {</span>
-<span class="line" id="code-11-L57"><a href="#code-11-L57"> 57</a>     if (referenced)</span>
-<span class="line" id="code-11-L58"><a href="#code-11-L58"> 58</a>       throw new com.cdwy.permission.service.port.error.ConflictException(&quot;PERMISSION_IN_USE&quot;, &quot;仍有子节点、角色授权或 API 绑定&quot;);</span>
+<span class="line" id="code-11-L50"><a href="#code-11-L50"> 50</a>   /**</span>
+<span class="line" id="code-11-L51"><a href="#code-11-L51"> 51</a>    * 启停菜单或按钮，授权关系保留，后续计算实时排除。控制台的内置菜单与按钮不能停用，否则所有人（包括管理员）都用不了对应页面。</span>
+<span class="line" id="code-11-L52"><a href="#code-11-L52"> 52</a>    *</span>
+<span class="line" id="code-11-L53"><a href="#code-11-L53"> 53</a>    * @param value 生效为 true</span>
+<span class="line" id="code-11-L54"><a href="#code-11-L54"> 54</a>    * @param builtIn 是否为控制台的内置菜单或按钮，由应用服务按内置目录判断</span>
+<span class="line" id="code-11-L55"><a href="#code-11-L55"> 55</a>    */</span>
+<span class="line" id="code-11-L56"><a href="#code-11-L56"> 56</a>   public void changeStatus(boolean value, boolean builtIn) {</span>
+<span class="line" id="code-11-L57"><a href="#code-11-L57"> 57</a>     if (!value) assertNotBuiltIn(builtIn);</span>
+<span class="line" id="code-11-L58"><a href="#code-11-L58"> 58</a>     active = value;</span>
 <span class="line" id="code-11-L59"><a href="#code-11-L59"> 59</a>   }</span>
 <span class="line" id="code-11-L60"><a href="#code-11-L60"> 60</a> </span>
-<span class="line" id="code-11-L61"><a href="#code-11-L61"> 61</a>   /** 同一业务系统内才允许绑定前端权限和 API 资源。 */</span>
-<span class="line" id="code-11-L62"><a href="#code-11-L62"> 62</a>   public void assertBindable(ProtectedResource resource) {</span>
-<span class="line" id="code-11-L63"><a href="#code-11-L63"> 63</a>     if (!java.util.Objects.equals(systemId, resource.getSystemId()))</span>
-<span class="line" id="code-11-L64"><a href="#code-11-L64"> 64</a>       throw new InvalidDataException(&quot;BINDING_SYSTEM_MISMATCH&quot;, &quot;前端权限与 API 资源必须属于同一应用&quot;);</span>
-<span class="line" id="code-11-L65"><a href="#code-11-L65"> 65</a>   }</span>
-<span class="line" id="code-11-L66"><a href="#code-11-L66"> 66</a> }</span></pre></details></section><section id="code-12"><h2>角色继承应用服务</h2><p>service/ddd/application/rbac/DddHierarchyService.java · <a href="../../src/main/java/com/cdwy/permission/service/ddd/application/rbac/DddHierarchyService.java">打开原文件</a></p><details><summary>展开源码（带行号）</summary><pre class="source"><span class="line" id="code-12-L1"><a href="#code-12-L1">  1</a> package com.cdwy.permission.service.ddd.application.rbac;</span>
+<span class="line" id="code-11-L61"><a href="#code-11-L61"> 61</a>   /**</span>
+<span class="line" id="code-11-L62"><a href="#code-11-L62"> 62</a>    * 删除前检查：内置菜单与按钮抛 {@code CONSOLE_BUILT_IN}；仍有下级、角色授权或 API 绑定时抛 {@code PERMISSION_IN_USE}（均 409）。</span>
+<span class="line" id="code-11-L63"><a href="#code-11-L63"> 63</a>    *</span>
+<span class="line" id="code-11-L64"><a href="#code-11-L64"> 64</a>    * @param builtIn 是否为控制台的内置菜单或按钮</span>
+<span class="line" id="code-11-L65"><a href="#code-11-L65"> 65</a>    * @param referenced 是否仍有下级、角色授权或 API 绑定</span>
+<span class="line" id="code-11-L66"><a href="#code-11-L66"> 66</a>    */</span>
+<span class="line" id="code-11-L67"><a href="#code-11-L67"> 67</a>   public void assertDeletable(boolean builtIn, boolean referenced) {</span>
+<span class="line" id="code-11-L68"><a href="#code-11-L68"> 68</a>     assertNotBuiltIn(builtIn);</span>
+<span class="line" id="code-11-L69"><a href="#code-11-L69"> 69</a>     if (referenced)</span>
+<span class="line" id="code-11-L70"><a href="#code-11-L70"> 70</a>       throw new com.cdwy.permission.service.port.error.ConflictException(&quot;PERMISSION_IN_USE&quot;, &quot;仍有子节点、角色授权或 API 绑定&quot;);</span>
+<span class="line" id="code-11-L71"><a href="#code-11-L71"> 71</a>   }</span>
+<span class="line" id="code-11-L72"><a href="#code-11-L72"> 72</a> </span>
+<span class="line" id="code-11-L73"><a href="#code-11-L73"> 73</a>   private static void assertNotBuiltIn(boolean builtIn) {</span>
+<span class="line" id="code-11-L74"><a href="#code-11-L74"> 74</a>     if (builtIn)</span>
+<span class="line" id="code-11-L75"><a href="#code-11-L75"> 75</a>       throw new com.cdwy.permission.service.port.error.ConflictException(&quot;CONSOLE_BUILT_IN&quot;, &quot;权限管理系统的内置菜单与按钮不能停用或删除&quot;);</span>
+<span class="line" id="code-11-L76"><a href="#code-11-L76"> 76</a>   }</span>
+<span class="line" id="code-11-L77"><a href="#code-11-L77"> 77</a> </span>
+<span class="line" id="code-11-L78"><a href="#code-11-L78"> 78</a>   /** 同一业务系统内才允许绑定前端权限和 API 资源。 */</span>
+<span class="line" id="code-11-L79"><a href="#code-11-L79"> 79</a>   public void assertBindable(ProtectedResource resource) {</span>
+<span class="line" id="code-11-L80"><a href="#code-11-L80"> 80</a>     if (!java.util.Objects.equals(systemId, resource.getSystemId()))</span>
+<span class="line" id="code-11-L81"><a href="#code-11-L81"> 81</a>       throw new InvalidDataException(&quot;BINDING_SYSTEM_MISMATCH&quot;, &quot;前端权限与 API 资源必须属于同一应用&quot;);</span>
+<span class="line" id="code-11-L82"><a href="#code-11-L82"> 82</a>   }</span>
+<span class="line" id="code-11-L83"><a href="#code-11-L83"> 83</a> }</span></pre></details></section><section id="code-12"><h2>角色继承应用服务</h2><p>service/ddd/application/rbac/DddHierarchyService.java · <a href="../../src/main/java/com/cdwy/permission/service/ddd/application/rbac/DddHierarchyService.java">打开原文件</a></p><details><summary>展开源码（带行号）</summary><pre class="source"><span class="line" id="code-12-L1"><a href="#code-12-L1">  1</a> package com.cdwy.permission.service.ddd.application.rbac;</span>
 <span class="line" id="code-12-L2"><a href="#code-12-L2">  2</a> </span>
 <span class="line" id="code-12-L3"><a href="#code-12-L3">  3</a> import com.cdwy.permission.service.ddd.domain.model.*;</span>
 <span class="line" id="code-12-L4"><a href="#code-12-L4">  4</a> import com.cdwy.permission.service.ddd.domain.repository.*;</span>

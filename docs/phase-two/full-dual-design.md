@@ -100,7 +100,7 @@ Controller 先通过 DTO/Bean Validation 校验格式，再由 `HttpMapping` 映
 
 全部后端测试连接真实 MySQL，每个测试在事务内执行并回滚；`Ddd*` 测试类继承结构化测试类，同一组测试方法在两条设计路线上各跑一遍。按需求编号整理的测试清单、错误码契约与运行方法见[需求—测试追踪](../second-review/04-test-traceability.adoc)。
 
-2026-11-21：182 个后端测试，失败 0、错误 0、跳过 0；52 个业务错误码全部有契约测试；JaCoCo 指令 93.5%、分支 83.5%、行 93.9%、方法 91.8%（含 CloneFactory 生成代码）。前端 5 组浏览器测试与课程系统跨系统联调在两种模式下各自通过。汇总见 [verification.json](../first-review/verification.json)。
+2026-11-21：186 个后端测试，失败 0、错误 0、跳过 0；53 个业务错误码全部有契约测试；JaCoCo 指令 93.6%、分支 84.0%、行 94.0%、方法 92.0%（含 CloneFactory 生成代码）。前端 5 组浏览器测试与课程系统跨系统联调在两种模式下各自通过。汇总见 [verification.json](../first-review/verification.json)。
 
 ## 9. 教师检查建议路径
 

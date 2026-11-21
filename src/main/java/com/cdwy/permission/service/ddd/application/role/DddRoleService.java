@@ -1,5 +1,6 @@
 package com.cdwy.permission.service.ddd.application.role;
 
+import com.cdwy.permission.service.auth.ConsoleCatalog;
 import com.cdwy.permission.service.ddd.domain.model.*;
 import com.cdwy.permission.service.ddd.domain.repository.*;
 import com.cdwy.permission.service.port.data.*;
@@ -65,7 +66,7 @@ public class DddRoleService implements RoleUseCase {
   @Transactional
   public RoleData.View status(Long id, boolean enabled) {
     AccessRole n = require(id);
-    n.changeStatus(enabled);
+    n.changeStatus(enabled, ConsoleCatalog.isAdminRole(n.getCode()));
     return view(roles.save(n));
   }
 
@@ -79,7 +80,7 @@ public class DddRoleService implements RoleUseCase {
     boolean granted =
         assignments.userRoles().stream().anyMatch(e -> e.right().equals(id))
             || assignments.rolePermissions().stream().anyMatch(e -> e.left().equals(id));
-    n.assertDeletable(graph, granted);
+    n.assertDeletable(ConsoleCatalog.isAdminRole(n.getCode()), graph, granted);
     roles.delete(id);
   }
 }

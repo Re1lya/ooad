@@ -2386,7 +2386,7 @@
     "/api/permissions/{id}": {
       "delete": {
         "summary": "删除前端权限",
-        "description": "删除该资源；除用户会清理其用户角色关系外，关联引用需要先解除，否则409。",
+        "description": "删除该资源；除用户会清理其用户角色关系外，关联引用需要先解除，否则409。权限系统自身的内置菜单与按钮不能停用或删除，返回409 CONSOLE_BUILT_IN。",
         "operationId": "PermissionController_delete",
         "tags": [
           "Permission"
@@ -2848,7 +2848,7 @@
     "/api/permissions/{id}/status": {
       "put": {
         "summary": "单独启停前端权限",
-        "description": "独立改变active，影响所有关联使用者；保留关系，下一次请求重新计算有效权限。",
+        "description": "独立改变active，影响所有关联使用者；保留关系，下一次请求重新计算有效权限。权限系统自身的内置菜单与按钮不能停用或删除，返回409 CONSOLE_BUILT_IN。",
         "operationId": "PermissionController_status",
         "tags": [
           "Permission"
@@ -3127,7 +3127,7 @@
     "/api/resources/{id}": {
       "delete": {
         "summary": "删除API资源",
-        "description": "删除该资源；除用户会清理其用户角色关系外，关联引用需要先解除，否则409。",
+        "description": "删除该资源；除用户会清理其用户角色关系外，关联引用需要先解除，否则409。权限系统自身的内置管理接口不能停用或删除，返回409 CONSOLE_BUILT_IN。",
         "operationId": "ApiResourceController_delete",
         "tags": [
           "ApiResource"
@@ -3311,7 +3311,7 @@
     "/api/resources/{id}/status": {
       "put": {
         "summary": "单独启停API资源",
-        "description": "独立改变active，影响所有关联使用者；保留关系，下一次请求重新计算有效权限。",
+        "description": "独立改变active，影响所有关联使用者；保留关系，下一次请求重新计算有效权限。权限系统自身的内置管理接口不能停用或删除，返回409 CONSOLE_BUILT_IN。",
         "operationId": "ApiResourceController_status",
         "tags": [
           "ApiResource"
@@ -3670,7 +3670,7 @@
     "/api/roles/{id}": {
       "delete": {
         "summary": "删除角色",
-        "description": "删除该资源；除用户会清理其用户角色关系外，关联引用需要先解除，否则409。",
+        "description": "删除该资源；除用户会清理其用户角色关系外，关联引用需要先解除，否则409。权限系统自身的内置管理员角色 rbac-admin不能停用或删除，返回409 CONSOLE_BUILT_IN。",
         "operationId": "RoleController_delete",
         "tags": [
           "Role"
@@ -3855,7 +3855,7 @@
     "/api/roles/{id}/status": {
       "put": {
         "summary": "单独启停角色",
-        "description": "独立改变enabled，影响所有关联使用者；保留关系，下一次请求重新计算有效权限。",
+        "description": "独立改变enabled，影响所有关联使用者；保留关系，下一次请求重新计算有效权限。权限系统自身的内置管理员角色 rbac-admin不能停用或删除，返回409 CONSOLE_BUILT_IN。",
         "operationId": "RoleController_status",
         "tags": [
           "Role"
@@ -4761,7 +4761,7 @@
     "/api/systems/{id}": {
       "delete": {
         "summary": "删除应用",
-        "description": "删除该资源；除用户会清理其用户角色关系外，关联引用需要先解除，否则409。",
+        "description": "删除该资源；除用户会清理其用户角色关系外，关联引用需要先解除，否则409。权限系统自身的内置应用 rbac不能停用或删除，返回409 CONSOLE_BUILT_IN。",
         "operationId": "SystemController_delete",
         "tags": [
           "System"
@@ -4946,7 +4946,7 @@
     "/api/systems/{id}/status": {
       "put": {
         "summary": "单独启停应用",
-        "description": "独立改变enabled，影响所有关联使用者；保留关系，下一次请求重新计算有效权限。",
+        "description": "独立改变enabled，影响所有关联使用者；保留关系，下一次请求重新计算有效权限。权限系统自身的内置应用 rbac不能停用或删除，返回409 CONSOLE_BUILT_IN。",
         "operationId": "SystemController_status",
         "tags": [
           "System"

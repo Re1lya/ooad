@@ -2,6 +2,7 @@ package com.cdwy.permission.service.system;
 
 import com.cdwy.permission.entity.system.BusinessSystem;
 import com.cdwy.permission.repository.system.BusinessSystemRepository;
+import com.cdwy.permission.service.auth.ConsoleCatalog;
 import com.cdwy.permission.service.port.data.*;
 import com.cdwy.permission.service.port.error.*;
 import com.cdwy.permission.service.port.system.SystemUseCase;
@@ -76,6 +77,7 @@ public class SystemService implements SystemUseCase {
   @Transactional
   public SystemData.View status(Long id, boolean enabled) {
     BusinessSystem value = require(id);
+    if (!enabled) protectBuiltIn(value);
     value.setEnabled(enabled);
     return view(value);
   }
@@ -84,8 +86,15 @@ public class SystemService implements SystemUseCase {
   @Transactional
   public void delete(Long id) {
     BusinessSystem value = require(id);
+    protectBuiltIn(value);
     if (permissions.existsBySystem_Id(id) || resources.existsBySystem_Id(id))
       throw new ConflictException("SYSTEM_IN_USE", "仍有授权或资源引用，请先解除关联");
     repository.delete(value);
+  }
+
+  /** 内置应用 rbac 就是控制台本身：停用或删除会让所有人（包括管理员）都进不了控制台，抛 {@code CONSOLE_BUILT_IN}（409）。 */
+  private static void protectBuiltIn(BusinessSystem value) {
+    if (ConsoleCatalog.isSystem(value.getCode()))
+      throw new ConflictException("CONSOLE_BUILT_IN", "权限管理系统是内置应用，不能停用或删除");
   }
 }

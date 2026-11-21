@@ -8,10 +8,14 @@ import PageHero from '@/components/PageHero.vue';
 import { catalog, load, systemName } from '@/stores/catalog';
 import { can, SELF_SYSTEM } from '@/stores/session';
 import { act, ask, track } from '@/stores/ui';
+import { BUILT_IN_HINT, isBuiltInPermission } from '@/utils/builtIn';
 
 const keyword = ref('');
 const app = ref<number | null>(null);
 const writable = computed(() => can('rbac.permissions.write'));
+/** 内置菜单与按钮不提供停用、删除（后端也会拒绝）。 */
+const builtIn = (p: Permission) =>
+  isBuiltInPermission(catalog.systems?.find((s) => s.id === p.systemId)?.code, p.code);
 
 onMounted(() => void track(load(['systems']).then(() => load(['permissions'], true))));
 watch(
@@ -217,12 +221,18 @@ async function unbind(r: Resource) {
               <button class="act" @click="openBinding(row.p)">接口</button>
               <template v-if="writable">
                 <button class="act" @click="edit(row.p)">编辑</button>
-                <button class="act" @click="toggle(row.p)">
+                <button v-if="!builtIn(row.p) || !row.p.active" class="act" @click="toggle(row.p)">
                   {{ row.p.active ? '停用' : '启用' }}
                 </button>
-                <button class="act warn" :aria-label="`删除${row.p.name}`" @click="remove(row.p)">
+                <button
+                  v-if="!builtIn(row.p)"
+                  class="act warn"
+                  :aria-label="`删除${row.p.name}`"
+                  @click="remove(row.p)"
+                >
                   删除
                 </button>
+                <span v-else class="mute" :title="BUILT_IN_HINT">内置</span>
               </template>
             </div>
           </td>

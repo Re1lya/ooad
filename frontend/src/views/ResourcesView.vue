@@ -8,11 +8,15 @@ import PageHero from '@/components/PageHero.vue';
 import { catalog, load, systemName } from '@/stores/catalog';
 import { can, SELF_SYSTEM } from '@/stores/session';
 import { act, ask, track } from '@/stores/ui';
+import { BUILT_IN_HINT, isBuiltInResource } from '@/utils/builtIn';
 
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as const;
 const keyword = ref('');
 const app = ref<number | null>(null);
 const writable = computed(() => can('rbac.resources.write'));
+/** 内置管理接口不提供停用、删除（后端也会拒绝）。 */
+const builtIn = (r: Resource) =>
+  isBuiltInResource(catalog.systems?.find((s) => s.id === r.systemId)?.code);
 
 onMounted(() => void track(load(['systems']).then(() => load(['resources'], true))));
 watch(
@@ -143,10 +147,18 @@ async function remove(r: Resource) {
           <td v-if="writable">
             <div class="acts">
               <button class="act" @click="edit(r)">编辑</button>
-              <button class="act" @click="toggle(r)">{{ r.active ? '停用' : '启用' }}</button>
-              <button class="act warn" :aria-label="`删除${r.name}`" @click="remove(r)">
+              <button v-if="!builtIn(r) || !r.active" class="act" @click="toggle(r)">
+                {{ r.active ? '停用' : '启用' }}
+              </button>
+              <button
+                v-if="!builtIn(r)"
+                class="act warn"
+                :aria-label="`删除${r.name}`"
+                @click="remove(r)"
+              >
                 删除
               </button>
+              <span v-else class="mute" :title="BUILT_IN_HINT">内置</span>
             </div>
           </td>
         </tr>

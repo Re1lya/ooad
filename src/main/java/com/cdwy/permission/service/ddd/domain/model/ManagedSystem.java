@@ -20,15 +20,32 @@ public class ManagedSystem {
     baseUrl = url;
   }
 
-  /** 当前系统开关参与所有资源的有效性判断。 */
-  public void changeStatus(boolean value) {
+  /**
+   * 改变应用开关，参与所有资源的有效性判断。内置应用（权限系统自身）不能停用：停用后所有人（包括管理员）都进不了控制台。
+   *
+   * @param value 启用为 true
+   * @param builtIn 是否为内置应用，由应用服务按内置目录判断
+   */
+  public void changeStatus(boolean value, boolean builtIn) {
+    if (!value) assertNotBuiltIn(builtIn);
     enabled = value;
   }
 
-  /** 防止删除仍有资源的应用。 */
-  public void assertDeletable(boolean referenced) {
+  /**
+   * 删除前检查：内置应用抛 {@code CONSOLE_BUILT_IN}，仍有菜单、按钮或 API 资源时抛 {@code SYSTEM_IN_USE}（均 409）。
+   *
+   * @param builtIn 是否为内置应用
+   * @param referenced 是否仍有菜单、按钮或 API 资源
+   */
+  public void assertDeletable(boolean builtIn, boolean referenced) {
+    assertNotBuiltIn(builtIn);
     if (referenced)
       throw new com.cdwy.permission.service.port.error.ConflictException("SYSTEM_IN_USE", "仍有授权或资源引用，请先解除关联");
+  }
+
+  private static void assertNotBuiltIn(boolean builtIn) {
+    if (builtIn)
+      throw new com.cdwy.permission.service.port.error.ConflictException("CONSOLE_BUILT_IN", "权限管理系统是内置应用，不能停用或删除");
   }
 
   /**

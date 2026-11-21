@@ -2,6 +2,7 @@ package com.cdwy.permission.service.role;
 
 import com.cdwy.permission.entity.role.Role;
 import com.cdwy.permission.repository.role.RoleRepository;
+import com.cdwy.permission.service.auth.ConsoleCatalog;
 import com.cdwy.permission.service.port.data.*;
 import com.cdwy.permission.service.port.error.*;
 import com.cdwy.permission.service.port.role.RoleUseCase;
@@ -84,6 +85,7 @@ public class RoleService implements RoleUseCase {
   @Transactional
   public RoleData.View status(Long id, boolean enabled) {
     Role value = require(id);
+    if (!enabled) protectBuiltIn(value);
     value.setEnabled(enabled);
     return view(value);
   }
@@ -96,10 +98,17 @@ public class RoleService implements RoleUseCase {
   public void delete(Long id) {
     repository.lockHierarchyRoles();
     Role value = require(id);
+    protectBuiltIn(value);
     if (hierarchy.existsBySeniorRole_IdOrInheritedRole_Id(id, id))
       throw new ConflictException("ROLE_HAS_INHERITANCE", "仍有角色继承关系，请先解除关联");
     if (userRoles.existsByRole_Id(id) || rolePermissions.existsByRole_Id(id))
       throw new ConflictException("ROLE_IN_USE", "仍有授权或资源引用，请先解除关联");
     repository.delete(value);
+  }
+
+  /** 内置管理员角色是管理员进入控制台的唯一授权来源：停用或删除会把管理员锁在外面，抛 {@code CONSOLE_BUILT_IN}（409）。 */
+  private static void protectBuiltIn(Role value) {
+    if (ConsoleCatalog.isAdminRole(value.getCode()))
+      throw new ConflictException("CONSOLE_BUILT_IN", "内置管理员角色不能停用或删除");
   }
 }
