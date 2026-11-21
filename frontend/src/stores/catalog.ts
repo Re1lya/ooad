@@ -51,5 +51,11 @@ export const roleName = (id: number): string =>
 export const systemName = (id: number | null | undefined): string =>
   catalog.systems?.find((system) => system.id === id)?.name ?? '—';
 
-export const departmentName = (id: number | null | undefined): string =>
-  id == null ? '—' : (catalog.departments?.find((d) => d.id === id)?.name ?? '—');
+/** 部门全称“上级 / 部门”：各分公司都有同名部门，只显示名称会混淆。 */
+export const departmentName = (id: number | null | undefined): string => {
+  const all = catalog.departments ?? [];
+  const department = all.find((d) => d.id === id);
+  if (!department) return '—';
+  const parent = all.find((d) => d.id === department.parentId);
+  return parent ? `${parent.name} / ${department.name}` : department.name;
+};

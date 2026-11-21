@@ -34,7 +34,7 @@ public class DddDepartmentService implements DepartmentUseCase {
   /** 返回无持久化技术的只读视图。 */
   private DepartmentData.View view(DepartmentNode n) {
     return new DepartmentData.View(
-        n.getId(), n.getName(), n.getParentId(), n.getManagerName(), n.getCode());
+        n.getId(), n.getName(), n.getParentId(), n.getCode());
   }
 
   /** 获取当前部门图。 */

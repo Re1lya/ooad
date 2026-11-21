@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 /** RBAC1 管理接口；管理身份由现有 API 拦截器统一校验，个人来源只取当前身份。 */
 @RestController
-@com.cdwy.permission.config.BusinessAccess(com.cdwy.permission.service.auth.ConsoleCatalog.SYSTEM)
+@com.cdwy.permission.config.BusinessAccess(com.cdwy.permission.config.BusinessAccess.CONSOLE)
 @RequiredArgsConstructor
 @RequestMapping("/api")
 public class RoleHierarchyController {

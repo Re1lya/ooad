@@ -8,5 +8,5 @@ public final class DepartmentDtos {
   public record Input(
       @NotBlank @Size(max = 128) String name, Long parentId, @Size(max = 64) String code) {}
 
-  public record View(Long id, String name, Long parentId, String managerName, String code) {}
+  public record View(Long id, String name, Long parentId, String code) {}
 }

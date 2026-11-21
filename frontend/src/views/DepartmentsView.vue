@@ -5,7 +5,7 @@ import type { Department } from '@/api/types';
 import Figures from '@/components/Figures.vue';
 import FormDialog from '@/components/FormDialog.vue';
 import PageHero from '@/components/PageHero.vue';
-import { catalog, load } from '@/stores/catalog';
+import { catalog, departmentName, load } from '@/stores/catalog';
 import { can } from '@/stores/session';
 import { act, ask, track } from '@/stores/ui';
 
@@ -23,7 +23,9 @@ const rows = computed(() => {
   const text = keyword.value.trim().toLowerCase();
   if (text)
     return all.value
-      .filter((d) => d.name.toLowerCase().includes(text))
+      .filter(
+        (d) => d.name.toLowerCase().includes(text) || (d.code ?? '').toLowerCase().includes(text),
+      )
       .map((d) => ({ d, level: 0, kids: false }));
   const result: { d: Department; level: number; kids: boolean }[] = [];
   const walk = (parent: number | null, level: number) => {
@@ -51,6 +53,7 @@ const editor = reactive({
   open: false,
   id: null as number | null,
   name: '',
+  code: '',
   parentId: '' as string | number,
 });
 function edit(d?: Department) {
@@ -58,6 +61,7 @@ function edit(d?: Department) {
     open: true,
     id: d?.id ?? null,
     name: d?.name ?? '',
+    code: d?.code ?? '',
     parentId: d?.parentId ?? '',
   });
 }
@@ -65,6 +69,7 @@ async function save() {
   const body = {
     name: editor.name.trim(),
     parentId: editor.parentId === '' ? null : Number(editor.parentId),
+    ...(editor.code.trim() ? { code: editor.code.trim() } : {}),
   };
   if (editor.id === null) await departmentsApi.create(body);
   else await departmentsApi.update(editor.id, body);
@@ -94,7 +99,7 @@ async function remove(d: Department) {
       v-model="keyword"
       class="grow"
       type="search"
-      placeholder="搜索部门"
+      placeholder="搜索部门名称或编码"
       aria-label="搜索当前列表"
     />
     <button v-if="writable" class="btn" @click="edit()">新增部门</button>
@@ -104,7 +109,7 @@ async function remove(d: Department) {
       <thead>
         <tr>
           <th>部门</th>
-          <th class="hide-sm">部门经理</th>
+          <th class="hide-sm">编码</th>
           <th>上级部门</th>
           <th v-if="writable" class="right">操作</th>
         </tr>
@@ -131,7 +136,7 @@ async function remove(d: Department) {
               <span v-else class="car"></span>{{ row.d.name }}
             </span>
           </td>
-          <td class="hide-sm">{{ row.d.managerName ?? '—' }}</td>
+          <td class="hide-sm"><code>{{ row.d.code ?? '—' }}</code></td>
           <td>{{ parentName(row.d.parentId) }}</td>
           <td v-if="writable">
             <div class="acts">
@@ -147,7 +152,7 @@ async function remove(d: Department) {
   </div>
   <div v-if="!rows.length" class="empty">
     <h3>{{ keyword ? '没有匹配的结果' : '还没有部门' }}</h3>
-    <p>{{ keyword ? '换一个名称再试。' : '新增部门，或导入员工信息表。' }}</p>
+    <p>{{ keyword ? '换一个名称再试。' : '新增部门，或在用户管理中同步员工信息。' }}</p>
   </div>
 
   <FormDialog
@@ -163,11 +168,20 @@ async function remove(d: Department) {
       <input v-model="editor.name" required maxlength="128" />
     </label>
     <label class="field"
+      >部门编码
+      <input
+        v-model="editor.code"
+        maxlength="64"
+        pattern="[A-Za-z0-9][A-Za-z0-9_.\-]*"
+        placeholder="不填则自动生成"
+      />
+    </label>
+    <label class="field"
       >上级部门
       <select v-model="editor.parentId">
         <option value="">无（顶级部门）</option>
         <option v-for="d in all.filter((x) => x.id !== editor.id)" :key="d.id" :value="d.id">
-          {{ d.name }}
+          {{ departmentName(d.id) }}
         </option>
       </select>
     </label>

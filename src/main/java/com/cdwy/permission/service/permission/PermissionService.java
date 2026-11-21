@@ -60,9 +60,7 @@ public class PermissionService implements PermissionUseCase {
         p.getType().name(),
         p.getMenuPath(),
         p.getParent() == null ? null : p.getParent().getId(),
-        p.getActive(),
-        p.getSourceDescription(),
-        p.getSourceGrants());
+        p.getActive());
   }
 
   public List<PermissionData.View> list(Long systemId) {

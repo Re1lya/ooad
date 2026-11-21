@@ -1,6 +1,5 @@
 package com.cdwy.permission.config;
 
-import com.cdwy.permission.service.auth.JwtTokenService;
 import com.cdwy.permission.service.port.auth.AuthenticationUseCase;
 import com.cdwy.permission.service.port.error.ForbiddenException;
 import com.cdwy.permission.service.port.rbac.AuthorizationUseCase;
@@ -50,7 +49,7 @@ public class ApiAccessConfig implements WebMvcConfigurer {
 
   /** 令牌目标系统：/api/apps/{应用编码}/... 为该应用，其余接口为权限系统自身。 */
   static String audience(String route) {
-    if (!route.startsWith("/api/apps/")) return JwtTokenService.CONSOLE_AUDIENCE;
+    if (!route.startsWith("/api/apps/")) return BusinessAccess.CONSOLE;
     String rest = route.substring("/api/apps/".length());
     int slash = rest.indexOf('/');
     return slash < 0 ? rest : rest.substring(0, slash);

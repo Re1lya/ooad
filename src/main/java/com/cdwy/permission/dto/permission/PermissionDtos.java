@@ -27,9 +27,7 @@ public final class PermissionDtos {
       String type,
       String menuPath,
       Long parentId,
-      boolean active,
-      String sourceDescription,
-      String sourceGrants) {}
+      boolean active) {}
 
   public record Tree(View permission, boolean granted, java.util.List<Tree> children) {}
 }

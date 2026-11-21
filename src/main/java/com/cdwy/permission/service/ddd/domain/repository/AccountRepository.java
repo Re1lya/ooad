@@ -24,6 +24,9 @@ public interface AccountRepository {
   /** 读取或保存领域状态；数据库异常由适配器翻译。 */
   Account save(Account value);
 
+  /** 批量保存（员工信息同步）：一次刷新，返回带标识的账号。 */
+  List<Account> saveAll(List<Account> values);
+
   /** 读取或保存领域状态；数据库异常由适配器翻译。 */
   void delete(Long id);
 

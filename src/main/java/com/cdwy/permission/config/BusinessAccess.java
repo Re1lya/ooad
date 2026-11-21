@@ -8,5 +8,8 @@ import java.lang.annotation.*;
 @Target({ElementType.TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface BusinessAccess {
+  /** 权限系统自身（管理控制台）的应用编码；控制台令牌的 aud 也取这个值。 */
+  String CONSOLE = "rbac";
+
   String value();
 }

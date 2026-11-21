@@ -26,6 +26,9 @@ public interface AssignmentRepository {
   /** 读取或保存领域状态；数据库异常由适配器翻译。 */
   void addUserRole(Long userId, Long roleId);
 
+  /** 批量授予用户角色（员工信息同步）；调用方保证这些分配尚不存在。 */
+  void addUserRoles(java.util.Collection<Link> links);
+
   /** 读取或保存领域状态；数据库异常由适配器翻译。 */
   void removeUserRole(Long userId, Long roleId);
 

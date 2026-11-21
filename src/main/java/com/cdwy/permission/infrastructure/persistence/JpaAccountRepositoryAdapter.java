@@ -59,6 +59,29 @@ public class JpaAccountRepositoryAdapter implements AccountRepository {
     }
   }
 
+  /** 批量保存：已有账号一次读取，全部写入后统一刷新。 */
+  public List<Account> saveAll(List<Account> values) {
+    java.util.Map<Long, UserAccount> current = new java.util.HashMap<>();
+    data.findAllById(
+            values.stream().map(Account::getId).filter(java.util.Objects::nonNull).toList())
+        .forEach(e -> current.put(e.getId(), e));
+    List<UserAccount> entities = new java.util.ArrayList<>();
+    for (Account v : values) {
+      UserAccount e = v.getId() == null ? new UserAccount() : current.get(v.getId());
+      CloneFactory.copy(e, v);
+      e.setPersonType(com.cdwy.permission.service.port.data.PersonType.valueOf(v.getKind()));
+      e.setDepartment(
+          v.getDepartmentId() == null ? null : departments.getReferenceById(v.getDepartmentId()));
+      entities.add(e);
+    }
+    try {
+      List<UserAccount> saved = data.saveAllAndFlush(entities);
+      return saved.stream().map(this::model).toList();
+    } catch (DataIntegrityViolationException ex) {
+      throw new ConflictException("数据重复或关联约束冲突，请刷新后重试");
+    }
+  }
+
   /** 删除前由领域服务检查业务引用，数据库保留最终约束。 */
   public void delete(Long id) {
     data.deleteById(id);

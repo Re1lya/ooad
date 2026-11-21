@@ -16,7 +16,7 @@ class DddFullWorkflowTests extends FirstReviewWorkflowTests {
   /** 防止仅切换角色图，却把整个系统误报为面向对象模式。 */
   @Test void FR26_reportsEverySelectedBusinessImplementation() throws Exception {
     for (String module : java.util.List.of("users", "departments", "systems", "roles",
-        "permissions", "resources", "authorization", "hierarchy", "authentication", "companyImport")) {
+        "permissions", "resources", "authorization", "hierarchy", "authentication", "directorySync")) {
       mvc.perform(get("/api/system-info").header("Authorization", "Bearer " + admin))
           .andExpect(status().isOk())
           .andExpect(jsonPath("$.modules." + module).value("ddd"));

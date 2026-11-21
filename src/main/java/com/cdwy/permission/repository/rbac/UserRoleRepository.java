@@ -13,4 +13,10 @@ public interface UserRoleRepository extends JpaRepository<UserRole, Long> {
   void deleteByUser_IdAndRole_Id(Long userId, Long roleId);
 
   void deleteAllByUser_Id(Long id);
+
+  /** 持有某个角色的全部用户标识（员工信息同步据此判断是否需要补授）。 */
+  @org.springframework.data.jpa.repository.Query(
+      "select ur.user.id from UserRole ur where ur.role.id = :roleId")
+  java.util.List<Long> holders(
+      @org.springframework.data.repository.query.Param("roleId") Long roleId);
 }

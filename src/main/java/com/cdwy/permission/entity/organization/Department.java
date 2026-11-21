@@ -53,10 +53,4 @@ public class Department {
   public void setParent(Department value) {
     parent = value;
   }
-
-  /** 导入表中的原始来源字段，普通编辑不隐式覆盖。 */
-  @lombok.Getter
-  @lombok.Setter
-  @Column(length = 128)
-  private String managerName;
 }

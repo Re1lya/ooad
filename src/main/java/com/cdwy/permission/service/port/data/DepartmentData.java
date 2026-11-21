@@ -8,7 +8,7 @@ public final class DepartmentData {
   public record Input(String name, Long parentId, String code) {}
 
   /** 与 HTTP 表现及数据库技术无关的用例数据。 */
-  public record View(Long id, String name, Long parentId, String managerName, String code) {}
+  public record View(Long id, String name, Long parentId, String code) {}
 
   /** 部门编码规则：字母或数字开头，只含字母、数字和 _.-，最长 64 位。 */
   public static String requireCode(String code) {

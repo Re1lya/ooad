@@ -753,7 +753,7 @@ class FirstReviewWorkflowTests {
             "authorization",
             "hierarchy",
             "authentication",
-            "companyImport",
+            "directorySync",
             "identity")) {
       mvc.perform(get("/api/system-info").header("Authorization", "Bearer " + admin))
           .andExpect(status().isOk())

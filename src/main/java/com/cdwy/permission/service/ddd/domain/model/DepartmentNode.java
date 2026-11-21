@@ -10,7 +10,6 @@ public class DepartmentNode {
   private Long id;
   private String name;
   private Long parentId;
-  private String managerName;
   private String code;
 
   /**

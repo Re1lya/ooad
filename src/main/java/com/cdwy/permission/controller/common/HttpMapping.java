@@ -20,7 +20,7 @@ public final class HttpMapping {
 
   /** HTTP 与用例数据显式转换，record 不依赖字段写入。 */
   public static DepartmentDtos.View view(DepartmentData.View v) {
-    return new DepartmentDtos.View(v.id(), v.name(), v.parentId(), v.managerName(), v.code());
+    return new DepartmentDtos.View(v.id(), v.name(), v.parentId(), v.code());
   }
 
   /** HTTP 与用例数据显式转换，record 不依赖字段写入。 */
@@ -96,9 +96,7 @@ public final class HttpMapping {
         v.type(),
         v.menuPath(),
         v.parentId(),
-        v.active(),
-        v.sourceDescription(),
-        v.sourceGrants());
+        v.active());
   }
 
   /** HTTP 与用例数据显式转换，record 不依赖字段写入。 */
@@ -171,20 +169,6 @@ public final class HttpMapping {
   public static PermissionDtos.Tree view(PermissionData.Tree v) {
     return new PermissionDtos.Tree(
         view(v.permission()), v.granted(), v.children().stream().map(HttpMapping::view).toList());
-  }
-
-  /** 导入汇总不返回真实员工明细。 */
-  public static com.cdwy.permission.vo.importing.CompanyImportSummaryVO view(CompanySummary v) {
-    return new com.cdwy.permission.vo.importing.CompanyImportSummaryVO(
-        v.departments(),
-        v.employees(),
-        v.systems(),
-        v.modules(),
-        v.functions(),
-        v.roleTemplates(),
-        v.qualifiedDepartments(),
-        v.digest(),
-        v.notes());
   }
 
   /** 可选文本字段：空白视为未填写。 */

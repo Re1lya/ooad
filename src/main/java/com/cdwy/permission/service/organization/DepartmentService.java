@@ -41,7 +41,6 @@ public class DepartmentService implements DepartmentUseCase {
         d.getId(),
         d.getName(),
         d.getParent() == null ? null : d.getParent().getId(),
-        d.getManagerName(),
         d.getCode());
   }
 

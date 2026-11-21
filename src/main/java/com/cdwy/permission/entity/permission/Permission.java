@@ -99,16 +99,4 @@ public class Permission {
   public void setActive(boolean value) {
     active = value;
   }
-
-  /** 导入表中的原始来源字段，普通编辑不隐式覆盖。 */
-  @lombok.Getter
-  @lombok.Setter
-  @Column(length = 2000)
-  private String sourceDescription;
-
-  /** 导入表中的原始来源字段，普通编辑不隐式覆盖。 */
-  @lombok.Getter
-  @lombok.Setter
-  @Column(length = 2000)
-  private String sourceGrants;
 }

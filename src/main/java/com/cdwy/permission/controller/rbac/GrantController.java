@@ -9,7 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@com.cdwy.permission.config.BusinessAccess(com.cdwy.permission.service.auth.ConsoleCatalog.SYSTEM)
+@com.cdwy.permission.config.BusinessAccess(com.cdwy.permission.config.BusinessAccess.CONSOLE)
 @RequestMapping("/api")
 public class GrantController {
   private final AuthorizationUseCase service;

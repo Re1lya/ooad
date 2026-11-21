@@ -15,8 +15,6 @@ public class FrontendPermission {
   private String menuPath;
   private Long parentId;
   private boolean active = true;
-  private String sourceDescription;
-  private String sourceGrants;
 
   public static final String MENU = "MENU", BUTTON = "BUTTON";
 

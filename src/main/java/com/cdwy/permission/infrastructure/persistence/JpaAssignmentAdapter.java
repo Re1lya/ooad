@@ -75,6 +75,21 @@ public class JpaAssignmentAdapter implements AssignmentRepository {
                   new UserRole(accounts.getReferenceById(user), roleData.getReferenceById(role))));
   }
 
+  /** 一次保存并刷新一批用户角色。 */
+  public void addUserRoles(java.util.Collection<Link> links) {
+    if (links.isEmpty()) return;
+    write(
+        () ->
+            users.saveAllAndFlush(
+                links.stream()
+                    .map(
+                        l ->
+                            new UserRole(
+                                accounts.getReferenceById(l.left()),
+                                roleData.getReferenceById(l.right())))
+                    .toList()));
+  }
+
   /** 幂等撤销用户角色。 */
   public void removeUserRole(Long user, Long role) {
     users.deleteByUser_IdAndRole_Id(user, role);

@@ -48,7 +48,7 @@ const CONSOLE = [
   ['rbac.overview', '工作台', 'MENU', '/overview'],
   ['rbac.users', '用户管理', 'MENU', '/users'],
   ['rbac.users.write', '维护用户', 'BUTTON', 'rbac.users'],
-  ['rbac.directory.sync', '导入员工信息表', 'BUTTON', 'rbac.users'],
+  ['rbac.directory.sync', '同步员工信息', 'BUTTON', 'rbac.users'],
   ['rbac.departments', '部门管理', 'MENU', '/departments'],
   ['rbac.departments.write', '维护部门', 'BUTTON', 'rbac.departments'],
   ['rbac.systems', '应用管理', 'MENU', '/systems'],

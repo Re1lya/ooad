@@ -38,9 +38,7 @@ public final class PermissionDirectory {
         n.getKind(),
         n.getMenuPath(),
         n.getParentId(),
-        n.getActive(),
-        n.getSourceDescription(),
-        n.getSourceGrants());
+        n.getActive());
   }
 
   /** 返回有效授权列表。 */

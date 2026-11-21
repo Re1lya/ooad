@@ -20,9 +20,7 @@ public final class PermissionData {
       String type,
       String menuPath,
       Long parentId,
-      boolean active,
-      String sourceDescription,
-      String sourceGrants) {}
+      boolean active) {}
 
   /** 与 HTTP 表现及数据库技术无关的用例数据。 */
   public record Tree(View permission, boolean granted, java.util.List<Tree> children) {}

@@ -22,7 +22,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class JwtTokenService {
   /** 权限系统自身（管理控制台）的系统标识。 */
-  public static final String CONSOLE_AUDIENCE = "rbac";
+  public static final String CONSOLE_AUDIENCE = com.cdwy.permission.config.BusinessAccess.CONSOLE;
 
   private final SecretKey signingKey;
   private final long expirationSeconds;

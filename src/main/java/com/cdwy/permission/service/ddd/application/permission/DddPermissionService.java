@@ -60,9 +60,7 @@ public class DddPermissionService implements PermissionUseCase {
         n.getKind(),
         n.getMenuPath(),
         n.getParentId(),
-        n.getActive(),
-        n.getSourceDescription(),
-        n.getSourceGrants());
+        n.getActive());
   }
 
   /** 根据应用过滤权限。 */

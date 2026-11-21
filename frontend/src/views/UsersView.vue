@@ -197,9 +197,9 @@ async function savePassword() {
     <button
       v-if="can('rbac.directory.sync')"
       class="btn ghost"
-      @click="router.push('/users/import')"
+      @click="router.push('/users/sync')"
     >
-      导入员工信息表
+      同步员工信息
     </button>
     <button v-if="writable" class="btn" @click="openEditor()">新增用户</button>
   </div>
@@ -265,7 +265,7 @@ async function savePassword() {
   </div>
   <div v-if="!visible.length" class="empty">
     <h3>{{ keyword ? '没有匹配的结果' : '还没有用户' }}</h3>
-    <p>{{ keyword ? '换一个工号、姓名或部门再试。' : '可以新增用户，或导入员工信息表。' }}</p>
+    <p>{{ keyword ? '换一个工号、姓名或部门再试。' : '可以新增用户，或同步员工信息。' }}</p>
   </div>
   <Pager :page="page" :size="SIZE" :total="total" unit="人" @go="go" />
 

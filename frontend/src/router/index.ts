@@ -46,9 +46,9 @@ export const router = createRouter({
       meta: { page: page.name },
     })),
     {
-      path: '/users/import',
-      name: 'import',
-      component: () => import('@/views/ImportView.vue'),
+      path: '/users/sync',
+      name: 'sync',
+      component: () => import('@/views/DirectorySyncView.vue'),
       meta: { page: 'users', button: 'rbac.directory.sync' },
     },
     { path: '/:rest(.*)*', redirect: () => firstAllowed() },

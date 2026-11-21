@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.*;
 
 /** 管理员查看审计记录（本系统角色继承变更使用应用编码 rbac，接入应用使用各自编码）。 */
 @RestController
-@com.cdwy.permission.config.BusinessAccess(com.cdwy.permission.service.auth.ConsoleCatalog.SYSTEM)
+@com.cdwy.permission.config.BusinessAccess(com.cdwy.permission.config.BusinessAccess.CONSOLE)
 @RequiredArgsConstructor
 @RequestMapping("/api/audit-logs")
 public class AuditLogController {

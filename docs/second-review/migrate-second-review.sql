@@ -37,3 +37,8 @@ ALTER TABLE sys_department ADD CONSTRAINT uk_department_code UNIQUE (code);
 -- 4) API 资源可登记接入应用 OpenAPI 的 operationId（同一应用内唯一），供“能否调用指定接口”的查询。
 ALTER TABLE api_resource ADD COLUMN operation_id VARCHAR(128) NULL AFTER code;
 ALTER TABLE api_resource ADD CONSTRAINT uk_api_operation UNIQUE (system_id,operation_id);
+
+-- 5) 公司三表导入改为员工信息同步：部门经理与功能权限模板的原始文本不再由任何功能写入，删除这些列。
+ALTER TABLE sys_department DROP COLUMN manager_name;
+ALTER TABLE sys_permission DROP COLUMN source_description;
+ALTER TABLE sys_permission DROP COLUMN source_grants;

@@ -35,7 +35,7 @@ export interface Department {
   id: number;
   name: string;
   parentId: number | null;
-  managerName: string | null;
+  code: string | null;
 }
 
 export interface System {
@@ -63,8 +63,6 @@ export interface Permission {
   menuPath: string | null;
   parentId: number | null;
   active: boolean;
-  sourceDescription?: string | null;
-  sourceGrants?: string | null;
 }
 
 export interface PermissionTree {
@@ -131,14 +129,16 @@ export interface AuditPage {
   items: AuditEntry[];
 }
 
-export interface ImportSummary {
-  departments: number;
-  employees: number;
-  systems: number;
-  modules: number;
-  functions: number;
-  roleTemplates: number;
-  qualifiedDepartments: number;
+/** 员工信息同步的预览或确认结果（不含员工个人明细）。 */
+export interface SyncSummary {
+  rows: number;
+  companies: number;
+  departmentsCreated: number;
+  departmentsKept: number;
+  usersCreated: number;
+  usersUpdated: number;
+  usersUnchanged: number;
+  roleGrants: number;
   digest: string;
-  notes: string[];
+  applied: boolean;
 }

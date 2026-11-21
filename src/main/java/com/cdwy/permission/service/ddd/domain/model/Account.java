@@ -69,17 +69,43 @@ public class Account {
       throw new com.cdwy.permission.service.port.error.ForbiddenException("不能删除本人或管理员");
   }
 
-  /** 来源同步保留凭证、有效期和现有授权，不推导个人角色。 */
-  public void importSource(
+  /** 员工信息同步新建人员时使用的密码散列占位值：不是 BCrypt 格式，任何密码都无法匹配。 */
+  public static final String UNPROVISIONED = "!UNPROVISIONED:";
+
+  /** 员工信息同步新建的人员：停用、没有可用密码；管理员设置密码并启用后才能登录。 */
+  public static Account unprovisioned(String username) {
+    Account account = new Account();
+    account.username = username;
+    account.enabled = false;
+    account.passwordHash = UNPROVISIONED + java.util.UUID.randomUUID();
+    account.kind = EMPLOYEE;
+    return account;
+  }
+
+  /**
+   * 员工信息同步：只更新来源字段，保留凭证、启用状态、期限与授权；管理员账号不参与同步。
+   *
+   * @return 是否有字段发生变化
+   */
+  public boolean syncSource(
       String name, Long department, String company, String source, String job, String telephone) {
     if (administrator)
-      throw new com.cdwy.permission.service.port.error.ConflictException("导入账号与管理员登录名冲突");
+      throw new com.cdwy.permission.service.port.error.ConflictException(
+          "用户名 " + username + " 是管理员账号，员工信息不能覆盖它");
+    boolean changed =
+        !java.util.Objects.equals(displayName, name)
+            || !java.util.Objects.equals(departmentId, department)
+            || !java.util.Objects.equals(companyName, company)
+            || !java.util.Objects.equals(sourceDepartment, source)
+            || !java.util.Objects.equals(jobTitle, job)
+            || !java.util.Objects.equals(phone, telephone);
     displayName = name;
     departmentId = department;
     companyName = company;
     sourceDepartment = source;
     jobTitle = job;
     phone = telephone;
+    return changed;
   }
 
   /** CloneFactory 的布尔 get 访问器约定。 */
