@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test;
 class LayerLoggingTests {
   @Test
   @DisplayName("NFR-11 令牌、登录与密码相关参数一律打码，普通标识照常输出")
-  void sensitiveArgumentsAreMasked() {
+  void NFR11_sensitiveArgumentsAreMasked() {
     assertEquals("***", LayerLoggingAspect.arguments("verify", null, new Object[] {"Bearer a.b.c"}));
     assertEquals("***", LayerLoggingAspect.arguments("login", null, new Object[] {"admin", "secret"}));
     assertEquals(
@@ -23,7 +23,7 @@ class LayerLoggingTests {
 
   @Test
   @DisplayName("NFR-11 方法名不敏感时，参数名含 password、secret、token、credential 的参数单独打码")
-  void sensitiveParameterNamesAreMasked() {
+  void NFR11_sensitiveParameterNamesAreMasked() {
     assertEquals(
         "\"admin\", ***",
         LayerLoggingAspect.arguments(
@@ -37,8 +37,15 @@ class LayerLoggingTests {
   }
 
   @Test
+  @DisplayName("NFR-11 参数中的换行等控制字符被替换，不能伪造日志行")
+  void NFR11_controlCharactersCannotForgeLogLines() {
+    assertEquals(
+        "\"a?b?c\"", LayerLoggingAspect.arguments("search", null, new Object[] {"a\nb\rc"}));
+  }
+
+  @Test
   @DisplayName("NFR-11 X-Client-Menu 只接受简单菜单标识")
-  void menuHeaderIsSanitized() {
+  void NFR11_menuHeaderIsSanitized() {
     assertEquals("users", RequestLoggingFilter.menu("users"));
     assertEquals("-", RequestLoggingFilter.menu(null));
     assertEquals("invalid", RequestLoggingFilter.menu("users\nFAKE LOG LINE"));
@@ -46,7 +53,7 @@ class LayerLoggingTests {
 
   @Test
   @DisplayName("NFR-11 按包名区分 Controller / Service / DDD-Application / Infrastructure 层")
-  void layersFollowPackages() {
+  void NFR11_layersFollowPackages() {
     assertEquals(
         "Controller",
         LayerLoggingAspect.layerOf(com.cdwy.permission.controller.role.RoleController.class));

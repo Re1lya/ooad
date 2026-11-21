@@ -20,6 +20,7 @@ public class EmployeeDirectory {
   private int departmentsCreated, departmentsKept, usersCreated, usersUpdated, usersUnchanged;
   private int roleGrants;
 
+  /** 以同步规则和已校验的员工表数据行创建；数据行做防御性复制，统计从零开始。 */
   public EmployeeDirectory(DirectoryData.Rule rule, List<DirectoryData.Row> rows) {
     this.rule = rule;
     this.rows = List.copyOf(rows);
@@ -36,6 +37,9 @@ public class EmployeeDirectory {
     }
   }
 
+  /**
+   * 放置一个分公司或部门并返回其标识：同一行键只放置并计数一次；按“上级 + 名称”找到已有部门即复用，否则交给 create 保存后计入新建。
+   */
   private Long place(
       Map<String, DepartmentNode> known,
       Long parent,

@@ -11,5 +11,6 @@ public @interface BusinessAccess {
   /** 权限系统自身（管理控制台）的应用编码；控制台令牌的 aud 也取这个值。 */
   String CONSOLE = "rbac";
 
+  /** 登记该接口的应用编码；权限系统自身的管理接口为 {@link #CONSOLE}。 */
   String value();
 }

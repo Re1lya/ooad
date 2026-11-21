@@ -62,7 +62,7 @@ public class JpaAssignmentAdapter implements AssignmentRepository {
     try {
       action.run();
     } catch (org.springframework.dao.DataIntegrityViolationException ex) {
-      throw new com.cdwy.permission.service.port.error.ConflictException("数据重复或关联约束冲突，请刷新后重试");
+      throw new com.cdwy.permission.service.port.error.ConflictException("DATA_CONFLICT", "数据重复或关联约束冲突，请刷新后重试");
     }
   }
 

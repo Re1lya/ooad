@@ -17,11 +17,12 @@ export interface User {
   sourceDepartment?: string | null;
 }
 
+/** 分页结果：page 从 1 开始，pageSize 为每页条数。 */
 export interface Page<T> {
-  items: T[];
-  total: number;
   page: number;
-  size: number;
+  pageSize: number;
+  total: number;
+  items: T[];
 }
 
 export interface Token {
@@ -122,12 +123,7 @@ export interface AuditEntry {
   after: Record<string, unknown> | null;
 }
 
-export interface AuditPage {
-  page: number;
-  pageSize: number;
-  total: number;
-  items: AuditEntry[];
-}
+export type AuditPage = Page<AuditEntry>;
 
 /** 员工信息同步的预览或确认结果（不含员工个人明细）。 */
 export interface SyncSummary {

@@ -20,6 +20,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.cdwy.permission.service.port.error.InvalidDataException;
 
 /**
  * DDD 应用服务：加载部门、账号与角色分配，交给 {@link EmployeeDirectory} 决定变化，再经仓储端口写入。
@@ -44,6 +45,10 @@ public class DddDirectorySyncService implements DirectorySyncUseCase {
     return "ddd";
   }
 
+  /**
+   * 在只读事务内计算变化，不写入。规则中的角色不存在抛 {@code SYNC_ROLE_NOT_FOUND}（400），表中用户名属于管理员账号抛
+   * {@code SYNC_ADMINISTRATOR_CONFLICT}（409）；文件不合法时由读取器抛 {@code EXCEL_INVALID} 或 {@code EMPLOYEE_SHEET_INVALID}（400）。
+   */
   @Override
   @Transactional(readOnly = true)
   public DirectoryData.Summary preview(byte[] workbook, DirectoryData.Rule rule) {
@@ -51,6 +56,7 @@ public class DddDirectorySyncService implements DirectorySyncUseCase {
     return run(sheet, rule, DirectoryData.digest(sheet, rule), false);
   }
 
+  /** 重新读取文件并计算摘要，与预览返回的不一致抛 {@code SYNC_PREVIEW_MISMATCH}（400）；其余校验同预览，任何失败都整批回滚。 */
   @Override
   @Transactional
   public DirectoryData.Summary commit(byte[] workbook, DirectoryData.Rule rule, String digest) {
@@ -60,6 +66,10 @@ public class DddDirectorySyncService implements DirectorySyncUseCase {
     return run(sheet, rule, expected, true);
   }
 
+  /**
+   * 预览与确认共用的编排：角色 → 部门 → 人员 → 角色补授，变化由 {@link EmployeeDirectory} 决定。write 为 false 时新部门只取负数临时标识，
+   * 账号与角色分配都不保存。
+   */
   private DirectoryData.Summary run(
       DirectoryData.Sheet sheet, DirectoryData.Rule rule, String digest, boolean write) {
     Map<String, Long> roleIds = roleIds(rule);
@@ -113,7 +123,7 @@ public class DddDirectorySyncService implements DirectorySyncUseCase {
                 .filter(role -> role.getCode().equals(code))
                 .map(AccessRole::getId)
                 .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("角色不存在：" + code)));
+                .orElseThrow(() -> new InvalidDataException("SYNC_ROLE_NOT_FOUND", "角色不存在：" + code)));
     return ids;
   }
 }

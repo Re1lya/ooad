@@ -1,11 +1,14 @@
 package com.cdwy.permission;
 
+import static com.cdwy.permission.support.TestUrls.url;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import com.cdwy.permission.service.auth.AdminBootstrapService;
 import com.cdwy.permission.service.port.data.DirectoryData;
+import com.cdwy.permission.support.RequestTransactionBoundary;
+import com.cdwy.permission.support.TestDatabase;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -16,12 +19,15 @@ import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockMultipartHttpServletRequestBuilder;
+import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -30,13 +36,28 @@ import tools.jackson.databind.json.JsonMapper;
  *
  * <p>测试数据全部为合成数据，不含真实员工信息。
  */
+@ActiveProfiles("test")
+@Transactional
+@Import(RequestTransactionBoundary.class)
 @SpringBootTest(
     properties = {
-      "spring.datasource.url=jdbc:h2:mem:directory_sync_tests;DB_CLOSE_DELAY=-1",
       "permission.jwt.secret=directory-sync-tests-signing-secret-32-bytes"
     })
 @AutoConfigureMockMvc
 class DirectorySyncTests {
+  private static final String LOGIN_URL = "/api/auth/login";
+  private static final String ROLES_URL = "/api/roles";
+  private static final String ROLE_PERMISSION_URL =
+      "/api/roles/{roleId}/permissions/{permissionId}";
+  private static final String SYNC_PREVIEW_URL = "/api/directory/sync/preview";
+  private static final String SYNC_STEP_URL = "/api/directory/sync/{step}";
+  private static final String USERS_SEARCH_URL =
+      "/api/users?page={page}&pageSize={pageSize}&keyword={keyword}";
+  private static final String USERS_URL = "/api/users";
+  private static final String USER_PASSWORD_URL = "/api/users/{userId}/password";
+  private static final String USER_ROLE_URL = "/api/users/{userId}/roles/{roleId}";
+  private static final String USER_STATUS_URL = "/api/users/{userId}/status";
+
   static final String PASSWORD = "Fixture-2026!";
   static final String[] HEADER = {"姓名", "用户名", "分公司", "部门", "岗位", "电话号码"};
   static final String[][] ROWS = {
@@ -55,13 +76,7 @@ class DirectorySyncTests {
 
   @BeforeEach
   void fixture() throws Exception {
-    db.execute("SET REFERENTIAL_INTEGRITY FALSE");
-    for (String table :
-        db.queryForList(
-            "select table_name from information_schema.tables where table_schema='PUBLIC' and"
-                + " table_type='BASE TABLE'",
-            String.class)) db.execute("DELETE FROM " + table);
-    db.execute("SET REFERENTIAL_INTEGRITY TRUE");
+    TestDatabase.clear(db);
     bootstrap.initialize("sync-admin", PASSWORD);
     admin = login("sync-admin", PASSWORD, 200);
     role("teacher", "教师");
@@ -126,7 +141,7 @@ class DirectorySyncTests {
     assertTrue(hasRole("SG000191", "student"));
     assertFalse(hasRole("SG000191", "teacher"));
     JsonNode user =
-        result(call(get("/api/users?page=0&size=5&keyword=SG000192"), 200)).get("items").get(0);
+        result(call(get(url(USERS_SEARCH_URL, 1, 5, "SG000192")), 200)).get("items").get(0);
     assertEquals("吴承泽", user.get("displayName").asString());
     assertEquals("施工员", user.get("jobTitle").asString());
     assertEquals("道路工程分公司", user.get("companyName").asString());
@@ -160,8 +175,8 @@ class DirectorySyncTests {
   void FR25_changesUpdateSourceFieldsAndKeepCredentialsAndGrants() throws Exception {
     commit(workbook(ROWS), rule("teacher", "student"));
     long id = userId("SG000191");
-    call(put("/api/users/" + id + "/password").contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(Map.of("password", PASSWORD))), 204);
-    call(put("/api/users/" + id + "/status").contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(Map.of("enabled", true))), 200);
+    call(put(url(USER_PASSWORD_URL, id)).contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(Map.of("password", PASSWORD))), 204);
+    call(put(url(USER_STATUS_URL, id)).contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(Map.of("enabled", true))), 200);
     login("SG000191", PASSWORD, 200);
 
     String[][] changed = {
@@ -202,6 +217,7 @@ class DirectorySyncTests {
     String digest =
         sync("preview", file, rule("teacher", "student"), null, 200).get("digest").asString();
     JsonNode stale = sync("commit", workbook(Arrays.copyOf(ROWS, 4)), rule("teacher", "student"), digest, 400);
+    assertEquals("SYNC_PREVIEW_MISMATCH", stale.get("code").asString());
     assertTrue(stale.get("message").asString().contains("重新预览"));
     sync("commit", file, rule("teacher", null), digest, 400);
     sync("commit", file, Map.of("headOffice", "道路工程分公司", "headOfficeRole", "teacher", "branchRole", "student"), digest, 400);
@@ -216,6 +232,7 @@ class DirectorySyncTests {
     rows[ROWS.length] = new String[] {"冒名", "sync-admin", "总公司", "综合办公室", "", ""};
     byte[] file = workbook(rows);
     JsonNode conflict = sync("preview", file, rule("teacher", "student"), null, 409);
+    assertEquals("SYNC_ADMINISTRATOR_CONFLICT", conflict.get("code").asString());
     assertTrue(conflict.get("message").asString().contains("sync-admin"));
     Map<String, String> rule = rule("teacher", "student");
     String digest =
@@ -236,18 +253,20 @@ class DirectorySyncTests {
     assertTrue(message(new String[][] {HEADER, {"甲", "SG 01", "总公司", "部门", "", ""}}).contains("第 2 行"));
     assertTrue(message(new String[][] {HEADER, {"甲", "SG0001", "", "部门", "", ""}}).contains("第 2 行：分公司不能为空"));
     assertTrue(message(new String[][] {HEADER, {"甲", "SG0001", "总公司", "部门", "", "1".repeat(33)}}).contains("电话号码超过 32 个字符"));
-    assertTrue(
-        sync("preview", "不是 Excel".getBytes(StandardCharsets.UTF_8), rule(null, null), null, 400)
-            .get("message")
-            .asString()
-            .contains("Excel"));
-    sync("preview", new byte[0], rule(null, null), null, 400);
-    assertTrue(
-        sync("preview", workbook(ROWS), rule("nobody", null), null, 400)
-            .get("message")
-            .asString()
-            .contains("角色不存在"));
-    sync("preview", workbook(ROWS), Map.of("headOffice", " "), null, 400);
+    JsonNode notExcel =
+        sync("preview", "不是 Excel".getBytes(StandardCharsets.UTF_8), rule(null, null), null, 400);
+    assertEquals("EXCEL_INVALID", notExcel.get("code").asString());
+    assertTrue(notExcel.get("message").asString().contains("Excel"));
+    assertEquals("BAD_REQUEST", sync("preview", new byte[0], rule(null, null), null, 400).get("code").asString());
+    JsonNode noSheet = sync("preview", zipWith("readme.txt", "不是工作表"), rule(null, null), null, 400);
+    assertEquals("EXCEL_INVALID", noSheet.get("code").asString());
+    assertTrue(noSheet.get("message").asString().contains("缺少第一张工作表"), "具体原因不能被笼统提示替换");
+    JsonNode unknownRole = sync("preview", workbook(ROWS), rule("nobody", null), null, 400);
+    assertEquals("SYNC_ROLE_NOT_FOUND", unknownRole.get("code").asString());
+    assertTrue(unknownRole.get("message").asString().contains("角色不存在"));
+    assertEquals(
+        "BAD_REQUEST",
+        sync("preview", workbook(ROWS), Map.of("headOffice", " "), null, 400).get("code").asString());
   }
 
   @Test
@@ -264,7 +283,7 @@ class DirectorySyncTests {
     long operator =
         result(
                 call(
-                    post("/api/users")
+                    post(USERS_URL)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(
                             json.writeValueAsString(
@@ -275,13 +294,13 @@ class DirectorySyncTests {
             .get("id")
             .asLong();
     String token = login("operator", PASSWORD, 200);
-    mvc.perform(multipart("/api/directory/sync/preview").file(file(workbook(ROWS))).header("Authorization", "Bearer " + token))
+    mvc.perform(multipart(SYNC_PREVIEW_URL).file(file(workbook(ROWS))).header("Authorization", "Bearer " + token))
         .andExpect(status().isForbidden());
     long role = role("hr", "人事专员");
     long sync = db.queryForObject("select id from sys_permission where code = 'rbac.directory.sync'", Long.class);
-    call(put("/api/roles/" + role + "/permissions/" + sync), 204);
-    call(put("/api/users/" + operator + "/roles/" + role), 204);
-    mvc.perform(multipart("/api/directory/sync/preview").file(file(workbook(ROWS))).header("Authorization", "Bearer " + token))
+    call(put(url(ROLE_PERMISSION_URL, role, sync)), 204);
+    call(put(url(USER_ROLE_URL, operator, role)), 204);
+    mvc.perform(multipart(SYNC_PREVIEW_URL).file(file(workbook(ROWS))).header("Authorization", "Bearer " + token))
         .andExpect(status().isOk());
   }
 
@@ -315,6 +334,17 @@ class DirectorySyncTests {
 
   // ---------- 辅助 ----------
 
+  /** 只含一个普通文件的 ZIP：能解压，但没有任何工作表。 */
+  static byte[] zipWith(String name, String content) throws Exception {
+    java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
+    try (java.util.zip.ZipOutputStream zip = new java.util.zip.ZipOutputStream(bytes)) {
+      zip.putNextEntry(new java.util.zip.ZipEntry(name));
+      zip.write(content.getBytes(StandardCharsets.UTF_8));
+      zip.closeEntry();
+    }
+    return bytes.toByteArray();
+  }
+
   JsonNode commit(byte[] file, Map<String, String> rule) throws Exception {
     String digest = sync("preview", file, rule, null, 200).get("digest").asString();
     return sync("commit", file, rule, digest, 200);
@@ -323,15 +353,18 @@ class DirectorySyncTests {
   JsonNode sync(String step, byte[] file, Map<String, String> rule, String digest, int status)
       throws Exception {
     MockMultipartHttpServletRequestBuilder request =
-        multipart("/api/directory/sync/" + step).file(file(file));
+        multipart(url(SYNC_STEP_URL, step)).file(file(file));
     rule.forEach((k, v) -> request.param(k, v));
     if (digest != null) request.param("digest", digest);
     request.header("Authorization", "Bearer " + admin);
     return result(mvc.perform(request).andExpect(status().is(status)).andReturn());
   }
 
+  /** 预览一张格式错误的员工表：断言业务码为 EMPLOYEE_SHEET_INVALID，返回提示消息。 */
   String message(String[][] table) throws Exception {
-    return sync("preview", rawWorkbook(table), rule(null, null), null, 400).get("message").asString();
+    JsonNode error = sync("preview", rawWorkbook(table), rule(null, null), null, 400);
+    assertEquals("EMPLOYEE_SHEET_INVALID", error.get("code").asString());
+    return error.get("message").asString();
   }
 
   static Map<String, String> rule(String headOfficeRole, String branchRole) {
@@ -353,7 +386,7 @@ class DirectorySyncTests {
   long role(String code, String name) throws Exception {
     return result(
             call(
-                post("/api/roles")
+                post(ROLES_URL)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(json.writeValueAsString(Map.of("code", code, "name", name))),
                 201))
@@ -387,7 +420,7 @@ class DirectorySyncTests {
   String login(String username, String password, int status) throws Exception {
     MvcResult result =
         mvc.perform(
-                post("/api/auth/login")
+                post(LOGIN_URL)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(json.writeValueAsString(Map.of("username", username, "password", password))))
             .andExpect(status().is(status))

@@ -10,9 +10,12 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+/** 部门仓储：部门树（上下级关系）与部门编码，供部门管理、员工信息同步和统一身份部门目录使用。 */
 public interface DepartmentRepository extends JpaRepository<Department, Long> {
+  /** 是否有以该部门为直接上级的子部门（只看下一层）；删除部门前检查。 */
   boolean existsByParent_Id(Long parentId);
 
+  /** 按编码精确查找部门（区分大小写）；编码全局唯一，空表示编码未被占用，修改时调用方需排除自身。 */
   Optional<Department> findByCode(String code);
 
   /** 同一上级（根部门的上级为空）下是否已有同名部门，排除自身。 */

@@ -123,6 +123,8 @@ deploy/permission/package-images.sh                      # build/rbac-images-<�
 deploy/course/package-images.sh ../course-project-mgt http://120.46.213.158   # build/course-images-<提交号>.tar.gz
 ----
 
+* 权限系统的打包默认先运行 `mvn clean verify`，测试连接真实 MySQL，须先设置 `TEST_DB_HOST`、`TEST_DB_PORT`、`TEST_DB_NAME`、`TEST_DB_USERNAME`、`TEST_DB_PASSWORD`（见 link:04-test-traceability.adoc[需求—测试追踪]）；已经在同一提交上跑过测试时，可设 `SKIP_TESTS=1` 只打包。
+
 * 课程系统的打包按老师部署文档执行，并做两项检查：前端产物里没有开发地址和 Mock 凭据，并且已写入统一身份地址。
 * 把包传到对应节点后，解包并在节点上构建：
 +

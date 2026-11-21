@@ -35,17 +35,17 @@ public class DddAuthorizationService implements AuthorizationUseCase {
 
   /** 当前账号。 */
   private Account user(Long id) {
-    return accounts.find(id).orElseThrow(() -> new ResourceNotFoundException("用户不存在"));
+    return accounts.find(id).orElseThrow(() -> new ResourceNotFoundException("USER_NOT_FOUND", "用户不存在"));
   }
 
   /** 当前角色。 */
   private AccessRole role(Long id) {
-    return roles.find(id).orElseThrow(() -> new ResourceNotFoundException("对象不存在"));
+    return roles.find(id).orElseThrow(() -> new ResourceNotFoundException("ROLE_NOT_FOUND", "角色不存在"));
   }
 
   /** 当前权限。 */
   private FrontendPermission permission(Long id) {
-    return permissions.find(id).orElseThrow(() -> new ResourceNotFoundException("前端权限不存在"));
+    return permissions.find(id).orElseThrow(() -> new ResourceNotFoundException("PERMISSION_NOT_FOUND", "前端权限不存在"));
   }
 
   /** 当前领域快照，角色权限不会写进 JWT。 */
@@ -69,7 +69,7 @@ public class DddAuthorizationService implements AuthorizationUseCase {
     Account a = user(userId);
     AccessRole r = role(roleId);
     if (!a.usable(credentials.now()) || !r.getEnabled())
-      throw new IllegalArgumentException("不能给失效账号或停用角色新增授权");
+      throw new InvalidDataException("GRANT_TARGET_INACTIVE", "不能给失效账号或停用角色新增授权");
     assignments.addUserRole(userId, roleId);
   }
 
@@ -87,7 +87,7 @@ public class DddAuthorizationService implements AuthorizationUseCase {
     AccessRole r = role(roleId);
     permission(permissionId);
     if (!r.getEnabled() || !snapshot().directory().usable(permissionId))
-      throw new IllegalArgumentException("不能新增失效角色或权限的授权");
+      throw new InvalidDataException("GRANT_TARGET_INACTIVE", "不能新增失效角色或权限的授权");
     assignments.addRolePermission(roleId, permissionId);
   }
 

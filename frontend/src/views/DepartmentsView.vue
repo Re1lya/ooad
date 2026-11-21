@@ -136,7 +136,9 @@ async function remove(d: Department) {
               <span v-else class="car"></span>{{ row.d.name }}
             </span>
           </td>
-          <td class="hide-sm"><code>{{ row.d.code ?? '—' }}</code></td>
+          <td class="hide-sm">
+            <code>{{ row.d.code ?? '—' }}</code>
+          </td>
           <td>{{ parentName(row.d.parentId) }}</td>
           <td v-if="writable">
             <div class="acts">

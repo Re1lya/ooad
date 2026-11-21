@@ -6,15 +6,18 @@ import com.cdwy.permission.repository.user.UserAccountRepository;
 import com.cdwy.permission.service.port.auth.AuthenticationUseCase;
 import com.cdwy.permission.service.port.data.*;
 import com.cdwy.permission.service.port.error.AuthenticationFailedException;
+import com.cdwy.permission.service.port.error.InvalidDataException;
 import com.cdwy.permission.service.user.*;
 import java.time.Instant;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /** 结构化事务脚本：按查询、业务校验、写入和结果转换组织处理步骤。 */
 @Service
+@RequiredArgsConstructor
 @org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(
     name = "app.backend-strategy",
     havingValue = "structured",
@@ -32,19 +35,6 @@ public class AuthService implements AuthenticationUseCase {
   private final JwtTokenService tokens;
   private final UserService userService;
   private final BusinessSystemRepository systems;
-
-  public AuthService(
-      UserAccountRepository users,
-      PasswordEncoder encoder,
-      JwtTokenService tokens,
-      UserService userService,
-      BusinessSystemRepository systems) {
-    this.users = users;
-    this.encoder = encoder;
-    this.tokens = tokens;
-    this.userService = userService;
-    this.systems = systems;
-  }
 
   /** 控制台登录：校验账号密码，签发目标系统为权限系统自身的令牌。 */
   public AuthData.Token login(AuthData.Login input) {
@@ -67,11 +57,11 @@ public class AuthService implements AuthenticationUseCase {
   /** systems 必须包含被调用的应用，且每一项都是已登记的应用编码。 */
   private List<String> audience(List<String> requested, String target) {
     if (!requested.contains(target))
-      throw new IllegalArgumentException("systems 必须包含当前应用 " + target);
+      throw new InvalidDataException("LOGIN_TARGET_NOT_IN_SYSTEMS", "systems 必须包含当前应用 " + target);
     List<String> distinct = requested.stream().distinct().toList();
     for (String code : distinct)
       if (systems.findByCode(code).isEmpty())
-        throw new IllegalArgumentException("未登记的目标系统：" + code);
+        throw new InvalidDataException("LOGIN_SYSTEM_UNKNOWN", "未登记的目标系统：" + code);
     return distinct;
   }
 
@@ -84,6 +74,10 @@ public class AuthService implements AuthenticationUseCase {
         .orElseThrow(() -> new AuthenticationFailedException("账号或密码错误，或账号已失效"));
   }
 
+  /**
+   * 每个请求由访问拦截器调用。验签与有效期由 {@link JwtTokenService#verify} 负责；令牌 {@code aud} 不含 audience 时抛“令牌不适用于当前系统”；
+   * 账号不存在、已停用或已过期，或凭证版本与令牌不一致（退出登录、改密、启停后）时抛“账号或凭证已失效”，均为 401。
+   */
   public AuthData.Identity resolve(String header, String audience) {
     JwtTokenService.Identity identity = tokens.verify(header);
     if (!identity.audience().contains(audience))
@@ -104,6 +98,10 @@ public class AuthService implements AuthenticationUseCase {
     user.setCredentialVersion(user.getCredentialVersion() + 1);
   }
 
+  /**
+   * 修改本人密码：锁定账号后核对原密码，不符抛 401；新密码按项目密码规则校验（{@code PASSWORD_POLICY_VIOLATION}），保存后递增凭证版本，
+   * 已签发的令牌（包括当前令牌）全部失效。
+   */
   @Transactional
   public void changePassword(Long id, AuthData.PasswordChange input) {
     UserAccount user =

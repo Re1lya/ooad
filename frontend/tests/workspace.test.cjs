@@ -3,7 +3,7 @@ const { test } = require('node:test');
 const s = require('./support.cjs');
 const { assert } = s;
 
-test('FR-21/22 前端资源管理、授权工作台、接口绑定、窄屏与退出', { skip: s.skip }, async () => {
+test('FR-16 FR-21 FR-22 NFR-10 前端资源管理、授权工作台、接口绑定、窄屏与退出', { skip: s.skip }, async () => {
   assert.ok(s.out && s.admin.username && s.admin.password, '需要设置演示账号及独立输出目录');
   const admin = await s.token();
   await s.ensureConsole(admin);
@@ -67,11 +67,11 @@ test('FR-21/22 前端资源管理、授权工作台、接口绑定、窄屏与�
       await page.getByRole('searchbox', { name: '搜索当前列表' }).fill('');
     });
     await check('新增弹窗取消不写入', async () => {
-      const before = (await s.api(admin, '/api/users?size=1')).total;
+      const before = (await s.api(admin, '/api/users?pageSize=1')).total;
       await page.getByRole('button', { name: '新增用户', exact: true }).click();
       await page.getByRole('dialog').getByLabel('登录名').fill('cancelled-' + suffix);
       await page.getByRole('dialog').getByRole('button', { name: '取消', exact: true }).click();
-      assert.equal((await s.api(admin, '/api/users?size=1')).total, before);
+      assert.equal((await s.api(admin, '/api/users?pageSize=1')).total, before);
     });
     await s.shot(page, 'users');
 

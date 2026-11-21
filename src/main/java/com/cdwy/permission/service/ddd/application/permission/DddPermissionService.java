@@ -42,12 +42,12 @@ public class DddPermissionService implements PermissionUseCase {
 
   /** 读取前端权限。 */
   private FrontendPermission require(Long id) {
-    return permissions.find(id).orElseThrow(() -> new ResourceNotFoundException("前端权限不存在"));
+    return permissions.find(id).orElseThrow(() -> new ResourceNotFoundException("PERMISSION_NOT_FOUND", "前端权限不存在"));
   }
 
   /** 读取 API 资源。 */
   private ProtectedResource resource(Long id) {
-    return resources.find(id).orElseThrow(() -> new ResourceNotFoundException("API 资源不存在"));
+    return resources.find(id).orElseThrow(() -> new ResourceNotFoundException("API_RESOURCE_NOT_FOUND", "API 资源不存在"));
   }
 
   /** 不重复访问数据库的结果转换。 */
@@ -75,8 +75,8 @@ public class DddPermissionService implements PermissionUseCase {
   @Transactional
   public PermissionData.View create(PermissionData.Input input) {
     if (permissions.all().stream().anyMatch(n -> n.getCode().equals(input.code())))
-      throw new ConflictException("前端权限编码已存在");
-    systems.find(input.systemId()).orElseThrow(() -> new ResourceNotFoundException("对象不存在"));
+      throw new ConflictException("PERMISSION_CODE_EXISTS", "前端权限编码已存在");
+    systems.find(input.systemId()).orElseThrow(() -> new ResourceNotFoundException("SYSTEM_NOT_FOUND", "应用不存在"));
     FrontendPermission n = new FrontendPermission();
     n.setSystemId(input.systemId());
     n.setCode(input.code());

@@ -91,7 +91,7 @@ public class Account {
       String name, Long department, String company, String source, String job, String telephone) {
     if (administrator)
       throw new com.cdwy.permission.service.port.error.ConflictException(
-          "用户名 " + username + " 是管理员账号，员工信息不能覆盖它");
+          "SYNC_ADMINISTRATOR_CONFLICT", "用户名 " + username + " 是管理员账号，员工信息不能覆盖它");
     boolean changed =
         !java.util.Objects.equals(displayName, name)
             || !java.util.Objects.equals(departmentId, department)
@@ -106,15 +106,5 @@ public class Account {
     jobTitle = job;
     phone = telephone;
     return changed;
-  }
-
-  /** CloneFactory 的布尔 get 访问器约定。 */
-  public boolean getEnabled() {
-    return enabled;
-  }
-
-  /** CloneFactory 的布尔 get 访问器约定。 */
-  public boolean getAdministrator() {
-    return administrator;
   }
 }

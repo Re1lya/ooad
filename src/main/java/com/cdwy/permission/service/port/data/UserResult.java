@@ -1,5 +1,16 @@
 package com.cdwy.permission.service.port.data;
 
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * 用户用例与登录结果中的用户信息：两种设计路线都由 CloneFactory 从账号实体或领域对象按同名字段复制，控制器再转换为 VO。
+ *
+ * <p>不含密码散列与凭证版本。{@code kind} 是 {@link PersonType} 的名称；{@code expiresAt} 为空表示不限期；
+ * {@code companyName}、{@code jobTitle}、{@code phone}、{@code sourceDepartment} 来自员工信息同步，未经同步的用户为空。
+ */
+@Getter
+@Setter
 public class UserResult {
 
   private Long id;
@@ -18,75 +29,11 @@ public class UserResult {
 
   private java.time.Instant expiresAt;
 
-  public Long getId() {
-    return id;
-  }
+  private String companyName;
 
-  public void setId(Long value) {
-    id = value;
-  }
+  private String jobTitle;
 
-  public String getUsername() {
-    return username;
-  }
+  private String phone;
 
-  public void setUsername(String value) {
-    username = value;
-  }
-
-  public String getDisplayName() {
-    return displayName;
-  }
-
-  public void setDisplayName(String value) {
-    displayName = value;
-  }
-
-  public boolean getEnabled() {
-    return enabled;
-  }
-
-  public void setEnabled(boolean value) {
-    enabled = value;
-  }
-
-  public boolean getAdministrator() {
-    return administrator;
-  }
-
-  public void setAdministrator(boolean value) {
-    administrator = value;
-  }
-
-  public Long getDepartmentId() {
-    return departmentId;
-  }
-
-  public void setDepartmentId(Long value) {
-    departmentId = value;
-  }
-
-  public String getKind() {
-    return kind;
-  }
-
-  public void setKind(String value) {
-    kind = value;
-  }
-
-  public java.time.Instant getExpiresAt() {
-    return expiresAt;
-  }
-
-  public void setExpiresAt(java.time.Instant value) {
-    expiresAt = value;
-  }
-
-  @lombok.Getter @lombok.Setter private String companyName;
-
-  @lombok.Getter @lombok.Setter private String jobTitle;
-
-  @lombok.Getter @lombok.Setter private String phone;
-
-  @lombok.Getter @lombok.Setter private String sourceDepartment;
+  private String sourceDepartment;
 }

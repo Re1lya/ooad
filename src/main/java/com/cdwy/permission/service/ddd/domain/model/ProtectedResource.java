@@ -2,6 +2,7 @@ package com.cdwy.permission.service.ddd.domain.model;
 
 import lombok.Getter;
 import lombok.Setter;
+import com.cdwy.permission.service.port.error.InvalidDataException;
 
 /** ProtectedResource 领域对象：只维护业务状态和不变量，不依赖 JPA。 */
 @Getter
@@ -22,19 +23,19 @@ public class ProtectedResource {
         || !path.startsWith("/")
         || path.contains("?")
         || path.contains("#")
-        || path.contains("**")) throw new IllegalArgumentException("资源路径须为不含查询参数的绝对路径，不支持 ** 通配符");
+        || path.contains("**")) throw new InvalidDataException("API_RESOURCE_PATH_INVALID", "资源路径须为不含查询参数的绝对路径，不支持 ** 通配符");
   }
 
   /** 后端权限码可选；登记后与方法、路径一样固定，供接入应用做方法级授权。 */
   public void assertCode() {
     if (code != null && !code.matches("[A-Za-z][A-Za-z0-9_:.-]{0,63}"))
-      throw new IllegalArgumentException("权限码须以字母开头，只含字母、数字和 _:.-，最长 64 位");
+      throw new InvalidDataException("API_RESOURCE_CODE_INVALID", "权限码须以字母开头，只含字母、数字和 _:.-，最长 64 位");
   }
 
   /** operationId 可选；登记后用于“能否调用指定接口”的查询。 */
   public void assertOperationId() {
     if (operationId != null && !operationId.matches("[A-Za-z_][A-Za-z0-9_.-]{0,127}"))
-      throw new IllegalArgumentException("operationId 须以字母或下划线开头，只含字母、数字和 _.-，最长 128 位");
+      throw new InvalidDataException("API_OPERATION_ID_INVALID", "operationId 须以字母或下划线开头，只含字母、数字和 _.-，最长 128 位");
   }
 
   /** 启用且登记了权限码的资源才向接入应用提供后端权限码（信息专家：资源自己知道是否有效）。 */
@@ -60,11 +61,6 @@ public class ProtectedResource {
 
   /** 前端绑定解除后才可删除。 */
   public void assertDeletable(boolean bound) {
-    if (bound) throw new com.cdwy.permission.service.port.error.ConflictException("API 资源仍绑定前端权限");
-  }
-
-  /** CloneFactory 的布尔 get 访问器约定。 */
-  public boolean getActive() {
-    return active;
+    if (bound) throw new com.cdwy.permission.service.port.error.ConflictException("API_RESOURCE_IN_USE", "API 资源仍绑定前端权限");
   }
 }

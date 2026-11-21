@@ -34,13 +34,12 @@ public final class IdentityData {
   /** 能否调用指定 operationId 的接口；不返回权限码。 */
   public record ApiCheck(String operationId, boolean allowed) {}
 
-  /** 分页查询条件：关键字可空，页码从 1 开始，每页 1～100 条。 */
-  public record Query(String keyword, int page, int pageSize) {
-    public Query {
-      if (keyword != null && keyword.length() > 100)
-        throw new IllegalArgumentException("keyword 最长 100 个字符");
-      if (page < 1) throw new IllegalArgumentException("page 须大于等于 1");
-      if (pageSize < 1 || pageSize > 100) throw new IllegalArgumentException("pageSize 须在 1 到 100 之间");
-    }
-  }
+  /**
+   * 分页查询条件；取值范围由 API 层校验。
+   *
+   * @param keyword 关键字，可空
+   * @param page 页码，从 1 开始
+   * @param pageSize 每页条数
+   */
+  public record Query(String keyword, int page, int pageSize) {}
 }

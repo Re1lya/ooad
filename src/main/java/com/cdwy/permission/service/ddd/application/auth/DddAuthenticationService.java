@@ -50,6 +50,7 @@ public class DddAuthenticationService implements AuthenticationUseCase {
         .orElseThrow(() -> new AuthenticationFailedException("账号或密码错误，或账号已失效"));
   }
 
+  /** 按账号当前凭证版本与目标系统签发令牌，并把账号按同名字段复制为登录结果中的用户信息（不含密码散列与凭证版本）。 */
   private AuthData.Token token(Account account, java.util.Collection<String> audience) {
     UserResult result = cn.edu.xmu.clonefactory.util.CloneFactory.copy(new UserResult(), account);
     result.setKind(account.getKind());

@@ -1,746 +1,610 @@
 package cn.edu.xmu.clonefactory;
 
 import com.google.auto.service.AutoService;
+import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 
-import javax.annotation.processing.*;
+import javax.annotation.processing.AbstractProcessor;
+import javax.annotation.processing.Messager;
+import javax.annotation.processing.ProcessingEnvironment;
+import javax.annotation.processing.Processor;
+import javax.annotation.processing.RoundEnvironment;
+import javax.annotation.processing.SupportedAnnotationTypes;
+import javax.annotation.processing.SupportedSourceVersion;
 import javax.lang.model.SourceVersion;
-import javax.lang.model.element.*;
+import javax.lang.model.element.AnnotationMirror;
+import javax.lang.model.element.AnnotationValue;
+import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
+import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.Modifier;
+import javax.lang.model.element.RecordComponentElement;
+import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
 import javax.tools.Diagnostic;
-import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.lang.annotation.Annotation;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
 /**
+ * CloneFactory 注解处理器。
+ *
+ * <p>支持四种拷贝注解：{@link CopyFrom}、{@link CopyTo}、
+ * {@link CopyNotNullFrom} 和 {@link CopyNotNullTo}。</p>
+ *
+ * <p>生成策略：</p>
+ * <ul>
+ *     <li>普通可变类：通过 setter 或 public 字段赋值；</li>
+ *     <li>record：通过规范构造器创建新对象；</li>
+ *     <li>包含 final 字段的类：通过全参数构造器创建新对象；</li>
+ *     <li>copyNotNull：引用类型为 null 时保留 target 原值。</li>
+ * </ul>
  */
 @AutoService(Processor.class)
-@SupportedAnnotationTypes({"cn.edu.xmu.clonefactory.CopyFrom","cn.edu.xmu.clonefactory.CopyNotNullFrom","cn.edu.xmu.clonefactory.CopyTo","cn.edu.xmu.clonefactory.CopyNotNullTo"})
+@SupportedAnnotationTypes({
+        "cn.edu.xmu.clonefactory.CopyFrom",
+        "cn.edu.xmu.clonefactory.CopyNotNullFrom",
+        "cn.edu.xmu.clonefactory.CopyTo",
+        "cn.edu.xmu.clonefactory.CopyNotNullTo"
+})
 @SupportedSourceVersion(SourceVersion.RELEASE_21)
-// 声明一个注解处理器，支持CopyFrom、CopyTo、CopyNotNullFrom和CopyNotNullTo注解
 public class CopyProcessor extends AbstractProcessor {
+
+    private static final String PACKAGE_NAME = "cn.edu.xmu.clonefactory.util";
+    private static final String GENERATED_CLASS_NAME = "CloneFactory";
+
     private Messager messager;
+    private boolean fileGenerated;
 
-    private final String PACKAGENAME = "cn.edu.xmu.clonefactory.util";
+    private static final List<AnnotationConfig> CONFIGS = List.of(
+            new AnnotationConfig(CopyFrom.class, CopyFrom.Exclude.class, CopyFrom.Of.class,
+                    "copy", false, true),
+            new AnnotationConfig(CopyTo.class, CopyTo.Exclude.class, CopyTo.Of.class,
+                    "copy", false, false),
+            new AnnotationConfig(CopyNotNullFrom.class, CopyNotNullFrom.Exclude.class, CopyNotNullFrom.Of.class,
+                    "copyNotNull", true, true),
+            new AnnotationConfig(CopyNotNullTo.class, CopyNotNullTo.Exclude.class, CopyNotNullTo.Of.class,
+                    "copyNotNull", true, false)
+    );
 
     @Override
-    // 返回支持的Java源代码版
-    public SourceVersion getSupportedSourceVersion() {
-        return SourceVersion.latestSupported();
-    }
-
-    @Override
-    // 初始化处理环境
     public synchronized void init(ProcessingEnvironment processingEnv) {
         super.init(processingEnv);
         this.messager = processingEnv.getMessager();
     }
 
+    @Override
+    public SourceVersion getSupportedSourceVersion() {
+        return SourceVersion.latestSupported();
+    }
 
     @Override
-    // 处理注解
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-        if (annotations.isEmpty()) {
+        if (annotations.isEmpty() || fileGenerated) {
             return false;
         }
-        TypeSpec.Builder typeSpecBuilder = TypeSpec.classBuilder("CloneFactory")
-                .addModifiers(Modifier.PUBLIC, Modifier.FINAL);
 
-        messager.printMessage(Diagnostic.Kind.NOTE, "CopyFromProcessor start");
-        //1. 处理@CopyFrom注解
-        Set<TypeElement> elementsToProcessCopyFrom = new HashSet<>();
+        TypeSpec.Builder factory = TypeSpec.classBuilder(GENERATED_CLASS_NAME)
+                .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
+                .addMethod(MethodSpec.constructorBuilder().addModifiers(Modifier.PRIVATE).build());
 
-        //添加所有带@CopyFrom注解的类
-        Set<TypeElement> annotatedElementsCopyFrom = roundEnv.getElementsAnnotatedWith(CopyFrom.class).stream()
-                .filter(element -> element.getKind() == ElementKind.CLASS)
-                .map(element -> (TypeElement)element)
-                .collect(Collectors.toSet());
-        elementsToProcessCopyFrom.addAll(annotatedElementsCopyFrom);
+        Set<String> generatedSignatures = new LinkedHashSet<>();
+        boolean generatedAny = false;
 
-        elementsToProcessCopyFrom.forEach(element -> {
-            messager.printMessage(Diagnostic.Kind.NOTE, new StringBuilder("Processing: ").append(element.getSimpleName()).toString());
+        for (AnnotationConfig config : CONFIGS) {
+            for (Element annotatedElement : roundEnv.getElementsAnnotatedWith(config.annotationType())) {
+                if (!isClassOrRecord(annotatedElement)) {
+                    continue;
+                }
 
-            //获取Target类所有可以Set的字段
-            List<Element> copyableFields = getAllSetableFields(element);
-            List<DeclaredType> sourceClasses;
-            // 使用注解中指定的源类
-            sourceClasses = getClass(element, "value", CopyFrom.class);
+                TypeElement annotatedType = (TypeElement) annotatedElement;
+                for (DeclaredType relatedType : getClassValues(annotatedType, "value", config.annotationType())) {
+                    TypeElement relatedElement = (TypeElement) relatedType.asElement();
+                    TypeElement target = config.copyFrom() ? annotatedType : relatedElement;
+                    TypeElement source = config.copyFrom() ? relatedElement : annotatedType;
 
+                    MethodSpec method = generateCopyMethod(config, target, source);
+                    if (method == null) {
+                        continue;
+                    }
 
-            sourceClasses.forEach(sourceClass -> {
-                //获取源类所有可以Get的字段
-                List<Element> sourceFields = getAllGetableFields((TypeElement)sourceClass.asElement());
-                messager.printMessage(Diagnostic.Kind.NOTE,
-                        new StringBuilder("Source fields: ")
-                                .append(sourceFields)
-                                .append(sourceClass)
-                                .toString());
-                messager.printMessage(Diagnostic.Kind.NOTE,
-                        new StringBuilder("Target element: ")
-                                .append(element)
-                                .toString());
-
-                // 创建一个名为copy的方法
-                MethodSpec.Builder copyMethodBuilder = MethodSpec.methodBuilder("copy")
-                        .addJavadoc("Copy all fields from source to target\n")
-                        .addJavadoc("generated by @CopyFrom("+sourceClass.asElement().getSimpleName()+") in {"+element.getSimpleName()+"}\n")
-                        .addJavadoc("@param target the target object\n")
-                        .addJavadoc("@param source the source object\n")
-                        .addJavadoc("@return the copied target object\n")
-                        .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
-                        .returns(TypeName.get(element.asType()))
-                        .addParameter(TypeName.get(element.asType()), "target")
-                        .addParameter(TypeName.get(sourceClass), "source");
-
-                // 遍历目标类的可复制字段
-                copyableFields.stream()
-                        .filter(field -> {
-                            String fieldName = field.getSimpleName().toString();
-                            // 检查源类是否有对应的字段或者方法
-                            boolean hasMatchingField = sourceFields.stream()
-                                    .anyMatch(sourceField -> {
-                                        String sourceFieldName = sourceField.getSimpleName().toString();
-                                        String getterName = getGetterName(fieldName);
-                                        return sourceFieldName.equals(fieldName) ||
-                                                (sourceField instanceof ExecutableElement &&
-                                                        sourceField.getSimpleName().toString().equals(getterName));
-                                    });
-                            // 检查是否应该被排除
-                            // 获取字段上的注解
-                            List<DeclaredType> fieldExcludeList = getClass(field, "value", CopyFrom.Exclude.class);
-                            List<DeclaredType> fieldOfList = getClass(field, "value", CopyFrom.Of.class);
-                            return hasMatchingField && !shouldExcludeField(field, sourceClass, fieldExcludeList, fieldOfList);
-                        })
-                        .forEach(field -> {
-                            String fieldName = field.getSimpleName().toString();
-                            String setterName = getSetterName(fieldName);
-                            String getterName = getGetterName(fieldName);
-                            copyMethodBuilder.addStatement("target.$L(source.$L())",
-                                    setterName, getterName);
-                        });
-
-                // 返回目标对象
-                copyMethodBuilder.addStatement("return target");
-
-                // 将copy方法添加到类中
-                typeSpecBuilder.addMethod(copyMethodBuilder.build());
-            });
-        });
-
-
-        //2、处理所有带@CopyTo注解的类
-        messager.printMessage(Diagnostic.Kind.NOTE, "CopyToProcessor start");
-        Set<TypeElement> elementsToProcessCopyTo = new HashSet<>();
-
-        // 添加所有带@CopyTo注解的类
-        Set<TypeElement> annotatedElementsCopyTo = roundEnv.getElementsAnnotatedWith(CopyTo.class).stream()
-                .filter(element -> element.getKind() == ElementKind.CLASS)
-                .map(element -> (TypeElement)element)
-                .collect(Collectors.toSet());
-        elementsToProcessCopyTo.addAll(annotatedElementsCopyTo);
-
-
-        elementsToProcessCopyTo.forEach(element -> {
-            messager.printMessage(Diagnostic.Kind.NOTE, new StringBuilder("Processing: ").append(element.getSimpleName()).toString());
-
-            //获取源类所有可以Get的字段
-            List<Element> copyableFields = getAllGetableFields(element);
-            List<DeclaredType> targetClasses;
-            // 使用注解中指定的Target类
-            targetClasses = getClass(element, "value", CopyTo.class);
-
-
-            targetClasses.forEach(targetClass -> {
-                //获取Target所有可以Set的字段
-                List<Element> targetFields = getAllSetableFields((TypeElement)targetClass.asElement());
-                messager.printMessage(Diagnostic.Kind.NOTE,
-                        new StringBuilder("Target fields: ")
-                                .append(targetFields)
-                                .append(targetClass)
-                                .toString());
-                messager.printMessage(Diagnostic.Kind.NOTE,
-                        new StringBuilder("Source element: ")
-                                .append(element)
-                                .toString());
-
-                // 创建一个名为copy的方法
-                MethodSpec.Builder copyMethodBuilder = MethodSpec.methodBuilder("copy")
-                        .addJavadoc("Copy all fields from source to target\n")
-                        .addJavadoc("generated by @CopyTo("+targetClass.asElement().getSimpleName()+") in {"+element.getSimpleName()+"}\n")
-                        .addJavadoc("@param target the target object\n")
-                        .addJavadoc("@param source the source object\n")
-                        .addJavadoc("@return the copied target object\n")
-                        .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
-                        .returns(TypeName.get(targetClass))
-                        .addParameter(TypeName.get(targetClass), "target")
-                        .addParameter(TypeName.get(element.asType()), "source");
-
-                // 遍历源类的可复制字段
-                copyableFields.stream()
-                        .filter(field -> {
-                            String fieldName = field.getSimpleName().toString();
-                            // 检查目标类是否有对应的字段或setter方法
-                            boolean hasMatchingField = targetFields.stream()
-                                    .anyMatch(targetField -> {
-                                        String targetFieldName = targetField.getSimpleName().toString();
-                                        String setterName = getSetterName(fieldName);
-                                        return targetFieldName.equals(fieldName) ||
-                                                (targetField instanceof ExecutableElement &&
-                                                        targetField.getSimpleName().toString().equals(setterName));
-                                    });
-                            // 检查是否应该被排除
-                            // 获取字段上的注解
-                            List<DeclaredType> fieldExcludeList = getClass(field, "value",CopyTo.Exclude.class);
-                            List<DeclaredType> fieldOfList = getClass(field, "value", CopyTo.Of.class);
-                            return hasMatchingField && !shouldExcludeField(field, targetClass, fieldExcludeList, fieldOfList);
-                        })
-                        .forEach(field -> {
-                            String fieldName = field.getSimpleName().toString();
-                            String setterName = getSetterName(fieldName);
-                            String getterName = getGetterName(fieldName);
-                            copyMethodBuilder.addStatement("target.$L(source.$L())",
-                                    setterName, getterName);
-                        });
-
-                // 返回目标对象
-                copyMethodBuilder.addStatement("return target");
-
-                // 将copy方法添加到类中
-                typeSpecBuilder.addMethod(copyMethodBuilder.build());
-            });
-        });
-
-
-        //3. 处理@CopyNotNullFrom注解
-        Set<TypeElement> elementsToProcessCopyNotNullFrom = new HashSet<>();
-
-        //添加所有带@CopyFrom注解的类
-        Set<TypeElement> annotatedElementsNotNullCopyFrom = roundEnv.getElementsAnnotatedWith(CopyNotNullFrom.class).stream()
-                .filter(element -> element.getKind() == ElementKind.CLASS)
-                .map(element -> (TypeElement)element)
-                .collect(Collectors.toSet());
-        elementsToProcessCopyNotNullFrom.addAll(annotatedElementsNotNullCopyFrom);
-
-        annotatedElementsNotNullCopyFrom.forEach(element -> {
-            messager.printMessage(Diagnostic.Kind.NOTE, new StringBuilder("Processing: ").append(element.getSimpleName()).toString());
-
-            //获取Target类所有可以Set的字段
-            List<Element> copyableFields = getAllSetableFields(element);
-            List<DeclaredType> sourceClasses;
-            // 使用注解中指定的源类
-            sourceClasses = getClass(element, "value", CopyNotNullFrom.class);
-
-
-            sourceClasses.forEach(sourceClass -> {
-                //获取源类所有可以Get的字段
-                List<Element> sourceFields = getAllGetableFields((TypeElement)sourceClass.asElement());
-                messager.printMessage(Diagnostic.Kind.NOTE,
-                        new StringBuilder("Source fields: ")
-                                .append(sourceFields)
-                                .append(sourceClass)
-                                .toString());
-                messager.printMessage(Diagnostic.Kind.NOTE,
-                        new StringBuilder("Target element: ")
-                                .append(element)
-                                .toString());
-
-                // 创建一个名为copy的方法
-                MethodSpec.Builder copyMethodBuilder = MethodSpec.methodBuilder("copyNotNull")
-                        .addJavadoc("Copy non-null fields from source to target\n")
-                        .addJavadoc("generated by @CopyNotNullFrom("+sourceClass.asElement().getSimpleName()+") in {"+element.getSimpleName()+"}\n")
-                        .addJavadoc("@param target the target object\n")
-                        .addJavadoc("@param source the source object\n")
-                        .addJavadoc("@return the copied target object\n")
-                        .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
-                        .returns(TypeName.get(element.asType()))
-                        .addParameter(TypeName.get(element.asType()), "target")
-                        .addParameter(TypeName.get(sourceClass), "source");
-
-                // 遍历目标类的可复制字段
-                copyableFields.stream()
-                        .filter(field -> {
-                            String fieldName = field.getSimpleName().toString();
-                            // 检查源类是否有对应的字段或者方法
-                            boolean hasMatchingField = sourceFields.stream()
-                                    .anyMatch(sourceField -> {
-                                        String sourceFieldName = sourceField.getSimpleName().toString();
-                                        String getterName = getGetterName(fieldName);
-                                        return sourceFieldName.equals(fieldName) ||
-                                                (sourceField instanceof ExecutableElement &&
-                                                        sourceField.getSimpleName().toString().equals(getterName));
-                                    });
-                            // 检查是否应该被排除
-                            // 获取字段上的注解
-                            List<DeclaredType> fieldExcludeList = getClass(field, "value", CopyNotNullFrom.Exclude.class);
-                            List<DeclaredType> fieldOfList = getClass(field, "value", CopyNotNullFrom.Of.class);
-                            return hasMatchingField && !shouldExcludeField(field, sourceClass, fieldExcludeList, fieldOfList);
-                        })
-                        .forEach(field -> {
-                            String fieldName = field.getSimpleName().toString();
-                            String setterName = getSetterName(fieldName);
-                            String getterName = getGetterName(fieldName);
-                            copyMethodBuilder.beginControlFlow("if (null != source.$L())",getterName)
-                                    .addStatement("target.$L(source.$L())",setterName,getterName)
-                                    .endControlFlow();
-                        });
-
-                // 返回目标对象
-                copyMethodBuilder.addStatement("return target");
-
-                // 将copy方法添加到类中
-                typeSpecBuilder.addMethod(copyMethodBuilder.build());
-            });
-        });
-
-        //4、处理所有带@CopyNotNullTo注解的类
-        messager.printMessage(Diagnostic.Kind.NOTE, "CopyNotNullToProcessor start");
-        Set<TypeElement> elementsToProcessCopyNotNullTo = new HashSet<>();
-
-        // 添加所有带@CopyNotNullTo注解的类
-        Set<TypeElement> annotatedElementsCopyNotNullTo = roundEnv.getElementsAnnotatedWith(CopyNotNullTo.class).stream()
-                .filter(element -> element.getKind() == ElementKind.CLASS)
-                .map(element -> (TypeElement)element)
-                .collect(Collectors.toSet());
-        elementsToProcessCopyNotNullTo.addAll(annotatedElementsCopyNotNullTo);
-
-
-        elementsToProcessCopyNotNullTo.forEach(element -> {
-            messager.printMessage(Diagnostic.Kind.NOTE, new StringBuilder("Processing: ").append(element.getSimpleName()).toString());
-
-            //获取源类所有可以Get的字段
-            List<Element> copyableFields = getAllGetableFields(element);
-            List<DeclaredType> targetClasses;
-            // 使用注解中指定的Target类
-            targetClasses = getClass(element, "value", CopyNotNullTo.class);
-
-
-            targetClasses.forEach(targetClass -> {
-                //获取Target所有可以Set的字段
-                List<Element> targetFields = getAllSetableFields((TypeElement)targetClass.asElement());
-                messager.printMessage(Diagnostic.Kind.NOTE,
-                        new StringBuilder("Target fields: ")
-                                .append(targetFields)
-                                .append(targetClass)
-                                .toString());
-                messager.printMessage(Diagnostic.Kind.NOTE,
-                        new StringBuilder("Source element: ")
-                                .append(element)
-                                .toString());
-
-                // 创建一个名为copy的方法
-                MethodSpec.Builder copyMethodBuilder = MethodSpec.methodBuilder("copyNotNull")
-                        .addJavadoc("Copy non-null fields from source to target\n")
-                        .addJavadoc("generated by @CopyNotNullTo("+targetClass.asElement().getSimpleName()+") in {"+element.getSimpleName()+"}\n")
-                        .addJavadoc("@param target the target object\n")
-                        .addJavadoc("@param source the source object\n")
-                        .addJavadoc("@return the copied target object\n")
-                        .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
-                        .returns(TypeName.get(targetClass))
-                        .addParameter(TypeName.get(targetClass), "target")
-                        .addParameter(TypeName.get(element.asType()), "source");
-
-                // 遍历源类的可复制字段
-                copyableFields.stream()
-                        .filter(field -> {
-                            String fieldName = field.getSimpleName().toString();
-                            // 检查目标类是否有对应的字段或setter方法
-                            boolean hasMatchingField = targetFields.stream()
-                                    .anyMatch(targetField -> {
-                                        String targetFieldName = targetField.getSimpleName().toString();
-                                        String setterName = getSetterName(fieldName);
-                                        return targetFieldName.equals(fieldName) ||
-                                                (targetField instanceof ExecutableElement &&
-                                                        targetField.getSimpleName().toString().equals(setterName));
-                                    });
-                            // 检查是否应该被排除
-                            List<DeclaredType> fieldExcludeList = getClass(field, "value", CopyNotNullTo.Exclude.class);
-                            List<DeclaredType> fieldOfList = getClass(field, "value", CopyNotNullTo.Of.class);
-                            return hasMatchingField && !shouldExcludeField(field, targetClass, fieldExcludeList, fieldOfList);
-                        })
-                        .forEach(field -> {
-                            String fieldName = field.getSimpleName().toString();
-                            String setterName = getSetterName(fieldName);
-                            String getterName = getGetterName(fieldName);
-                            copyMethodBuilder.beginControlFlow("if (null != source.$L())",getterName)
-                                    .addStatement("target.$L(source.$L())",setterName,getterName)
-                                    .endControlFlow();
-                        });
-
-                // 返回目标对象
-                copyMethodBuilder.addStatement("return target");
-
-                // 将copy方法添加到类中
-                typeSpecBuilder.addMethod(copyMethodBuilder.build());
-            });
-        });
-
-        // 创建Java文件
-        JavaFile javaFile = JavaFile.builder(PACKAGENAME, typeSpecBuilder.build()).build();
-
-        // 将Java文件写入到文件中
-        try {
-            javaFile.writeTo(processingEnv.getFiler());
-        } catch (Exception e) {
-            // 如果出现异常，打印错误信息
-            messager.printMessage(Diagnostic.Kind.ERROR, e.getMessage());
+                    String signature = config.methodName() + "(" + target.getQualifiedName() + "," + source.getQualifiedName() + ")";
+                    if (generatedSignatures.add(signature)) {
+                        factory.addMethod(method);
+                        generatedAny = true;
+                    }
+                }
+            }
         }
 
+        if (!generatedAny) {
+            return true;
+        }
+
+        try {
+            JavaFile.builder(PACKAGE_NAME, factory.build()).build().writeTo(processingEnv.getFiler());
+            fileGenerated = true;
+        } catch (Exception exception) {
+            messager.printMessage(Diagnostic.Kind.ERROR,
+                    "生成 CloneFactory 失败: " + exception.getMessage());
+        }
         return true;
     }
 
+    /**
+     * 为一组 target/source 生成 copy 或 copyNotNull 方法。
+     */
+    private MethodSpec generateCopyMethod(AnnotationConfig config, TypeElement target, TypeElement source) {
+        Map<String, PropertyInfo> targetProperties = properties(target);
+        Map<String, PropertyInfo> sourceProperties = properties(source);
 
+        MethodSpec.Builder method = MethodSpec.methodBuilder(config.methodName())
+                .addJavadoc("Copy matching properties from $T to $T.\n", source, target)
+                .addJavadoc("Generated from @$L on $T.\n", config.annotationType().getSimpleName(), target)
+                .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
+                .returns(TypeName.get(target.asType()))
+                .addParameter(TypeName.get(target.asType()), "target")
+                .addParameter(TypeName.get(source.asType()), "source");
 
-
-    // 获取类的所有方法
-    private List<ExecutableElement> getAllMethods(TypeElement type) {
-        List<ExecutableElement> methods = new ArrayList<>();
-        // 获取当前类的所有方法
-        methods.addAll(ElementFilter.methodsIn(type.getEnclosedElements()));
-        // 获取父类的类型
-        TypeElement superClass = (TypeElement) ((DeclaredType) type.getSuperclass()).asElement();
-        // 递归获取所有父类的方法，直到到达Object类
-        while (superClass != null && !superClass.getQualifiedName().toString().equals("java.lang.Object")) {
-            methods.addAll(ElementFilter.methodsIn(superClass.getEnclosedElements()));
-            TypeMirror superClassType = superClass.getSuperclass();
-            if (superClassType.getKind() == TypeKind.DECLARED) {
-                superClass = (TypeElement) ((DeclaredType) superClassType).asElement();
-            } else {
-                break;
+        if (requiresConstructor(target)) {
+            List<String> constructorProperties = constructorPropertyNames(target);
+            if (constructorProperties == null) {
+                return null;
             }
+
+            List<CodeBlock> arguments = new ArrayList<>();
+            for (String propertyName : constructorProperties) {
+                CodeBlock argument = constructorArgument(config, target, source,
+                        targetProperties, sourceProperties, propertyName);
+                if (argument == null) {
+                    return null;
+                }
+                arguments.add(argument);
+            }
+            method.addStatement("return new $T($L)", TypeName.get(target.asType()),
+                    CodeBlock.join(arguments, ", "));
+            return method.build();
+        }
+
+        boolean generatedStatement = false;
+        for (PropertyInfo targetProperty : targetProperties.values()) {
+            if (targetProperty.writer() == null) {
+                continue;
+            }
+
+            PropertyInfo sourceProperty = sourceProperties.get(targetProperty.name());
+            if (sourceProperty == null || sourceProperty.reader() == null) {
+                continue;
+            }
+            if (isExcluded(config, target, source, targetProperty, sourceProperty)) {
+                continue;
+            }
+
+            CodeBlock sourceRead = read(sourceProperty, "source");
+            if (config.copyNotNull() && !isPrimitive(sourceProperty.type())) {
+                method.beginControlFlow("if ($L != null)", sourceRead);
+                write(method, targetProperty, sourceRead);
+                method.endControlFlow();
+            } else {
+                write(method, targetProperty, sourceRead);
+            }
+            generatedStatement = true;
+        }
+
+        if (!generatedStatement) {
+            messager.printMessage(Diagnostic.Kind.WARNING,
+                    "没有为 " + target.getQualifiedName() + " <- " + source.getQualifiedName()
+                            + " 生成可复制属性。请检查 getter/setter、final 字段或构造器。");
+        }
+
+        method.addStatement("return target");
+        return method.build();
+    }
+
+    /**
+     * 生成不可变目标对象的构造器参数。
+     */
+    private CodeBlock constructorArgument(AnnotationConfig config,
+                                          TypeElement target,
+                                          TypeElement source,
+                                          Map<String, PropertyInfo> targetProperties,
+                                          Map<String, PropertyInfo> sourceProperties,
+                                          String propertyName) {
+        PropertyInfo sourceProperty = sourceProperties.get(propertyName);
+        PropertyInfo targetProperty = targetProperties.get(propertyName);
+
+        boolean copySource = sourceProperty != null
+                && sourceProperty.reader() != null
+                && !isExcluded(config, target, source, targetProperty, sourceProperty);
+
+        if (copySource) {
+            CodeBlock sourceRead = read(sourceProperty, "source");
+            if (config.copyNotNull() && !isPrimitive(sourceProperty.type())) {
+                if (targetProperty == null || targetProperty.reader() == null) {
+                    return sourceRead;
+                }
+                CodeBlock targetRead = read(targetProperty, "target");
+                return CodeBlock.of("$L != null ? $L : $L", sourceRead, sourceRead, targetRead);
+            }
+            return sourceRead;
+        }
+
+        if (targetProperty != null && targetProperty.reader() != null) {
+            return read(targetProperty, "target");
+        }
+
+        messager.printMessage(Diagnostic.Kind.ERROR,
+                "无法为不可变类型 " + target.getQualifiedName() + " 的属性 " + propertyName
+                        + " 找到 source 或 target 的可读属性。");
+        return null;
+    }
+
+    private void write(MethodSpec.Builder method, PropertyInfo targetProperty, CodeBlock value) {
+        if (targetProperty.writer().equals(targetProperty.name())) {
+            method.addStatement("target.$L = $L", targetProperty.name(), value);
+        } else {
+            method.addStatement("target.$L($L)", targetProperty.writer(), value);
+        }
+    }
+
+    private CodeBlock read(PropertyInfo property, String variableName) {
+        if (property.reader().equals(property.name()) && property.field() != null
+                && property.field().getModifiers().contains(Modifier.PUBLIC)) {
+            return CodeBlock.of("$L.$L", variableName, property.name());
+        }
+        return CodeBlock.of("$L.$L()", variableName, property.reader());
+    }
+
+    /**
+     * record 或包含 final 实例字段的目标类型需要通过构造器创建新对象。
+     */
+    private boolean requiresConstructor(TypeElement target) {
+        if (target.getKind() == ElementKind.RECORD) {
+            return true;
+        }
+        return instanceFields(target).stream()
+                .anyMatch(field -> field.getModifiers().contains(Modifier.FINAL));
+    }
+
+    /**
+     * 返回目标构造器参数对应的属性名，顺序必须与构造器一致。
+     */
+    private List<String> constructorPropertyNames(TypeElement target) {
+        if (target.getKind() == ElementKind.RECORD) {
+            return target.getRecordComponents().stream()
+                    .map(component -> component.getSimpleName().toString())
+                    .toList();
+        }
+
+        List<VariableElement> fields = declaredInstanceFields(target);
+        List<ExecutableElement> constructors = ElementFilter.constructorsIn(target.getEnclosedElements()).stream()
+                .filter(constructor -> constructor.getModifiers().contains(Modifier.PUBLIC))
+                .toList();
+
+        ExecutableElement constructor = constructors.stream()
+                .max((left, right) -> Integer.compare(left.getParameters().size(), right.getParameters().size()))
+                .orElse(null);
+
+        // Lombok 的 @AllArgsConstructor/@Value 在部分处理阶段可能尚未暴露构造器。
+        if ((constructor == null || constructor.getParameters().isEmpty()) && hasLombokAllArgsConstructor(target)) {
+            return fields.stream().map(field -> field.getSimpleName().toString()).toList();
+        }
+
+        if (constructor == null) {
+            messager.printMessage(Diagnostic.Kind.ERROR,
+                    "类型 " + target.getQualifiedName() + " 含有 final 字段，但找不到 public 构造器。");
+            return null;
+        }
+
+        List<String> propertyNames = new ArrayList<>();
+        List<? extends VariableElement> parameters = constructor.getParameters();
+        for (int index = 0; index < parameters.size(); index++) {
+            VariableElement parameter = parameters.get(index);
+            String parameterName = parameter.getSimpleName().toString();
+            String matched = fields.stream()
+                    .map(field -> field.getSimpleName().toString())
+                    .filter(name -> name.equals(parameterName))
+                    .findFirst()
+                    .orElse(null);
+
+            if (matched == null && parameters.size() == fields.size()) {
+                matched = fields.get(index).getSimpleName().toString();
+            }
+
+            if (matched == null) {
+                messager.printMessage(Diagnostic.Kind.ERROR,
+                        "无法把构造器参数 " + parameterName + " 映射到 " + target.getQualifiedName() + " 的字段。");
+                return null;
+            }
+            propertyNames.add(matched);
+        }
+        return propertyNames;
+    }
+
+    /**
+     * 构建目标类型的属性表。record 使用组件访问器，普通类使用 getter/setter、
+     * Lombok 注解或 public 字段。
+     */
+    private Map<String, PropertyInfo> properties(TypeElement type) {
+        Map<String, PropertyInfo> properties = new LinkedHashMap<>();
+
+        if (type.getKind() == ElementKind.RECORD) {
+            for (RecordComponentElement component : type.getRecordComponents()) {
+                String name = component.getSimpleName().toString();
+                properties.put(name, new PropertyInfo(
+                        name,
+                        component.asType(),
+                        findField(type, name),
+                        component.getAccessor().getSimpleName().toString(),
+                        null,
+                        true,
+                        false
+                ));
+            }
+            return properties;
+        }
+
+        List<ExecutableElement> methods = allMethods(type);
+        for (VariableElement field : instanceFields(type)) {
+            String name = field.getSimpleName().toString();
+            boolean isFinal = field.getModifiers().contains(Modifier.FINAL);
+            boolean isPublic = field.getModifiers().contains(Modifier.PUBLIC);
+            String reader = findReader(type, methods, field);
+            String writer = isFinal ? null : findWriter(type, methods, field);
+            properties.put(name, new PropertyInfo(name, field.asType(), field, reader, writer, isFinal, isPublic));
+        }
+
+        // 兼容只有 getter/setter、没有对应字段的虚拟属性。
+        for (ExecutableElement method : methods) {
+            String methodName = method.getSimpleName().toString();
+            if (method.getParameters().isEmpty() && method.getReturnType().getKind() != TypeKind.VOID) {
+                String propertyName = propertyNameFromReader(methodName);
+                if (propertyName != null && !properties.containsKey(propertyName)) {
+                    properties.put(propertyName, new PropertyInfo(
+                            propertyName, method.getReturnType(), null, methodName, null, false, false));
+                }
+            }
+            if (method.getParameters().size() == 1 && methodName.startsWith("set") && methodName.length() > 3) {
+                String propertyName = decapitalize(methodName.substring(3));
+                PropertyInfo existing = properties.get(propertyName);
+                if (existing == null) {
+                    properties.put(propertyName, new PropertyInfo(
+                            propertyName, method.getParameters().get(0).asType(), null, null, methodName, false, false));
+                } else if (existing.writer() == null) {
+                    properties.put(propertyName, new PropertyInfo(
+                            existing.name(), existing.type(), existing.field(), existing.reader(), methodName,
+                            existing.finalField(), existing.publicField()));
+                }
+            }
+        }
+        return properties;
+    }
+
+    private String findReader(TypeElement owner, List<ExecutableElement> methods, VariableElement field) {
+        String name = field.getSimpleName().toString();
+        String getter = "get" + capitalize(name);
+        String booleanGetter = "is" + capitalize(name);
+        if (methodExists(methods, getter) || methodExists(methods, booleanGetter)
+                || hasAnnotation(field, "lombok.Getter") || hasAnnotation(owner, "lombok.Getter")
+                || hasAnnotation(owner, "lombok.Data") || hasAnnotation(owner, "lombok.Value")) {
+            return getter;
+        }
+        if (field.getModifiers().contains(Modifier.PUBLIC)) {
+            return name;
+        }
+        return null;
+    }
+
+    private String findWriter(TypeElement owner, List<ExecutableElement> methods, VariableElement field) {
+        String name = field.getSimpleName().toString();
+        String setter = "set" + capitalize(name);
+        if (methodExists(methods, setter) || hasAnnotation(field, "lombok.Setter")
+                || hasAnnotation(owner, "lombok.Setter") || hasAnnotation(owner, "lombok.Data")) {
+            return setter;
+        }
+        if (field.getModifiers().contains(Modifier.PUBLIC) && !field.getModifiers().contains(Modifier.FINAL)) {
+            return name;
+        }
+        return null;
+    }
+
+    private boolean isExcluded(AnnotationConfig config,
+                               TypeElement target,
+                               TypeElement source,
+                               PropertyInfo targetProperty,
+                               PropertyInfo sourceProperty) {
+        String oppositeType = config.copyFrom()
+                ? source.getQualifiedName().toString()
+                : target.getQualifiedName().toString();
+
+        Set<String> excludes = new LinkedHashSet<>();
+        Set<String> includes = new LinkedHashSet<>();
+        collectRuleValues(targetProperty, config.excludeType(), config.ofType(), excludes, includes);
+        collectRuleValues(sourceProperty, config.excludeType(), config.ofType(), excludes, includes);
+
+        if (!includes.isEmpty() && !includes.contains(oppositeType)) {
+            return true;
+        }
+        return excludes.contains(oppositeType);
+    }
+
+    private void collectRuleValues(PropertyInfo property,
+                                   Class<? extends Annotation> excludeType,
+                                   Class<? extends Annotation> ofType,
+                                   Set<String> excludes,
+                                   Set<String> includes) {
+        if (property == null) {
+            return;
+        }
+        List<Element> elements = new ArrayList<>();
+        if (property.field() != null) {
+            elements.add(property.field());
+        }
+        TypeElement owner = property.field() == null ? null : (TypeElement) property.field().getEnclosingElement();
+        if (owner != null) {
+            for (ExecutableElement method : allMethods(owner)) {
+                if (method.getSimpleName().contentEquals(property.name())
+                        || method.getSimpleName().contentEquals("get" + capitalize(property.name()))
+                        || method.getSimpleName().contentEquals("is" + capitalize(property.name()))
+                        || method.getSimpleName().contentEquals("set" + capitalize(property.name()))) {
+                    elements.add(method);
+                }
+            }
+        }
+        for (Element element : elements) {
+            for (DeclaredType type : getClassValues(element, "value", excludeType)) {
+                if (type.asElement() instanceof TypeElement annotationTypeElement) {
+                    excludes.add(annotationTypeElement.getQualifiedName().toString());
+                }
+            }
+            for (DeclaredType type : getClassValues(element, "value", ofType)) {
+                if (type.asElement() instanceof TypeElement annotationTypeElement) {
+                    includes.add(annotationTypeElement.getQualifiedName().toString());
+                }
+            }
+        }
+    }
+
+    private List<VariableElement> declaredInstanceFields(TypeElement type) {
+        return ElementFilter.fieldsIn(type.getEnclosedElements()).stream()
+                .filter(field -> !field.getModifiers().contains(Modifier.STATIC))
+                .toList();
+    }
+
+    private List<VariableElement> instanceFields(TypeElement type) {
+        List<VariableElement> fields = new ArrayList<>();
+        TypeElement current = type;
+        while (current != null && !current.getQualifiedName().contentEquals("java.lang.Object")) {
+            fields.addAll(ElementFilter.fieldsIn(current.getEnclosedElements()).stream()
+                    .filter(field -> !field.getModifiers().contains(Modifier.STATIC))
+                    .toList());
+            TypeMirror superclass = current.getSuperclass();
+            current = superclass.getKind() == TypeKind.DECLARED
+                    ? (TypeElement) ((DeclaredType) superclass).asElement()
+                    : null;
+        }
+        return fields;
+    }
+
+    private List<ExecutableElement> allMethods(TypeElement type) {
+        List<ExecutableElement> methods = new ArrayList<>();
+        TypeElement current = type;
+        while (current != null && !current.getQualifiedName().contentEquals("java.lang.Object")) {
+            methods.addAll(ElementFilter.methodsIn(current.getEnclosedElements()));
+            TypeMirror superclass = current.getSuperclass();
+            current = superclass.getKind() == TypeKind.DECLARED
+                    ? (TypeElement) ((DeclaredType) superclass).asElement()
+                    : null;
         }
         return methods;
     }
 
-    // 获取元素的注解
-    private Optional<AnnotationMirror> getAnnotationMirror(Element element, Class<?> clazz) {
-        String clazzName = TypeName.get(clazz).toString();
-        for(AnnotationMirror m : element.getAnnotationMirrors()) {
-            if(m.getAnnotationType().toString().equals(clazzName)) {
-                return Optional.ofNullable(m);
+    private VariableElement findField(TypeElement type, String name) {
+        return instanceFields(type).stream()
+                .filter(field -> field.getSimpleName().contentEquals(name))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private boolean methodExists(List<ExecutableElement> methods, String methodName) {
+        return methods.stream().anyMatch(method -> method.getSimpleName().contentEquals(methodName));
+    }
+
+    private boolean isClassOrRecord(Element element) {
+        return element.getKind() == ElementKind.CLASS || element.getKind() == ElementKind.RECORD;
+    }
+
+    private boolean isPrimitive(TypeMirror type) {
+        return type.getKind().isPrimitive();
+    }
+
+    private boolean hasLombokAllArgsConstructor(TypeElement type) {
+        return hasAnnotation(type, "lombok.AllArgsConstructor") || hasAnnotation(type, "lombok.Value");
+    }
+
+    private boolean hasAnnotation(Element element, String annotationName) {
+        return element.getAnnotationMirrors().stream()
+                .anyMatch(annotation -> annotation.getAnnotationType().toString().equals(annotationName));
+    }
+
+    private String propertyNameFromReader(String methodName) {
+        if (methodName.startsWith("get") && methodName.length() > 3) {
+            return decapitalize(methodName.substring(3));
+        }
+        if (methodName.startsWith("is") && methodName.length() > 2
+                && methodName.substring(2, 3).equals(methodName.substring(2, 3).toUpperCase())) {
+            return decapitalize(methodName.substring(2));
+        }
+        return null;
+    }
+
+    private String capitalize(String value) {
+        return Character.toUpperCase(value.charAt(0)) + value.substring(1);
+    }
+
+    private String decapitalize(String value) {
+        if (value.isEmpty()) {
+            return value;
+        }
+        return Character.toLowerCase(value.charAt(0)) + value.substring(1);
+    }
+
+    private Optional<AnnotationMirror> getAnnotationMirror(Element element, Class<?> annotationType) {
+        String annotationName = annotationType.getCanonicalName();
+        for (AnnotationMirror annotation : element.getAnnotationMirrors()) {
+            if (annotation.getAnnotationType().toString().equals(annotationName)) {
+                return Optional.of(annotation);
             }
         }
         return Optional.empty();
     }
 
-    // 获取注解的值
-    private Optional<AnnotationValue> getAnnotationValue(AnnotationMirror annotationMirror, String key) {
-        for(Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry : annotationMirror.getElementValues().entrySet() ) {
-            if(entry.getKey().getSimpleName().toString().equals(key)) {
-                messager.printMessage(Diagnostic.Kind.NOTE, String.format("Entry: %s, value: %s", entry.getKey().getSimpleName().toString(), entry.getValue().toString()));
-                return Optional.ofNullable(entry.getValue());
-            }
-        }
-        return Optional.empty();
-    }
-
-    // 获取注解的??，并转换为类型列表
-    private List<DeclaredType> getClass(Element clazz, String key, Class clas) {
-        return getAnnotationMirror(clazz, clas)
-                .flatMap(annotation -> getAnnotationValue(annotation, key))
-                // ^ note that annotation value here corresponds to Class[],
-                .map(annotation -> (List<AnnotationValue>)annotation.getValue())
-                .map(fromClasses -> fromClasses.stream()
-                        .map(fromClass -> (DeclaredType)fromClass.getValue())
-                        .collect(Collectors.toList()))
+    @SuppressWarnings("unchecked")
+    private List<DeclaredType> getClassValues(Element element,
+                                              String key,
+                                              Class<? extends Annotation> annotationType) {
+        return getAnnotationMirror(element, annotationType)
+                .flatMap(annotation -> annotation.getElementValues().entrySet().stream()
+                        .filter(entry -> entry.getKey().getSimpleName().contentEquals(key))
+                        .map(Map.Entry::getValue)
+                        .findFirst())
+                .map(value -> (List<AnnotationValue>) value.getValue())
+                .map(values -> values.stream()
+                        .map(annotationValue -> (DeclaredType) annotationValue.getValue())
+                        .toList())
                 .orElse(List.of());
     }
 
-    /**
-     * 检查元素（字段或类）是否有Lombok的Getter/Data注解
-     * 支持@Getter, @Data, @Value注解
-     */
-    private boolean hasGetter(Element element) {
-        return element.getAnnotationMirrors().stream()
-                .anyMatch(am -> {
-                    String annotationName = am.getAnnotationType().toString();
-                    return annotationName.equals("lombok.Getter") ||
-                            annotationName.equals("lombok.Data") ||
-                            annotationName.equals("lombok.Value");
-                });
+    private record AnnotationConfig(
+            Class<? extends Annotation> annotationType,
+            Class<? extends Annotation> excludeType,
+            Class<? extends Annotation> ofType,
+            String methodName,
+            boolean copyNotNull,
+            boolean copyFrom
+    ) {
     }
 
-    /**
-     * 检查元素（字段或类）是否有Lombok的Setter/Data注解
-     * 支持@Setter, @Data注解
-     */
-    private boolean hasSetter(Element element) {
-        return element.getAnnotationMirrors().stream()
-                .anyMatch(am -> {
-                    String annotationName = am.getAnnotationType().toString();
-                    return annotationName.equals("lombok.Setter") ||
-                            annotationName.equals("lombok.Data");
-                });
-    }
-
-    /**
-     * 根据字段名生成标准的getter方法名
-     * 例如：name -> getName, age -> getAge
-     */
-    private String getGetterName(String fieldName) {
-        StringBuilder getterName=new StringBuilder();
-        return  getterName.append("get").append(fieldName.substring(0,1).toUpperCase()).append(fieldName.substring(1)).toString();
-    }
-
-    /**
-     * 根据字段名生成标准的setter方法名
-     * 例如：name -> setName, age -> setAge
-     */
-    private String getSetterName(String fieldName) {
-        StringBuilder setterName=new StringBuilder();
-        return  setterName.append("set").append(fieldName.substring(0,1).toUpperCase()).append(fieldName.substring(1)).toString();
-
-    }
-
-    /**
-     * 获取所有该类字段(包括父类字段)
-     */
-    private List<Element> getAllFields(TypeElement type) {
-        List<Element> allFields=new ArrayList<>();
-        // 获取当前类的所有字段（包括父类字段）
-        TypeElement currentType = type;
-        while (currentType != null && !currentType.getQualifiedName().toString().equals("java.lang.Object")) {
-            allFields.addAll(ElementFilter.fieldsIn(currentType.getEnclosedElements()));
-            TypeMirror superclass = currentType.getSuperclass();
-            if (superclass.getKind() == TypeKind.DECLARED) {
-                currentType = (TypeElement) ((DeclaredType) superclass).asElement();
-            } else {
-                currentType = null;
-            }
-        }
-        return allFields;
-    }
-
-    /**
-     * 获取所有可以Get的字段(包括父类字段)
-     */
-    private List<Element> getAllGetableFields(TypeElement type) {
-        // 获取所有字段和方法
-        List<Element> allFields = getAllFields(type);
-        List<ExecutableElement> methods = getAllMethods(type);
-
-        // 创建一个结果集合来存储所有可获取的字段和方法
-        Set<Element> getableElements = new HashSet<>();
-
-        // 1. 首先处理所有实际存在的字段
-        Map<Element, Boolean> recordFields = allFields.stream()
-                .filter(field -> !(field.getKind() == ElementKind.FIELD &&
-                        (field.getModifiers().contains(Modifier.STATIC) ||
-                                field.getModifiers().contains(Modifier.FINAL))))
-                .collect(Collectors.toMap(
-                        field -> field,
-                        field -> {
-                            String getterName = getGetterName(field.getSimpleName().toString());
-                            return hasGetter(field) || methods.stream()
-                                    .anyMatch(method -> method.getSimpleName().toString().equals(getterName));
-                        }
-                ));
-
-        // 获取类的层次结构
-        List<TypeElement> hierarchy = Stream.iterate(type,
-                        currentType -> {
-                            TypeMirror superclass = currentType.getSuperclass();
-                            return superclass.getKind() == TypeKind.DECLARED ?
-                                    (TypeElement) ((DeclaredType) superclass).asElement() : null;
-                        })
-                .takeWhile(currentType -> currentType != null &&
-                        !currentType.getQualifiedName().toString().equals("java.lang.Object"))
-                .collect(Collectors.toList());
-        Collections.reverse(hierarchy);
-
-        // 处理类级别的Lombok注解
-        hierarchy.stream()
-                .filter(this::hasGetter)
-                .flatMap(temp -> getClassFields(temp).stream())
-                .forEach(classField -> {
-                    if (recordFields.containsKey(classField)) {
-                        recordFields.put(classField, true);
-                    }
-                });
-
-        // 添加所有符合条件的实际字段
-        getableElements.addAll(recordFields.entrySet().stream()
-                .filter(Map.Entry::getValue)
-                .map(Map.Entry::getKey)
-                .collect(Collectors.toList()));
-
-        // 3. 处理只有getter方法但没有对应字段的情况
-        methods.stream()
-                .filter(method -> {
-                    String methodName = method.getSimpleName().toString();
-                    // 检查是否是getter方法（以get开头，无参数）
-                    return methodName.startsWith("get") &&
-                            methodName.length() > 3 &&
-                            method.getParameters().isEmpty() &&
-                            !method.getReturnType().getKind().equals(TypeKind.VOID);
-                })
-                .forEach(getter -> {
-                    // 从getter方法名推导字段名
-                    String methodName = getter.getSimpleName().toString();
-                    String fieldName = methodName.substring(3, 4).toLowerCase() + methodName.substring(4);
-
-                    // 检查是否已经有对应的实际字段
-                    boolean hasCorrespondingField = allFields.stream()
-                            .anyMatch(field -> field.getSimpleName().toString().equals(fieldName));
-
-                    // 如果没有对应的实际字段，将getter方法作为一个虚拟字段添加到结果中
-                    if (!hasCorrespondingField) {
-                        getableElements.add(getter);
-                    }
-                });
-
-        return new ArrayList<>(getableElements);
-    }
-
-    /**
-     * 获取所有获取的字段
-     * 包括：
-     * 1. 有getter方法的字段
-     * 2. 有Lombok注解的字段
-     * 3. 父类中符合条件的字段
-     */
-    private List<Element> getAllSetableFields(TypeElement type) {
-        // 获取所有字段和方法
-        List<Element> allFields = getAllFields(type);
-        List<ExecutableElement> methods = getAllMethods(type);
-
-        // 创建一个结果集合来存储所有可设置的字段和方法
-        Set<Element> setableElements = new HashSet<>();
-
-        // 1. 处理所有实际存在的字段
-        Map<Element, Boolean> recordFields = allFields.stream()
-                .filter(field -> !(field.getKind() == ElementKind.FIELD &&
-                        (field.getModifiers().contains(Modifier.STATIC) ||
-                                field.getModifiers().contains(Modifier.FINAL))))
-                .collect(Collectors.toMap(
-                        field -> field,
-                        field -> {
-                            String setterName = getSetterName(field.getSimpleName().toString());
-                            return hasSetter(field) || methods.stream()
-                                    .anyMatch(method -> method.getSimpleName().toString().equals(setterName));
-                        }
-                ));
-
-        // 获取类的层次结构
-        List<TypeElement> hierarchy = Stream.iterate(type,
-                        currentType -> {
-                            TypeMirror superclass = currentType.getSuperclass();
-                            return superclass.getKind() == TypeKind.DECLARED ?
-                                    (TypeElement) ((DeclaredType) superclass).asElement() : null;
-                        })
-                .takeWhile(currentType -> currentType != null &&
-                        !currentType.getQualifiedName().toString().equals("java.lang.Object"))
-                .collect(Collectors.toList());
-        Collections.reverse(hierarchy);
-
-        // 处理类级别的Lombok注解
-        hierarchy.stream()
-                .filter(this::hasSetter)
-                .flatMap(temp -> getClassFields(temp).stream())
-                .forEach(classField -> {
-                    if (recordFields.containsKey(classField)) {
-                        recordFields.put(classField, true);
-                    }
-                });
-
-        // 添加所有符合条件的实际字段
-        setableElements.addAll(recordFields.entrySet().stream()
-                .filter(Map.Entry::getValue)
-                .map(Map.Entry::getKey)
-                .collect(Collectors.toList()));
-
-        // 3. 处理只有setter方法但没有对应字段的情况
-        methods.stream()
-                .filter(method -> {
-                    String methodName = method.getSimpleName().toString();
-                    // 检查是否是setter方法（以set开头，只有一个参数）
-                    return methodName.startsWith("set") &&
-                            methodName.length() > 3 &&
-                            method.getParameters().size() == 1 &&
-                            method.getReturnType().getKind().equals(TypeKind.VOID);
-                })
-                .forEach(setter -> {
-                    // 从setter方法名推导字段名
-                    String methodName = setter.getSimpleName().toString();
-                    String fieldName = methodName.substring(3, 4).toLowerCase() + methodName.substring(4);
-
-                    // 检查是否已经有对应的实际字段
-                    boolean hasCorrespondingField = allFields.stream()
-                            .anyMatch(field -> field.getSimpleName().toString().equals(fieldName));
-
-                    // 如果没有对应的实际字段，将setter方法作为一个虚拟字段添加到结果中
-                    if (!hasCorrespondingField) {
-                        setableElements.add(setter);
-                    }
-                });
-
-        return new ArrayList<>(setableElements);
-    }
-    /**
-     * 检查字段是否应该被排除
-     * 处理@CopyFrom.Exclude和@CopyFrom.Of注解的逻辑
-     */
-    private boolean shouldExcludeField(Element field, DeclaredType sourceClass, List<DeclaredType> fieldExcludeList, List<DeclaredType> fieldOfList) {
-
-        // 获取对应getter/setter方法
-        String fieldName = field.getSimpleName().toString();
-        String getterName = getGetterName(fieldName);
-        String setterName = getSetterName(fieldName);
-
-        // 在当前类和父类中查找对应的getter/setter方法
-        TypeElement classElement = (TypeElement) field.getEnclosingElement();
-        List<ExecutableElement> methods = getAllMethods(classElement);
-
-        // 查找getter和setter方法上的注解
-        List<DeclaredType> methodExcludeList = methods.stream()
-                .filter(method -> method.getSimpleName().toString().equals(getterName) ||
-                        method.getSimpleName().toString().equals(setterName))
-                .flatMap(method -> getClass(method, "value", CopyFrom.Exclude.class).stream())
-                .collect(Collectors.toList());
-
-        List<DeclaredType> methodOfList = methods.stream()
-                .filter(method -> method.getSimpleName().toString().equals(getterName) ||
-                        method.getSimpleName().toString().equals(setterName))
-                .flatMap(method -> getClass(method, "value", CopyFrom.Of.class).stream())
-                .collect(Collectors.toList());
-
-        // 合并字段和方法上的注解列表
-        List<DeclaredType> excludeList = Stream.concat(fieldExcludeList.stream(), methodExcludeList.stream())
-                .distinct()
-                .collect(Collectors.toList());
-        List<DeclaredType> ofList = Stream.concat(fieldOfList.stream(), methodOfList.stream())
-                .distinct()
-                .collect(Collectors.toList());
-
-        // 检查是否应该排除
-        if (!excludeList.isEmpty() && !ofList.isEmpty()) {
-            return (excludeList.stream().anyMatch(hasClass ->
-                    TypeName.get(hasClass).toString().equals(TypeName.get(sourceClass).toString()))) ||
-                    ofList.stream().noneMatch(hasClass ->
-                            TypeName.get(hasClass).toString().equals(TypeName.get(sourceClass).toString()));
-        }
-        else if (excludeList.isEmpty() && !ofList.isEmpty()) {
-            return ofList.stream().noneMatch(hasClass ->
-                    TypeName.get(hasClass).toString().equals(TypeName.get(sourceClass).toString()));
-        }
-        else if (!excludeList.isEmpty() && ofList.isEmpty()) {
-            return excludeList.stream().anyMatch(hasClass ->
-                    TypeName.get(hasClass).toString().equals(TypeName.get(sourceClass).toString()));
-        }
-        return false;
-    }
-
-    /**
-     * 获取所有该类定义的字段
-     */
-    private List<Element>getClassFields(TypeElement type) {
-        List<Element> allFields=new ArrayList<>();
-        allFields.addAll(type.getEnclosedElements());
-        return allFields;
+    private record PropertyInfo(
+            String name,
+            TypeMirror type,
+            VariableElement field,
+            String reader,
+            String writer,
+            boolean finalField,
+            boolean publicField
+    ) {
     }
 }

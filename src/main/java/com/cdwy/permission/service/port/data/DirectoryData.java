@@ -4,6 +4,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.HexFormat;
 import java.util.List;
+import com.cdwy.permission.service.port.error.InvalidDataException;
 
 /** 员工信息同步的用例数据：与 HTTP 表现、Excel 格式及数据库技术无关。 */
 public final class DirectoryData {
@@ -24,6 +25,7 @@ public final class DirectoryData {
 
   /** 已校验的员工信息表：数据行与文件内容摘要。 */
   public record Sheet(List<Row> rows, String fileDigest) {
+    /** 复制数据行，之后对原列表的修改不影响本表。 */
     public Sheet {
       rows = List.copyOf(rows);
     }
@@ -35,10 +37,8 @@ public final class DirectoryData {
    * <p>课程管理系统的约定是“总公司员工是教师，其余分公司员工是学生”，即 headOfficeRole=teacher、branchRole=student。
    */
   public record Rule(String headOffice, String headOfficeRole, String branchRole) {
+    /** 规范化：总公司名称去掉首尾空白（调用方保证非空）；角色编码去掉首尾空白，空白或未填视为不授予（{@code null}）。 */
     public Rule {
-      if (headOffice == null || headOffice.isBlank())
-        throw new IllegalArgumentException("请填写总公司名称");
-      if (headOffice.length() > 128) throw new IllegalArgumentException("总公司名称最长 128 个字符");
       headOffice = headOffice.strip();
       headOfficeRole = blankToNull(headOfficeRole);
       branchRole = blankToNull(branchRole);
@@ -103,6 +103,6 @@ public final class DirectoryData {
   /** 确认时核对摘要。 */
   public static void requireConfirmed(String expected, String given) {
     if (!expected.equals(given))
-      throw new IllegalArgumentException("员工信息表或同步规则与预览时不一致，请重新预览");
+      throw new InvalidDataException("SYNC_PREVIEW_MISMATCH", "员工信息表或同步规则与预览时不一致，请重新预览");
   }
 }

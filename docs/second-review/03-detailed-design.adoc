@@ -46,7 +46,7 @@ image::package-overview.png[后端包图,1000]
 |===
 | |API A：建立角色继承 |API B：接入应用查询当前身份
 |路径 |`PUT /api/roles/{seniorId}/inherits/{inheritedId}` |`GET /api/apps/{code}/auth/me`
-|业务目标 |高级角色获得被继承角色的权限（RBAC1 核心），拒绝自继承与环，幂等 |课程系统用用户本人 JWT 取得其在 `cpm` 应用内的角色与权限码，实现“课程系统权限由权限系统管理”
+|业务目标 |高级角色获得被继承角色的权限（RBAC1 核心），拒绝自继承与环，幂等 |课程系统用用户本人 JWT 取得其在 `course-project-management` 应用内的角色与权限码，实现“课程系统权限由权限系统管理”
 |Controller |link:{src}/controller/rbac/RoleHierarchyController.java[RoleHierarchyController.inherit] |link:{src}/controller/identity/ApplicationIdentityController.java[ApplicationIdentityController.me]
 |结构化 |link:{src}/service/rbac/RoleHierarchyService.java[RoleHierarchyService.inherit] → link:{src}/service/structured/rbac/StructuredRoleGraphService.java[StructuredRoleGraphService.validate] |link:{src}/service/identity/ApplicationIdentityService.java[ApplicationIdentityService.current]
 |DDD |link:{src}/service/ddd/application/rbac/DddHierarchyService.java[DddHierarchyService.inherit] → link:{src}/service/ddd/domain/model/RoleGraph.java[RoleGraph.assertCanInherit] |link:{src}/service/ddd/application/identity/DddApplicationIdentityService.java[DddApplicationIdentityService.current] → link:{src}/service/ddd/domain/model/AuthorizationSnapshot.java[AuthorizationSnapshot] / link:{src}/service/ddd/domain/model/ProtectedResource.java[ProtectedResource.authorityCode]
@@ -185,18 +185,23 @@ image::sequence-ddd-identity.png[DDD 顺序图 API B,900]
 
 == 统一权限：课程项目管理系统接入
 
-课程系统沿用老师仓库的统一身份契约，不改业务代码，只配置 `APP_IDENTITY_BASE_URL=http://rbac-backend:18081/api/apps/cpm`：
+课程系统按老师仓库的统一身份契约调用权限系统，不改课程代码，只配置 `IDENTITY_BASE_URL`（后端）与 `VITE_IDENTITY_BASE_URL`（前端）为 `http://<权限系统>/api/apps/course-project-management`。Apifox「统一身份鉴权」的 8 个接口与审计接口如下（`{base}` 即上述地址）：
 
-[cols="2,2,3",options="header"]
+[cols="2,3",options="header"]
 |===
-|课程系统调用 |权限系统接口 |用途
-|`GET {base}/auth/me` |`GET /api/apps/cpm/auth/me` |当前用户、角色编码、权限码；课程后端把权限码装入 Spring Security 做接口授权，前端按菜单/按钮码显示菜单
-|`GET {base}/identity/users/{userId}` |`GET /api/apps/cpm/identity/users/{userId}` |添加教师时按统一身份标识查姓名与工号
-|`GET/POST {base}/auth/audit-logs` |`GET/POST /api/apps/cpm/auth/audit-logs` |课程关键操作写入统一审计；课程端按可见范围查询
-|登录（前端） |`POST /api/auth/login`（经课程前端 Nginx `/identity/api/auth/login` 转发） |课程前端补丁新增统一身份登录页，令牌存入 `cpm.accessToken`
+|接口 |用途与规则
+|`POST {base}/auth/login` |课程前端登录；不需要令牌，`systems` 必须包含当前应用，签发的令牌 `aud` 为 `systems`
+|`POST {base}/auth/logout` |本人已签发的令牌全部失效（凭证版本加一，不保存令牌）
+|`GET {base}/auth/me` |`subject`（工号）、角色编码（含继承）、权限码（本应用的菜单/按钮码及其绑定的启用 API 权限码）；课程后端把权限码装入 Spring Security 做接口授权
+|`GET {base}/auth/permissions/{permission}` |课程前端切换路由时判断菜单或按钮权限，只返回 `allowed`
+|`GET {base}/auth/api-permissions/{operationId}` |判断能否调用 operationId 对应的接口；未登记返回 404 `API_OPERATION_NOT_FOUND`
+|`GET {base}/auth/departments` |逐层查询部门（不传 `parentId` 为根部门），`page` 从 1 开始
+|`GET {base}/auth/departments/{departmentId}/users` |部门下的人员，按工号或姓名查询，不含联系方式
+|`GET {base}/auth/users/{userId}` |按工号查姓名，课程系统登记教师时使用
+|`GET/POST {base}/auth/audit-logs` |课程关键操作写入统一审计（按 requestId 幂等）；课程端按应用查询
 |===
 
-权限码模型：课程系统的前端菜单/按钮码（`MCO`、`MCOR` …）登记为 `cpm` 应用的前端权限；后端权限码（`TC`、`CV` …）登记在 API 资源的 `code` 上；两者经“前端权限—API”绑定，随角色（含继承）下发。课程应用的完整登记清单见 link:../../scripts/register-course-app.py[register-course-app.py]（只调用普通管理 API，可重复执行）。
+权限码模型：课程系统的前端菜单/按钮码（`MCO`、`MCOR` …）登记为 `course-project-management` 应用的前端权限；后端权限码（`TC`、`CV` …）登记在 API 资源的 `code` 上；两者经“前端权限—API”绑定，随角色（含继承）下发。课程应用的完整登记清单见 link:../../scripts/register-course-app.py[register-course-app.py]（只调用普通管理 API，可重复执行）。
 
 == 日志设计
 
@@ -209,6 +214,27 @@ image::sequence-ddd-identity.png[DDD 顺序图 API B,900]
 
 前端切换菜单时，`docker service logs -f cdwy_rbac-backend | grep "menu=hierarchy"` 即可看到对应请求经 Controller、Service 的完整日志。
 
+== 代码规范
+
+按课程《代码规范》整改，各条在代码中的落实如下：
+
+[cols="2,5",options="header"]
+|===
+|规范 |落实
+|API 层完成输入校验 |格式类校验（非空、长度、范围、枚举、编码格式、分页参数）写在 `dto/**` 与 Controller 参数注解上，统一由 `ApiExceptionHandler` 翻译为 400 `BAD_REQUEST`；Service 只检查业务规则
+|DTO 与 VO 分离 |请求对象在 `dto/<模块>` 包，以 `DTO` 结尾；返回对象在 `vo/<模块>` 包，以 `VO` 结尾。每个模块的 `*VoMapper` 负责 DTO → Command、Result → VO，Controller 不直接拼装响应
+|优先 CloneFactory |同名同类型字段用 `CloneFactory.copy(...)`：实体 ↔ 领域对象、`UserCreateDTO` → `CreateUserCommand`、`UserResult` → `UserVO`；派生字段、类型转换显式赋值。实体主键用 `@CopyFrom.Exclude` 排除，不从领域对象拷回
+|Lombok 去样板代码 |实体、领域对象、Result 用 `@Getter/@Setter`；服务与 Controller 用 `@RequiredArgsConstructor`；关联实体用 `@NoArgsConstructor` 并保留建立关联的构造器。只有绑定 `@Value` 或需要计算的构造器手写
+|禁止 `var` |主代码与测试代码都写明确类型
+|中文注释 |每个类、接口、record、枚举和公开方法有中文 Javadoc，关键私有方法说明非显然规则；用例端口写明错误码、幂等、审计与凭证版本影响
+|列表分页 |会增长的列表统一 `page`（从 1 开始）、`pageSize`（1–100）、`total`，响应为 `PageVO<T>`（`{page, pageSize, total, items}`）
+|数据库兜底约束 |唯一键、外键、检查约束由部署建表脚本保证，`MySqlSchemaTests` 在真实 MySQL 上核对它们与实体声明一致
+|错误就地翻译 |业务异常携带稳定错误码（如 `ROLE_INHERITANCE_CYCLE`），`ApiExceptionHandler` 只按异常类型决定 HTTP 状态，不按表名分支；DDD 适配器在保存处把唯一约束冲突翻译为 `DATA_CONFLICT`，结构化路线以先查重为主、数据库约束兜底
+|不手工 flush |普通保存用 `save`；只有需要在当前事务内捕获唯一约束的 DDD 适配器使用 `saveAndFlush`
+|事务边界在 Service |写操作在 Service（DDD 为应用服务）方法上声明 `@Transactional`，跨仓储写入在同一事务内完成
+|测试 |测试连接真实 MySQL 并回滚；方法名与 `@DisplayName` 带需求编号；URL 模板集中为类顶部常量；每个错误码与每个按 id 操作的接口都有契约测试，见 link:04-test-traceability.adoc[需求—测试追踪]
+|===
+
 == JavaEE 技术清单
 
 [cols="2,3,3",options="header"]
@@ -216,7 +242,7 @@ image::sequence-ddd-identity.png[DDD 顺序图 API B,900]
 |技术 |解决的问题 |配置位置 / 关键类
 |Spring Boot 4.0.8 |自动配置、内嵌 Tomcat、可执行 JAR |`pom.xml`、`NifiedPermissionSystemApplication`
 |Spring MVC（REST） |HTTP 接口、统一异常响应 |`controller/**`、`ApiExceptionHandler`
-|Bean Validation |请求参数校验（400） |`dto/**` 注解、`@Valid`
+|Bean Validation |请求体与查询参数的格式校验，统一返回 400 `BAD_REQUEST` |`dto/**` 注解、`@Valid`；Controller 参数上的 `@Min/@Max/@Size`
 |Spring Security |无状态安全配置、BCrypt 密码摘要 |`config/SecurityConfig`
 |JJWT |签发与校验 JWT（身份 + 有效期 + 凭证版本） |`service/auth/JwtTokenService`
 |HandlerInterceptor |登录外接口认证、管理员与业务授权判断 |`config/ApiAccessConfig`
@@ -225,13 +251,13 @@ image::sequence-ddd-identity.png[DDD 顺序图 API B,900]
 |条件装配 |结构化 / DDD 二选一 |`@ConditionalOnProperty(app.backend-strategy)`
 |Spring AOP（AspectJ 注解） |各层统一日志 |`infrastructure/logging/LayerLoggingAspect`
 |logback + MDC + Servlet Filter |请求号、菜单、操作人贯穿日志 |`logback-spring.xml`、`RequestLoggingFilter`
-|CloneFactory |实体与领域对象、DTO 之间的对象拷贝 |实体上的 `@CopyTo/@CopyFrom`，`JpaResourceCatalogAdapter` 等
-|Lombok |减少样板代码 |领域对象 `@Getter/@Setter`、`@RequiredArgsConstructor`
+|CloneFactory 0.0.2 |同名同类型字段的对象拷贝：实体与领域对象、DTO 与 Command、Result 与 VO |实体上的 `@CopyTo/@CopyFrom`（主键 `@CopyFrom.Exclude`）、`UserCreateDTO`、`UserVO`，`Jpa*Adapter`、`UserVoMapper`
+|Lombok |去掉 getter/setter/构造器样板代码 |实体与领域对象 `@Getter/@Setter`、服务与 Controller `@RequiredArgsConstructor`；`lombok.config` 让布尔字段也生成 `getXxx()`，与 CloneFactory 的读取方式一致
 |Jackson 3 |JSON 序列化，审计 before/after 存储 |`AuditTrailService`
 |外部化配置与 Profile |环境变量、Docker secret（configtree） |`application.properties`、`application-swarm.properties`
 |Spring Boot Actuator |Swarm 健康检查 |管理端口 18082 `/actuator/health`
-|H2 / MySQL Connector/J |测试与演示库 / 部署库 |`application*.properties`
-|JUnit 5、MockMvc、OutputCapture、JaCoCo |HTTP 级验收、日志断言、覆盖率 |`src/test/**`、`pom.xml`
+|MySQL Connector/J / H2 |测试与部署库 / 本地演示库 |`application-test.properties`、`application-prod.properties`、`application.properties`
+|JUnit 5、MockMvc、OutputCapture、JaCoCo |HTTP 级验收（真实 MySQL、事务回滚、请求级保存点）、错误码契约、日志断言、覆盖率 |`src/test/**`、`support/RequestTransactionBoundary`、`pom.xml`
 |Docker / Docker Swarm / Nginx |容器化、服务发现、滚动更新、反向代理 |`deploy/stack.yml`、`deploy/permission/**`
 |Vue 3 + TypeScript + Vite |管理前端 |`frontend/**`
 |===

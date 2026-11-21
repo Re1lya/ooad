@@ -68,10 +68,10 @@ image::er-physical.png[物理 ER,900]
 == 一致性与并发
 
 * 唯一键保证三组关联与继承边不重复，重复请求在服务层表现为幂等。
-* 多级防环在服务层完成：写继承边前对角色表加悲观写锁（`RoleRepository.lockHierarchyRoles` / `RoleCatalog.lockGraph`），在同一事务内读取全图后校验，避免并发反向加边形成环（`PhaseTwoRbac1Tests.concurrentOppositeEdgesCannotFormCycle`）。
+* 多级防环在服务层完成：写继承边前对角色表加悲观写锁（`RoleRepository.lockHierarchyRoles` / `RoleCatalog.lockGraph`），在同一事务内读取全图后校验，避免并发反向加边形成环（`PhaseTwoRbac1Tests.FR18_concurrentOppositeEdgesCannotFormCycle`，在真实 MySQL 上运行）。
 * 删除被引用的角色、权限、资源、应用返回 409。
 
 == 验证
 
-* 测试中用 H2 MySQL 模式执行建表脚本，与 JPA 实际模型逐表比较列、主键、外键与唯一键（`FirstReviewWorkflowTests.mysqlDdlMatchesPersistentTablesColumnsKeysAndUniqueConstraints`），外键总数断言为 14。
-* 2026-11-18 在本地 MySQL 8.4 容器执行建表脚本，两种设计模式均以 `ddl-auto=validate` 启动成功；生产服务器尚未部署。
+* 自动化测试连接真实 MySQL：每个 Spring 上下文启动时执行本建表脚本，Hibernate 以 `ddl-auto=validate` 启动，核对每张表的列与类型；`MySqlSchemaTests.NFR03_deploymentDdlMatchesEntityConstraints` 再核对主键、唯一约束、外键（14 个）与检查约束和实体声明一致。
+* 服务器上的 MySQL 用同一份脚本建库，两种设计模式都以 `ddl-auto=validate` 启动并通过公网联调核对，见 link:05-deployment.adoc[部署说明]。

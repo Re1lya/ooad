@@ -5,7 +5,9 @@
 #   在该节点：cd /root/ooad-deploy && tar xzf rbac-images-<提交号>.tar.gz && rbac-images-<提交号>/build-images.sh
 #
 # 用法：deploy/permission/package-images.sh [输出目录，默认 build]
-# 环境变量：SKIP_TESTS=1 打包时跳过测试；MVN_ARGS 传给 Maven（如 -Dmaven.repo.local=...）
+# 环境变量：SKIP_TESTS=1 打包时跳过测试；MVN_ARGS 传给 Maven（如 -Dmaven.repo.local=...）。
+# 测试连接真实 MySQL：不跳过测试时须设置 TEST_DB_HOST、TEST_DB_PORT、TEST_DB_NAME、TEST_DB_USERNAME、TEST_DB_PASSWORD
+# （见 src/test/resources/application-test.properties），测试账号需要该库的建表、删表权限。
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
@@ -17,7 +19,7 @@ if [ -n "$(git status --porcelain -- src frontend/src frontend/package.json pom.
 fi
 read -r -a mvn_args <<< "${MVN_ARGS:-}"
 
-mvn -B -q "${mvn_args[@]}" -f third-party/clonefactory/pom.xml install -DskipTests
+mvn -B -q "${mvn_args[@]}" -f third-party/clonefactory/pom.xml install -Dmaven.test.skip=true
 (cd frontend && npm ci --no-audit --no-fund && npm run build)
 if [ "${SKIP_TESTS:-0}" = 1 ]; then
   mvn -B -q "${mvn_args[@]}" clean package -DskipTests

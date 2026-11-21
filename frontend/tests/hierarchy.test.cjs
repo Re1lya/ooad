@@ -3,7 +3,7 @@ const { test } = require('node:test');
 const s = require('./support.cjs');
 const { assert } = s;
 
-test('FR-23 角色层级、循环继承与有效权限来源', { skip: s.skip }, async () => {
+test('FR-16 FR-17 FR-18 FR-19 角色层级、循环继承与有效权限来源', { skip: s.skip }, async () => {
   const admin = await s.token();
   await s.ensureConsole(admin);
   const suffix = Date.now().toString(36);

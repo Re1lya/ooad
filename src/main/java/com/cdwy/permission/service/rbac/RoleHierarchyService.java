@@ -15,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.cdwy.permission.service.port.error.InvalidDataException;
 
 /** RBAC1 角色有向无环图：维护继承边、验证无环、解析有效继承路径。 */
 @Service
@@ -53,7 +54,7 @@ public class RoleHierarchyService implements HierarchyUseCase {
 
   /** 获取角色；不存在时保持统一 404 契约。 */
   public Role require(Long id) {
-    return roles.findById(id).orElseThrow(() -> new ResourceNotFoundException("角色不存在"));
+    return roles.findById(id).orElseThrow(() -> new ResourceNotFoundException("ROLE_NOT_FOUND", "角色不存在"));
   }
 
   /** 建立高级角色到被继承角色的边；串行化图写入后检查全图可达性。 */
@@ -62,10 +63,10 @@ public class RoleHierarchyService implements HierarchyUseCase {
     roles.lockHierarchyRoles();
     Role senior = require(seniorId);
     Role inherited = require(inheritedId);
-    if (seniorId.equals(inheritedId)) throw new IllegalArgumentException("角色不能继承自身");
+    if (seniorId.equals(inheritedId)) throw new InvalidDataException("ROLE_SELF_INHERITANCE", "角色不能继承自身");
     if (hierarchy.existsBySeniorRole_IdAndInheritedRole_Id(seniorId, inheritedId)) return;
     if (!senior.getEnabled() || !inherited.getEnabled())
-      throw new IllegalArgumentException("请先启用关系两端的角色");
+      throw new InvalidDataException("ROLE_DISABLED", "请先启用关系两端的角色");
     policy.validate(seniorId, inheritedId, snapshot(graph()));
     hierarchy.save(new RoleHierarchy(senior, inherited));
     log.info(

@@ -30,7 +30,7 @@ public class DddResourceService implements ResourceUseCase {
 
   /** 读取 API 资源。 */
   private ProtectedResource require(Long id) {
-    return resources.find(id).orElseThrow(() -> new ResourceNotFoundException("API 资源不存在"));
+    return resources.find(id).orElseThrow(() -> new ResourceNotFoundException("API_RESOURCE_NOT_FOUND", "API 资源不存在"));
   }
 
   /** 资源结果。 */
@@ -70,15 +70,15 @@ public class DddResourceService implements ResourceUseCase {
             v ->
                 v.getSystemId().equals(input.systemId())
                     && v.getMethod().equals(input.method())
-                    && v.getPath().equals(input.path()))) throw new ConflictException("API 资源已存在");
+                    && v.getPath().equals(input.path()))) throw new ConflictException("API_RESOURCE_EXISTS", "API 资源已存在");
     if (input.operationId() != null
         && resources.all().stream()
             .anyMatch(
                 v ->
                     v.getSystemId().equals(input.systemId())
                         && input.operationId().equals(v.getOperationId())))
-      throw new ConflictException("该应用已登记相同 operationId 的接口");
-    systems.find(input.systemId()).orElseThrow(() -> new ResourceNotFoundException("对象不存在"));
+      throw new ConflictException("API_OPERATION_EXISTS", "该应用已登记相同 operationId 的接口");
+    systems.find(input.systemId()).orElseThrow(() -> new ResourceNotFoundException("SYSTEM_NOT_FOUND", "应用不存在"));
     return view(resources.save(n));
   }
 

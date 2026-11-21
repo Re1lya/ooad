@@ -27,6 +27,10 @@ public class JwtTokenService {
   private final SecretKey signingKey;
   private final long expirationSeconds;
 
+  /**
+   * 密钥取 {@code permission.jwt.secret}：非空时至少 32 字节（UTF-8），否则启动失败；为空时每次启动随机生成，重启后已签发的令牌全部失效。
+   * 有效期取 {@code permission.jwt.expiration-seconds}。
+   */
   public JwtTokenService(JwtSettings settings) {
     byte[] bytes = settings.secret().getBytes(StandardCharsets.UTF_8);
     if (bytes.length > 0 && bytes.length < 32) throw new IllegalArgumentException("JWT 密钥至少 32 字节");
@@ -34,6 +38,7 @@ public class JwtTokenService {
     expirationSeconds = settings.expirationSeconds();
   }
 
+  /** 令牌有效时长（秒），即登录结果中的 {@code expiresIn}。 */
   public long expiresIn() {
     return expirationSeconds;
   }
@@ -61,6 +66,10 @@ public class JwtTokenService {
   /** 验签后的身份：用户、凭证版本与令牌目标系统。 */
   public record Identity(Long userId, long credentialVersion, Set<String> audience) {}
 
+  /**
+   * 解析 {@code Authorization} 请求头：须以 {@code Bearer} 加空格开头（不区分大小写），签名有效且未过期，并带有正整数用户标识、凭证版本
+   * {@code cv}、非空 {@code aud} 和不晚于当前时间的签发时间。只校验令牌本身，账号状态与目标系统由调用方检查；任何不符都抛同一个 401 提示。
+   */
   public Identity verify(String header) {
     if (header == null || !header.regionMatches(true, 0, "Bearer ", 0, 7)) throw invalid();
     try {
@@ -87,6 +96,7 @@ public class JwtTokenService {
     }
   }
 
+  /** 统一的令牌失败结果，不向调用方透露具体原因。 */
   private static AuthenticationFailedException invalid() {
     return new AuthenticationFailedException("Token 无效或已过期，请重新登录");
   }

@@ -30,12 +30,12 @@ public class DddUserService implements UserUseCase {
 
   /** 读取账号领域对象。 */
   private Account require(Long id) {
-    return accounts.find(id).orElseThrow(() -> new ResourceNotFoundException("用户不存在"));
+    return accounts.find(id).orElseThrow(() -> new ResourceNotFoundException("USER_NOT_FOUND", "用户不存在"));
   }
 
   /** 写操作锁定账号，保留凭证版本的并发语义。 */
   private Account lock(Long id) {
-    return accounts.lock(id).orElseThrow(() -> new ResourceNotFoundException("用户不存在"));
+    return accounts.lock(id).orElseThrow(() -> new ResourceNotFoundException("USER_NOT_FOUND", "用户不存在"));
   }
 
   /** 领域属性到结果的同型字段映射。 */
@@ -47,7 +47,7 @@ public class DddUserService implements UserUseCase {
 
   /** 部门存在性属于跨对象一致性。 */
   private void department(Long id) {
-    if (id != null && departments.find(id).isEmpty()) throw new ResourceNotFoundException("部门不存在");
+    if (id != null && departments.find(id).isEmpty()) throw new ResourceNotFoundException("DEPARTMENT_NOT_FOUND", "部门不存在");
   }
 
   /** 当前人员资料。 */
@@ -56,18 +56,16 @@ public class DddUserService implements UserUseCase {
   }
 
   /** 员工列表与关键字检索都在数据库分页。 */
-  public UserData.Page<UserResult> list(int page, int size, String keyword) {
-    if (page < 0 || size < 1 || size > 100)
-      throw new IllegalArgumentException("分页参数不合法，size 为 1 到 100");
-    UserData.Page<Account> values = accounts.search(keyword, page, size);
+  public UserData.Page<UserResult> list(int page, int pageSize, String keyword) {
+    UserData.Page<Account> values = accounts.search(keyword, page, pageSize);
     return new UserData.Page<>(
-        values.items().stream().map(this::view).toList(), values.total(), page, size);
+        page, pageSize, values.total(), values.items().stream().map(this::view).toList());
   }
 
   /** 新账号默认普通身份，角色授权由独立用例执行。 */
   @Transactional
   public UserResult create(CreateUserCommand input) {
-    if (accounts.username(input.getUsername()).isPresent()) throw new ConflictException("登录名已存在");
+    if (accounts.username(input.getUsername()).isPresent()) throw new ConflictException("USERNAME_EXISTS", "登录名已存在");
     credentials.validatePassword(input.getPassword());
     department(input.getDepartmentId());
     Account account = new Account();

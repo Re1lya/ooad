@@ -51,7 +51,7 @@ watch(keyword, (text) => {
       results.value = [];
       return;
     }
-    const page = await track(usersApi.list(0, 8, value));
+    const page = await track(usersApi.list(1, 8, value));
     if (keyword.value.trim() !== value || !page) return;
     const lower = value.toLowerCase();
     results.value = page.items.filter((u) =>

@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-11-18T13:51:19.933723+00:00",
-  "sourceRevision": "45cb2cc3c691ec419fa080dfd825144646ae0a3c",
+  "generatedAt": "2026-11-21T13:11:41.121454+00:00",
+  "sourceRevision": "f32d4faed32a7db1cae5cc19af3b0c13666ae3f3",
   "branch": "feat/second-review-integration",
   "includesWorkingTreeChanges": true,
   "repository": "https://github.com/yyyjjjj949/ooad",
-  "sourceFiles": 160,
+  "sourceFiles": 200,
   "springServices": [
     "AdminBootstrapService",
     "ApiResourceService",
@@ -12,12 +12,12 @@
     "AuditTrailService",
     "AuthService",
     "AuthorizationService",
-    "CompanyImportService",
+    "ConsoleRegistrationService",
     "DddApplicationIdentityService",
     "DddAuthenticationService",
     "DddAuthorizationService",
-    "DddCompanyImportService",
     "DddDepartmentService",
+    "DddDirectorySyncService",
     "DddHierarchyService",
     "DddPermissionService",
     "DddResourceService",
@@ -26,6 +26,7 @@
     "DddSystemService",
     "DddUserService",
     "DepartmentService",
+    "DirectorySyncService",
     "JwtTokenService",
     "PermissionService",
     "RoleHierarchyService",
@@ -34,8 +35,8 @@
     "SystemService",
     "UserService"
   ],
-  "serviceCount": 27,
-  "activeServiceCountPerMode": 15,
+  "serviceCount": 28,
+  "activeServiceCountPerMode": 16,
   "backendStrategies": [
     "structured",
     "ddd"
@@ -59,43 +60,43 @@
   "conceptualEntityCount": 6,
   "persistentTableCount": 12,
   "foreignKeyCount": 14,
-  "httpOperationCount": 61,
+  "httpOperationCount": 66,
   "tests": {
-    "tests": 103,
+    "tests": 182,
     "failures": 0,
     "errors": 0,
     "skipped": 0
   },
   "jacoco": {
     "instruction": {
-      "covered": 13734,
-      "missed": 1633,
-      "percent": 89.37
+      "covered": 16373,
+      "missed": 1132,
+      "percent": 93.53
     },
     "branch": {
-      "covered": 791,
-      "missed": 257,
-      "percent": 75.48
+      "covered": 923,
+      "missed": 183,
+      "percent": 83.45
     },
     "line": {
-      "covered": 2757,
-      "missed": 283,
-      "percent": 90.69
+      "covered": 2947,
+      "missed": 193,
+      "percent": 93.85
     },
     "complexity": {
-      "covered": 1120,
-      "missed": 349,
-      "percent": 76.24
+      "covered": 1207,
+      "missed": 241,
+      "percent": 83.36
     },
     "method": {
-      "covered": 829,
-      "missed": 110,
-      "percent": 88.29
+      "covered": 822,
+      "missed": 73,
+      "percent": 91.84
     },
     "class": {
-      "covered": 175,
-      "missed": 5,
-      "percent": 97.22
+      "covered": 207,
+      "missed": 0,
+      "percent": 100.0
     }
   },
   "frontendBuild": "vue-tsc --noEmit && vite build: passed",
@@ -148,8 +149,8 @@
     "fullDualDesignReview": "2026-11-18: opened new class/domain-adapter/permission and account sequence PNGs; reviewed changed diagrams contact sheet; unaffected diagrams retain prior visual review."
   },
   "diagramCount": 18,
-  "mysqlValidation": "H2 MySQL-mode structural comparison in tests; additionally applied to a local MySQL 8.4 container and started both strategies with ddl-auto=validate (2026-11-18); production server not yet deployed",
+  "mysqlValidation": "All backend tests run against MySQL 8.4: the deployment DDL builds the test schema, Hibernate starts with ddl-auto=validate, MySqlSchemaTests compares keys, unique and check constraints and foreign keys with the entity mappings; the servers use the same DDL",
   "companyDataReadOnlyCheck": "../design/phase-two/full-dual-company-readonly.json",
-  "serverDeploymentValidated": false,
+  "serverDeploymentValidated": true,
   "oldDatabaseMigration": false
 }

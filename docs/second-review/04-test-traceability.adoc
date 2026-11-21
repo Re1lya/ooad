@@ -1,6 +1,6 @@
 = 需求—测试追踪（第二次检查版）
 Cdwy 小组
-:revdate: 2026-11-18
+:revdate: 2026-11-21
 :toc: left
 :sectnums:
 :table-caption: 表
@@ -8,76 +8,266 @@ Cdwy 小组
 
 == 执行方式与结果
 
+测试连接真实 MySQL（8.0.16 及以上）。先准备一个空库和有建表、删表权限的账号，再用环境变量告诉测试连哪里：
+
 [source,bash]
 ----
-mvn -B -f third-party/clonefactory/pom.xml install -DskipTests
+export TEST_DB_HOST=127.0.0.1 TEST_DB_PORT=3306 TEST_DB_NAME=rbac_test TEST_DB_USERNAME=rbac_test
+export TEST_DB_PASSWORD=<测试账号密码>
+mvn -B -f third-party/clonefactory/pom.xml install -Dmaven.test.skip=true
 mvn -B clean verify          # 同时生成 target/site/jacoco/index.html
+python3 scripts/build-test-traceability.py   # 按测试源码重新生成本文第 3 节的三张表
 ----
 
-2026-11-18 结果：103 个测试，失败 0、错误 0、跳过 0。JaCoCo：行 90.69%、分支 75.48%、指令 89.37%、方法 88.29%（含 CloneFactory 生成代码）。机器可读汇总见 link:../first-review/verification.json[verification.json]。
+2026-11-21 结果（本机 MySQL 8.4）：182 个测试，失败 0、错误 0、跳过 0。JaCoCo：指令 93.5%、分支 83.5%、行 93.9%、方法 91.8%（含 CloneFactory 生成代码）。
 
-每个 HTTP 验收类都以两种设计各跑一遍：`Ddd*` 类继承结构化测试类，只把 `app.backend-strategy` 改为 `ddd`，因此同一条需求在两条设计路线上使用完全相同的测试方法与数据。
+== 测试约定
 
-[cols="3,1,1,1",options="header"]
+按课程代码规范的测试要求组织，与老师课程项目的测试写法一致：
+
+[cols="2,5",options="header"]
 |===
-|测试类 |结构化 |DDD |数量
-|link:{test}/FirstReviewWorkflowTests.java[FirstReviewWorkflowTests] / link:{test}/DddFullWorkflowTests.java[DddFullWorkflowTests] |✓ |✓ |22 + 23
-|link:{test}/PhaseTwoRbac1Tests.java[PhaseTwoRbac1Tests] / link:{test}/DddRbac1Tests.java[DddRbac1Tests] |✓ |✓ |7 + 8
-|link:{test}/ApplicationIdentityTests.java[ApplicationIdentityTests] / link:{test}/DddApplicationIdentityTests.java[DddApplicationIdentityTests] |✓ |✓ |9 + 10
-|link:{test}/CompanyImportTests.java[CompanyImportTests] / link:{test}/DddCompanyImportTests.java[DddCompanyImportTests] |✓ |✓ |8 + 8
-|link:{test}/DualDesignBoundaryTests.java[DualDesignBoundaryTests]（架构与领域规则） 2+|无需 Spring |5
-|link:{test}/infrastructure/logging/LayerLoggingTests.java[LayerLoggingTests]（日志脱敏与分层） 2+|无需 Spring |3
+|约定 |本项目做法
+|真实 MySQL，不 mock 数据库 |`src/test/resources/application-test.properties` 连接 MySQL；每个 Spring 上下文启动时先删表，再执行部署用的 `docs/first-review/database-mysql.sql`，Hibernate 以 `validate` 启动。`MySqlSchemaTests` 另外核对 validate 不检查的主键、唯一约束、外键与检查约束。
+|测试事务回滚 |测试类标注 `@Transactional`，测试方法结束即回滚。清表用 `DELETE`（MySQL 的 `TRUNCATE` 会隐式提交）。`RequestTransactionBoundary` 用 JDBC 保存点模拟“一个请求一个事务”：请求前把改动写入数据库并清空持久化上下文；请求成功则写入，请求以异常结束则回滚到保存点。
+|例外：并发测试 |`PhaseTwoRbac1Tests.FR18_concurrentOppositeEdgesCannotFormCycle` 的两个并发请求运行在各自的连接上，只能看到已提交的数据，所以这个测试标注 `Propagation.NOT_SUPPORTED`，结束时自行清空提交的数据。
+|需求编号 |测试方法名以需求编号开头（如 `FR18_…`），`@DisplayName` 写明需求编号与验收条件。
+|URL 常量 |URL 模板集中在测试类顶部的 `private static final String`，路径参数用 `{name}` 占位，由 `TestUrls.url(...)` 展开。
+|错误码契约 |每个业务错误码至少有一个测试断言响应体的 `code`（见 3.3）。`ErrorCodeContractTests` 按需求逐个覆盖各模块的错误码。
+|不存在的 id |`ErrorCodeContractTests.NFR07_everyByIdEndpointRejectsMissingIds` 覆盖全部 40 个按 id 操作的请求组合：两个 id 的接口分别让第一个、第二个 id 不存在，断言 404 和对应的 `*_NOT_FOUND`。
+|共享契约 |`Ddd*` 测试类继承结构化测试类，两条设计路线运行同一组测试方法和数据，不复制断言。
 |===
 
 == 追踪表
 
-测试数据：`ApplicationIdentityTests` 建立 `cpm` 与 `oa` 两个应用；`cpm` 下菜单 `MCO`（绑定 API `GET /courses`，权限码 `CV`）与按钮 `MCOR`（绑定 `PUT /courses/{id}/review`，权限码 `CR`）；角色 `course-admin` 继承 `teacher`，用户 `lin` 只分配 `course-admin`。`PhaseTwoRbac1Tests` 使用 `course` 应用、`teacher` 角色和 `GET /api/demo/courses` 资源，按用例再建多级/菱形角色。
+测试数据：`ApplicationIdentityTests` 建立 `course-project-management` 与 `oa` 两个应用；`course-project-management` 下菜单 `MCO`（绑定 API `GET /courses`，权限码 `CV`）与按钮 `MCOR`（绑定 `PUT /courses/{id}/review`，权限码 `CR`）；角色 `course-admin` 继承 `teacher`。`PhaseTwoRbac1Tests` 使用 `course` 应用、`teacher` 角色和 `GET /api/demo/courses` 资源，按用例再建多级、菱形角色。`ErrorCodeContractTests` 每个测试从空库开始，只建管理员、一名员工、一个应用及其菜单和 API 资源、一个角色。
 
-[cols="1,4,3,5",options="header"]
+// tag::generated[]
+
+=== 测试类
+
+`Ddd*` 类继承对应的结构化测试类，只把 `app.backend-strategy` 改为 `ddd`，同一组测试方法在两条设计路线上各跑一遍。
+
+[cols="3,1,1",options="header"]
 |===
-|需求 |验收条件 |API |测试类.方法
-
-|FR-01 |正确凭据得到 Bearer JWT，不建会话；错误、缺失、伪造、过期返回 401 |`POST /api/auth/login` |`FirstReviewWorkflowTests.loginReturnsBearerAndNeverCreatesServerSession`、`badCredentialsMissingMalformedExpiredAndForgedTokensReturn401`
-|FR-02 |改密后旧 Token 失效 |`PUT /api/me/password` |`passwordChangeInvalidatesOldTokenWithoutSessionStorage`
-|FR-03 |用户维护、停用即失效、管理员保护 |`/api/users/**` |`disabledAccountInvalidatesTokenAndReenableDoesNotReviveIt`、`deletionsRespectReferencesAndProtectAdministrator`、`ordinaryUsersCannotManageAndAdministratorHasNoAutomaticBusinessGrant`
-|FR-04 |外部/临时人员期限 |`POST /api/users` |`externalAndTemporaryPeopleUseSharedUserEntityAndConfiguredValidityLimits`；`DualDesignBoundaryTests.FR26_expiryIncludesLastDayAndExcludesFollowingMidnight`
-|FR-05 |部门树与删除引用 |`/api/departments/**` |`departmentTreeAndDeleteReferencesRemainConsistent`
-|FR-06、FR-15 |独立启停影响所有持有人；普通编辑不能夹带状态 |`/api/*/{id}/status` |`statusCommandsAffectAllHoldersWithoutChangingOrdinaryFields`、`ordinaryEditsCannotSmuggleStatusAndNamesDoNotRevokeGrants`
-|FR-07、FR-10 |多角色并集；重复分配幂等；撤一个角色不影响其他来源 |`/api/users/{id}/roles/{roleId}` |`duplicateAssignmentsAreIdempotentAndGrantUnionSurvivesOneRoleRevocation`
-|FR-08 |菜单树防环、跨应用父节点与按钮父节点被拒 |`/api/permissions` |`menuTreeRejectsCyclesCrossApplicationParentsAndButtonParents`
-|FR-09 |资源唯一、拒绝宽泛通配；可登记后端权限码 |`/api/resources` |`resourceValidationRejectsDuplicatesAndBroadWildcards`；权限码见 FR-27
-|FR-11、FR-12、FR-14 |三段授权链缺一即 403；新授权无需重新登录；不能跨应用绑定或绕过更具体资源 |`/api/roles/{id}/permissions/**`、`/api/permissions/{id}/resources/**`、`GET /api/demo/courses` |`rolePermissionAndApiBindingAreAllNecessaryAndNewGrantsWorkWithoutRelogin`、`permissionRevocationAndApiUnbindingImmediatelyRejectExistingToken`、`apiResourcesCannotBindAcrossApplicationsOrBypassMoreSpecificRoute`
-|FR-13 |导航补祖先容器但不授予其 API |`GET /api/me/menu` |`menuTreeKeepsAncestorsAsContainersWithoutGrantingTheirApi`
-|FR-17 |多级继承；撤除必要边后同一 Token 下一次请求 403 |`PUT/DELETE /api/roles/{s}/inherits/{i}` |`PhaseTwoRbac1Tests.transitiveInheritanceAndRevocation`
-|FR-18 |自继承、环、重复、缺失对象；停用节点参与防环；并发反向加边只成功一边 |同上 |`rejectCyclesAndKeepIdempotency`、`disabledIntermediateStillParticipatesInCycleCheck`、`concurrentOppositeEdgesCannotFormCycle`
-|FR-19 |菱形去重、停用阻断、多来源互不误撤 |`GET /api/me/permission-origins` |`diamondAndDisabledBranches`、`independentSourcesSurviveDirectRevocation`
-|FR-20 |继承管理边界与角色预览 |`GET /api/roles/{id}/effective-permissions` |`authorizationBoundaryAndPreview`
-|FR-21、FR-22 |前端任务闭环与交互 |前端 |`frontend/tests/*.test.cjs`（Edge/Playwright，历史记录见 `docs/design/phase-two/`，本轮未重跑）；本轮浏览器人工核对见第 3 节
-|FR-23 |实际装载模式可查询 |`GET /api/system-info` |`DddRbac1Tests.FR23_reportsSelectedImplementation`
-|FR-24、FR-25 |三表预览与确认导入 |`POST /api/imports/company/*` |`CompanyImportTests.FR24_*`、`FR25_*`（8 个）及 DDD 重跑
-|FR-26 |全模块双实现；领域与应用层无持久化依赖；Controller 只依赖端口 |— |`DualDesignBoundaryTests.FR26_applicationAndDomainHaveNoPersistenceDependencies`、`FR26_httpBoundaryDependsOnPorts`；`FirstReviewWorkflowTests.FR26_allBusinessModulesReportSelectedStrategy`
-|FR-27 |`/auth/me` 返回继承角色与本应用菜单、按钮、API 权限码；解除继承、停用角色、停用资源、停用应用即时生效；只返回本应用；未知应用 404，无 Token 401 |`GET /api/apps/{code}/auth/me` |`ApplicationIdentityTests.FR27_currentIdentityIncludesInheritedRolesAndCodes`、`FR27_inheritanceChangeIsVisibleOnNextCall`、`FR27_disabledRoleAndResourceAreExcluded`、`FR27_permissionsAreScopedToTheApplication`；`DddApplicationIdentityTests.FR27_identityModuleReportsDdd`
-|FR-28 |按统一身份标识查姓名与工号；不存在 404 |`GET /api/apps/{code}/identity/users/{userId}` |`FR28_lookupUserByIdentityId`
-|FR-29 |审计写入幂等、操作人快照、按应用隔离、按目标筛选；无应用内权限者 403，管理员可查；未知应用 404；缺类型 400 |`GET/POST /api/apps/{code}/auth/audit-logs` |`FR29_auditWriteIsIdempotentAndScoped`、`FR29_auditQueryRequiresPermissionInApplication`
-|FR-30 |建立、解除继承写入审计，操作人为当前管理员 |`GET /api/audit-logs` |`FR30_hierarchyChangesAreAudited`
-|NFR-01、NFR-02 |认证边界；响应不泄露密码摘要与凭证版本 |— |`badCredentials…Return401`、`loginResponseCannotExposePasswordOrCredentialVersionOrAdminAssignment`
-|NFR-04 |分层与依赖方向 |— |`DualDesignBoundaryTests`（5 个）
-|NFR-09 |MySQL 建表脚本与 JPA 模型逐表一致；无会话表 |— |`mysqlDdlMatchesPersistentTablesColumnsKeysAndUniqueConstraints`、`loginReturnsBearerAndNeverCreatesServerSession`
-|NFR-11 |菜单头进入日志；Controller 与 Service/DDD 应用服务均有日志；令牌与密码打码；菜单头防注入 |任意 `/api` 请求 |`ApplicationIdentityTests.NFR11_menuSwitchProducesLayeredLogs`（两种模式）、`LayerLoggingTests`（3 个）
-|NFR-12 |Swarm 部署、健康检查 |— |部署后按 link:05-deployment.adoc[部署说明] 第 8 节逐项核对
+|测试类 |设计路线 |测试数
+|`ApplicationIdentityTests` / `DddApplicationIdentityTests` |结构化 + DDD |47
+|`ConsoleRbacTests` / `DddConsoleRbacTests` |结构化 + DDD |10
+|`DirectorySyncTests` / `DddDirectorySyncTests` |结构化 + DDD |20
+|`DualDesignBoundaryTests` |通用 |5
+|`ErrorCodeContractTests` / `DddErrorCodeContractTests` |结构化 + DDD |36
+|`FirstReviewWorkflowTests` / `DddFullWorkflowTests` |结构化 + DDD |43
+|`LayerLoggingTests` |通用 |5
+|`MySqlSchemaTests` |通用 |1
+|`PhaseTwoRbac1Tests` / `DddRbac1Tests` |结构化 + DDD |15
 |===
 
-== 跨系统联调记录（2026-11-18，本机）
+=== 需求—测试追踪
 
-环境：MySQL 8.4 容器（执行 `database-mysql.sql`）；权限系统后端以 `swarm` 配置启动（分别验证 `ddd` 与 `structured` 两种模式在 `validate` 下启动）；老师课程后端 ca90f1c（打本仓库补丁，Flyway 执行 13 个迁移）；课程前端开发服务器。
+每个测试方法的名称以需求编号开头，`@DisplayName` 写明需求编号与验收条件；下表由测试源码生成。
+
+[cols="1,2,6,1",options="header"]
+|===
+|编号 |需求 |测试方法（显示名） |设计路线
+|FR-01 |账号密码登录 |`FirstReviewWorkflowTests.FR01_loginReturnsBearerAndNeverCreatesServerSession`：FR-01 NFR-10 登录返回 Bearer JWT，不创建服务端会话，库中也没有会话表 |结构化 + DDD
+|FR-02 |本人身份与改密 |`ErrorCodeContractTests.FR02_passwordChangeCodes`：FR-02 本人改密：原密码错误返回 UNAUTHORIZED，新密码太弱返回 PASSWORD_POLICY_VIOLATION +
+`FirstReviewWorkflowTests.FR02_passwordChangeInvalidatesOldTokenWithoutSessionStorage`：FR-02 改密后旧令牌失效，不依赖服务端会话存储 |结构化 + DDD
+|FR-03 |用户维护 |`ApplicationIdentityTests.FR03_userSearchIsPagedInDatabaseAndKeepsDepartment`：FR-03 用户列表按工号或姓名在数据库层检索并分页；新建用户的所属部门随结果返回 +
+`ErrorCodeContractTests.FR03_userCreationCodes`：FR-03 新建用户：登录名重复 USERNAME_EXISTS，弱密码 PASSWORD_POLICY_VIOLATION，部门不存在 DEPARTMENT_NOT_FOUND +
+`FirstReviewWorkflowTests.FR03_disabledAccountInvalidatesTokenAndReenableDoesNotReviveIt`：FR-03 停用账号使已签发令牌失效，重新启用也不恢复旧令牌 +
+`FirstReviewWorkflowTests.FR03_deletionsRespectReferencesAndProtectAdministrator`：FR-03 删除前检查引用，管理员账号受保护 |结构化 + DDD
+|FR-04 |人员身份 |`ErrorCodeContractTests.FR04_accessWindowCodes`：FR-04 人员期限不符合人员类型或超过上限时返回 ACCESS_WINDOW_INVALID +
+`FirstReviewWorkflowTests.FR04_externalAndTemporaryPeopleUseSharedUserEntityAndConfiguredValidityLimits`：FR-04 NFR-06 外部与临时人员共用用户实体，期限受配置上限约束，过期后不能登录 |结构化 + DDD
+|FR-05 |部门维护 |`ErrorCodeContractTests.FR05_departmentCodes`：FR-05 部门：同级重名、编码重复、形成环路、仍被使用时分别返回对应错误码 +
+`FirstReviewWorkflowTests.FR05_departmentTreeAndDeleteReferencesRemainConsistent`：FR-05 部门树防环，有子部门或员工时不能删除 |结构化 + DDD
+|FR-06 |应用维护 |`ErrorCodeContractTests.FR06_systemCodes`：FR-06 应用：编码重复 SYSTEM_CODE_EXISTS，仍被引用 SYSTEM_IN_USE，引用不存在的应用 SYSTEM_NOT_FOUND |结构化 + DDD
+|FR-07 |角色维护 |`ErrorCodeContractTests.FR07_roleCodes`：FR-07 角色：编码重复 ROLE_CODE_EXISTS，仍有授权 ROLE_IN_USE，仍有继承关系 ROLE_HAS_INHERITANCE |结构化 + DDD
+|FR-08 |前端权限树 |`ErrorCodeContractTests.FR08_permissionTreeCodes`：FR-08 前端权限：编码重复、按钮无上级、按钮带地址、上级不合法、形成环路、有子节点改按钮、仍被使用 +
+`FirstReviewWorkflowTests.FR08_menuTreeRejectsCyclesCrossApplicationParentsAndButtonParents`：FR-08 菜单树拒绝环路、跨应用上级和以按钮为上级 |结构化 + DDD
+|FR-09 |API 资源维护 |`ErrorCodeContractTests.FR09_resourceCodes`：FR-09 API 资源：路由重复 API_RESOURCE_EXISTS，operationId 重复 API_OPERATION_EXISTS，仍被绑定 API_RESOURCE_IN_USE +
+`FirstReviewWorkflowTests.FR09_resourceValidationRejectsDuplicatesAndBroadWildcards`：FR-09 API 资源拒绝重复路由和过宽的通配路径 |结构化 + DDD
+|FR-10 |用户角色分配 |`ErrorCodeContractTests.FR10_inactiveGrantTargets`：FR-10 FR-11 给用户授予停用角色、给角色授予停用权限都返回 GRANT_TARGET_INACTIVE +
+`FirstReviewWorkflowTests.FR10_duplicateAssignmentsAreIdempotentAndGrantUnionSurvivesOneRoleRevocation`：FR-10 重复分配幂等，撤回一个角色后其他角色提供的权限仍然有效 |结构化 + DDD
+|FR-11 |角色权限分配 |`ErrorCodeContractTests.FR10_inactiveGrantTargets`：FR-10 FR-11 给用户授予停用角色、给角色授予停用权限都返回 GRANT_TARGET_INACTIVE +
+`FirstReviewWorkflowTests.FR11_permissionRevocationAndApiUnbindingImmediatelyRejectExistingToken`：FR-11 FR-12 撤回角色权限或解除接口绑定后，已签发的令牌立即被拒绝 |结构化 + DDD
+|FR-12 |前端权限绑定 API |`ErrorCodeContractTests.FR12_bindingAcrossSystems`：FR-12 前端权限绑定其他应用的 API 资源返回 BINDING_SYSTEM_MISMATCH +
+`FirstReviewWorkflowTests.FR11_permissionRevocationAndApiUnbindingImmediatelyRejectExistingToken`：FR-11 FR-12 撤回角色权限或解除接口绑定后，已签发的令牌立即被拒绝 +
+`FirstReviewWorkflowTests.FR14_apiResourcesCannotBindAcrossApplicationsOrBypassMoreSpecificRoute`：FR-12 FR-14 接口不能跨应用绑定，鉴权按最具体的路径匹配且不能绕过 |结构化 + DDD
+|FR-13 |个人导航 |`FirstReviewWorkflowTests.FR13_menuTreeKeepsAncestorsAsContainersWithoutGrantingTheirApi`：FR-13 个人菜单保留祖先容器，祖先不因此获得接口权限 +
+`frontend/tests/menu.test.cjs`：FR-13 FR-38 菜单根据后端授权动态显示 |浏览器（两条路线各跑一遍）、结构化 + DDD
+|FR-14 |真实请求鉴权 |`FirstReviewWorkflowTests.FR14_rolePermissionAndApiBindingAreAllNecessaryAndNewGrantsWorkWithoutRelogin`：FR-14 角色、权限、接口绑定缺一不可，新授权无需重新登录即生效 +
+`FirstReviewWorkflowTests.FR14_apiResourcesCannotBindAcrossApplicationsOrBypassMoreSpecificRoute`：FR-12 FR-14 接口不能跨应用绑定，鉴权按最具体的路径匹配且不能绕过 |结构化 + DDD
+|FR-15 |状态独立变更 |`FirstReviewWorkflowTests.FR15_statusCommandsAffectAllHoldersWithoutChangingOrdinaryFields`：FR-15 状态接口停用后影响全部持有者，且不改动普通字段 +
+`FirstReviewWorkflowTests.FR15_ordinaryEditsCannotSmuggleStatusAndNamesDoNotRevokeGrants`：FR-15 普通编辑不能夹带状态字段，改名不影响已有授权 |结构化 + DDD
+|FR-16 |演示页面 |`frontend/tests/hierarchy.test.cjs`：FR-16 FR-17 FR-18 FR-19 角色层级、循环继承与有效权限来源 +
+`frontend/tests/workspace.test.cjs`：FR-16 FR-21 FR-22 NFR-10 前端资源管理、授权工作台、接口绑定、窄屏与退出 |浏览器（两条路线各跑一遍）
+|FR-17 |多级角色继承 |`PhaseTwoRbac1Tests.FR17_transitiveInheritanceAndRevocation`：FR-17 多级继承与撤回在同一Token下生效 +
+`frontend/tests/hierarchy.test.cjs`：FR-16 FR-17 FR-18 FR-19 角色层级、循环继承与有效权限来源 |浏览器（两条路线各跑一遍）、结构化 + DDD
+|FR-18 |继承图一致性 |`ErrorCodeContractTests.FR18_hierarchyCodes`：FR-18 角色继承：自继承 ROLE_SELF_INHERITANCE，成环 ROLE_INHERITANCE_CYCLE，端点停用 ROLE_DISABLED +
+`PhaseTwoRbac1Tests.FR18_rejectCyclesAndKeepIdempotency`：FR-18 自继承、环路、重复边及缺失对象 +
+`PhaseTwoRbac1Tests.FR18_disabledIntermediateStillParticipatesInCycleCheck`：FR-18 停用节点仍参与防环检查 +
+`PhaseTwoRbac1Tests.FR18_concurrentOppositeEdgesCannotFormCycle`：FR-18 并发反向继承不会形成环路 +
+`frontend/tests/hierarchy.test.cjs`：FR-16 FR-17 FR-18 FR-19 角色层级、循环继承与有效权限来源 |浏览器（两条路线各跑一遍）、结构化 + DDD
+|FR-19 |有效来源解释 |`PhaseTwoRbac1Tests.FR19_diamondAndDisabledBranches`：FR-19 菱形继承去重、停用隔离和直接授权 +
+`PhaseTwoRbac1Tests.FR19_independentSourcesSurviveDirectRevocation`：FR-19 多来源去重且撤回直接授权后继承授权仍有效 +
+`frontend/tests/hierarchy.test.cjs`：FR-16 FR-17 FR-18 FR-19 角色层级、循环继承与有效权限来源 |浏览器（两条路线各跑一遍）、结构化 + DDD
+|FR-20 |继承访问边界 |`PhaseTwoRbac1Tests.FR20_authorizationBoundaryAndPreview`：FR-20 继承管理权限边界与角色有效权限预览 |结构化 + DDD
+|FR-21 |前端任务闭环 |`frontend/tests/workspace.test.cjs`：FR-16 FR-21 FR-22 NFR-10 前端资源管理、授权工作台、接口绑定、窄屏与退出 |浏览器（两条路线各跑一遍）
+|FR-22 |交互可用性 |`frontend/tests/navigation.test.cjs`：FR-22 浏览器后退和前进恢复正确页面 +
+`frontend/tests/workspace.test.cjs`：FR-16 FR-21 FR-22 NFR-10 前端资源管理、授权工作台、接口绑定、窄屏与退出 |浏览器（两条路线各跑一遍）
+|FR-23 |RBAC1 核心双实现 |`DddRbac1Tests.FR23_reportsSelectedImplementation`：FR-23 DDD 模式下角色继承模块报告 ddd 实现 |DDD
+|FR-24 |员工信息同步预览 |`DirectorySyncTests.FR24_previewCountsChangesAndWritesNothing`：FR-24 预览只计算变化：两级部门、新人员、按分公司补授角色，不写数据库 +
+`DirectorySyncTests.FR24_invalidSheetsAreRejectedWithRowNumbers`：FR-24 员工表格式错误逐项拒绝，并指出 Excel 行号 +
+`DirectorySyncTests.FR24_firstWorksheetFollowsWorkbookRelationshipAndSharedStrings`：FR-24 按工作簿关系定位首张工作表并读取共享字符串（与课程系统提供的原表结构相同） +
+`frontend/tests/sync.test.cjs`：FR-24 FR-25 同步员工信息：预览、确认、重复执行无变化，更换文件或规则须重新预览 |浏览器（两条路线各跑一遍）、结构化 + DDD
+|FR-25 |员工信息同步确认 |`DirectorySyncTests.FR25_commitBuildsTwoLevelTreeAndUnprovisionedUsers`：FR-25 确认后建成“分公司 / 部门”两级树，同名部门分属不同分公司；新人员停用且无法登录；按分公司授予教师或学生 +
+`DirectorySyncTests.FR25_rerunIsIdempotent`：FR-25 重复执行同一份表没有任何变化 +
+`DirectorySyncTests.FR25_changesUpdateSourceFieldsAndKeepCredentialsAndGrants`：FR-25 变化的人员只更新姓名、部门、岗位与电话，保留密码、启用状态与已有角色；不在表中的人员不受影响；角色只增不减 +
+`DirectorySyncTests.FR25_digestMustMatchFileAndRule`：FR-25 确认时文件或规则与预览不一致须重新预览，且不写入 +
+`DirectorySyncTests.FR25_administratorConflictRollsBackEverything`：FR-25 表中出现管理员账号时整批拒绝，已经建好的部门也回滚 +
+`frontend/tests/sync.test.cjs`：FR-24 FR-25 同步员工信息：预览、确认、重复执行无变化，更换文件或规则须重新预览 |浏览器（两条路线各跑一遍）、结构化 + DDD
+|FR-26 |全业务双设计 |`DddErrorCodeContractTests.FR26_domainObjectsGuardFormats`：FR-26 领域对象拒绝不合法的资源路径、权限码、operationId 与部门编码 +
+`DddFullWorkflowTests.FR26_reportsEverySelectedBusinessImplementation`：FR-26 DDD 模式下每个业务模块都报告 ddd 实现 +
+`DualDesignBoundaryTests.FR26_applicationAndDomainHaveNoPersistenceDependencies`：FR-26 NFR-04 DDD 应用层与领域层不依赖 JPA、实体与持久化适配器 +
+`DualDesignBoundaryTests.FR26_httpBoundaryDependsOnPorts`：FR-26 NFR-04 Controller 只依赖用例端口，不依赖结构化实现或实体 +
+`DualDesignBoundaryTests.FR26_expiryIncludesLastDayAndExcludesFollowingMidnight`：FR-26 有效期包含截止日当天，次日零点起失效，超过上限返回 ACCESS_WINDOW_INVALID +
+`DualDesignBoundaryTests.FR26_accountStateAndPasswordRotateCredentialVersion`：FR-26 停用、启用与重置密码轮换凭证版本，重复停用不重复递增 +
+`DualDesignBoundaryTests.FR26_adminIdentityCannotBeRemovedByChangingPersonType`：FR-26 管理员身份不能通过改为外部人员或删除账号移除 +
+`FirstReviewWorkflowTests.FR26_allBusinessModulesReportSelectedStrategy`：FR-26 NFR-06 两种配置下全部业务模块都报告实际装载的设计路线 |DDD、结构化 + DDD、通用
+|FR-27 |接入应用身份查询 |`ApplicationIdentityTests.FR27_currentIdentityIncludesInheritedRolesAndCodes`：FR-27 /auth/me 返回 subject、继承得到的角色、菜单按钮码与绑定的 API 权限码、姓名和工号 +
+`ApplicationIdentityTests.FR27_inheritanceChangeIsVisibleOnNextCall`：FR-27 解除继承后同一令牌的下一次 /auth/me 立即失去继承权限 +
+`ApplicationIdentityTests.FR27_disabledRoleAndResourceAreExcluded`：FR-27 停用被继承角色阻断路径；停用 API 资源只撤回对应后端权限码 +
+`ApplicationIdentityTests.FR27_disabledApplicationAndMissingToken`：FR-27 应用停用时不返回角色和权限；未知应用的令牌无法签发，无令牌 401 +
+`DddApplicationIdentityTests.FR27_identityModuleReportsDdd`：FR-27 DDD 模式下统一身份模块报告 ddd 实现 |DDD、结构化 + DDD
+|FR-28 |统一身份人员查询 |`ApplicationIdentityTests.FR28_lookupUserByIdentityId`：FR-28 按统一身份用户标识查询姓名与工号；不存在 404 IDENTITY_USER_NOT_FOUND；旧路径已删除 |结构化 + DDD
+|FR-29 |接入应用审计 |`ApplicationIdentityTests.FR29_auditWriteIsIdempotentAndScoped`：FR-29 审计写入按 requestId 幂等，查询按应用隔离并保留操作人快照 +
+`ApplicationIdentityTests.FR29_auditQueryRequiresPermissionInApplication`：FR-29 应用内没有任何有效权限的用户不能查询审计；请求体校验 400 +
+`ErrorCodeContractTests.FR29_auditSnapshotTooLarge`：FR-29 写入审计记录时 before 内容过长返回 AUDIT_SNAPSHOT_TOO_LARGE |结构化 + DDD
+|FR-30 |继承变更审计 |`ApplicationIdentityTests.FR30_hierarchyChangesAreAudited`：FR-30 角色继承建立与解除写入审计记录，操作人为当前管理员 |结构化 + DDD
+|FR-31 |接入应用登录 |`ApplicationIdentityTests.FR31_loginReturnsTokenContract`：FR-31 登录不需要令牌，响应只有 accessToken、tokenType、expiresIn +
+`ApplicationIdentityTests.FR31_loginRejectsBadCredentialsAndSystems`：FR-31 密码错误 401 UNAUTHORIZED；systems 缺当前应用、含未登记应用、为空或请求多出字段都 400 +
+`ApplicationIdentityTests.FR31_tokenAudienceIsEnforced`：FR-31 令牌只能用于 aud 中的系统：课程令牌不能调控制台，控制台令牌不能调课程身份接口 +
+`ErrorCodeContractTests.FR31_applicationLoginTargets`：FR-31 接入应用登录：systems 不含当前应用 LOGIN_TARGET_NOT_IN_SYSTEMS，含未登记应用 LOGIN_SYSTEM_UNKNOWN |结构化 + DDD
+|FR-32 |接入应用退出 |`ApplicationIdentityTests.FR32_logoutInvalidatesIssuedTokens`：FR-32 退出登录后同一令牌立即失效，重新登录可以继续使用 |结构化 + DDD
+|FR-33 |前端权限码校验 |`ApplicationIdentityTests.FR33_permissionCheckCoversMenusAndButtonsOnly`：FR-33 校验前端菜单/按钮权限码：只返回 allowed；继承得到的菜单为真，后端 API 权限码与无关权限为假 |结构化 + DDD
+|FR-34 |接口调用权限校验 |`ApplicationIdentityTests.FR34_apiPermissionByOperationId`：FR-34 按 operationId 判断能否调用接口：只返回 operationId 与 allowed；未登记 404 API_OPERATION_NOT_FOUND +
+`ApplicationIdentityTests.FR34_operationIdIsUniquePerApplication`：FR-34 operationId 在同一应用内唯一，格式不合法时拒绝 |结构化 + DDD
+|FR-35 |部门目录查询 |`ApplicationIdentityTests.FR35_departmentsAreListedLevelByLevel`：FR-35 逐层查询部门：不传 parentId 为根部门，传入为直接子部门；字段与分页结构符合契约 +
+`ApplicationIdentityTests.FR35_departmentQueryValidationAndAccess`：FR-35 部门查询参数校验：页码、每页条数、关键字长度 400；上级部门不存在 404；没有授权 403 +
+`ApplicationIdentityTests.FR35_departmentNamesAreUniquePerParentAndCodesAreUnique`：FR-35 部门名称同一上级下唯一、编码全局唯一；未填编码时自动编码 |结构化 + DDD
+|FR-36 |部门人员查询 |`ApplicationIdentityTests.FR36_departmentUsers`：FR-36 部门下的用户：按工号或姓名查询，字段不含联系方式；部门不存在 404；没有授权 403 |结构化 + DDD
+|FR-37 |浏览器跨域 |`ApplicationIdentityTests.FR37_corsAllowsConfiguredOrigins`：FR-37 浏览器直连接口按配置放行课程前端来源：预检允许 Authorization 与 GET，未配置的来源被拒绝 |结构化 + DDD
+|FR-38 |控制台内置目录 |`ConsoleRbacTests.FR38_catalogCoversEveryConsoleEndpoint`：FR-38 每个标注为 rbac 的管理接口（个人接口除外）都在内置目录中登记，且目录中没有多余接口 +
+`ConsoleRbacTests.FR38_registrationIsIdempotentAndRestoresBuiltInGrants`：FR-38 启动登记幂等：重复初始化不产生重复数据；被删掉的内置授权在下次启动时补齐 +
+`ConsoleRbacTests.FR38_administratorSeesEveryConsoleMenu`：FR-38 管理员的导航包含全部 11 个控制台菜单，按钮挂在所属菜单下 +
+`ConsoleRbacTests.FR38_menuAndApisFollowGrants`：FR-38 菜单根据后端授权动态显示：授予后出现、页面接口放行，撤销后下一次请求立即消失并返回 403 +
+`ConsoleRbacTests.FR38_personalEndpointsAndFailClosed`：FR-38 个人接口只要求登录；没有登记访问规则的接口一律拒绝；控制台管理员也不能绕过 +
+`DirectorySyncTests.FR38_syncRequiresDirectorySyncGrant`：FR-38 员工信息同步须拥有“同步员工信息”按钮的授权 +
+`frontend/tests/menu.test.cjs`：FR-13 FR-38 菜单根据后端授权动态显示 |浏览器（两条路线各跑一遍）、结构化 + DDD
+|NFR-01 |认证与身份边界 |`ErrorCodeContractTests.NFR01_authenticationAndAuthorizationCodes`：NFR-01 未登录或凭证错误返回 UNAUTHORIZED，普通用户调用管理接口返回 FORBIDDEN +
+`FirstReviewWorkflowTests.NFR01_badCredentialsMissingMalformedExpiredAndForgedTokensReturn401`：NFR-01 错误凭证、缺少或畸形令牌、过期或伪造令牌一律返回 401 +
+`FirstReviewWorkflowTests.NFR01_ordinaryUsersCannotManageAndAdministratorHasNoAutomaticBusinessGrant`：NFR-01 普通用户不能调用管理接口，管理员也不会自动获得业务接口权限 +
+`FirstReviewWorkflowTests.NFR01_initializationCannotEscalateOrdinaryUserAndRemovedEndpointsAreNotRegistered`：NFR-01 初始化不能把普通账号提升为管理员，已删除的接口不再注册 |结构化 + DDD
+|NFR-02 |数据最小输出 |`FirstReviewWorkflowTests.NFR02_loginResponseCannotExposePasswordOrCredentialVersionOrAdminAssignment`：NFR-02 响应不含密码摘要与凭证版本，请求也不能夹带管理员身份 |结构化 + DDD
+|NFR-03 |一致性 |`DddErrorCodeContractTests.NFR03_adapterTranslatesUniqueViolation`：NFR-03 DDD 仓储适配器把数据库唯一约束冲突就地翻译为 DATA_CONFLICT +
+`ErrorCodeContractTests.NFR03_uniqueViolationFallsBackToDataConflict`：NFR-03 业务检查之外的唯一约束冲突由数据库拦截，统一翻译为 DATA_CONFLICT +
+`MySqlSchemaTests.NFR03_deploymentDdlMatchesEntityConstraints`：NFR-03 NFR-09 在真实 MySQL 上，部署建表脚本的主键、唯一约束、外键与检查约束与实体声明一致 |DDD、结构化 + DDD、通用
+|NFR-04 |可维护性 |`DualDesignBoundaryTests.FR26_applicationAndDomainHaveNoPersistenceDependencies`：FR-26 NFR-04 DDD 应用层与领域层不依赖 JPA、实体与持久化适配器 +
+`DualDesignBoundaryTests.FR26_httpBoundaryDependsOnPorts`：FR-26 NFR-04 Controller 只依赖用例端口，不依赖结构化实现或实体 |通用
+|NFR-05 |可追溯 |`FirstReviewWorkflowTests.NFR05_exportOpenApiInputsRoutesAndActualSchemaForDocumentation`：NFR-05 导出实际路由与 MySQL 库结构，供需求追踪文档生成 |结构化 + DDD
+|NFR-06 |可配置 |`FirstReviewWorkflowTests.FR04_externalAndTemporaryPeopleUseSharedUserEntityAndConfiguredValidityLimits`：FR-04 NFR-06 外部与临时人员共用用户实体，期限受配置上限约束，过期后不能登录 +
+`FirstReviewWorkflowTests.FR26_allBusinessModulesReportSelectedStrategy`：FR-26 NFR-06 两种配置下全部业务模块都报告实际装载的设计路线 |结构化 + DDD
+|NFR-07 |交互与错误 |`ErrorCodeContractTests.NFR07_malformedRequestsReturnBadRequest`：NFR-07 字段校验失败、JSON 无法解析、未知字段、参数越界或类型不符都返回 BAD_REQUEST +
+`ErrorCodeContractTests.NFR07_everyByIdEndpointRejectsMissingIds`：NFR-07 所有按 id 操作的接口对不存在的 id 返回 404 与对应的 *_NOT_FOUND 业务码 |结构化 + DDD
+|NFR-08 |性能边界 |`DirectorySyncTests.NFR08_tenThousandRows`：NFR-08 一万行员工表（与课程系统员工表同规模）在一个事务内同步，部门与人员按数据库分页查询 |结构化 + DDD
+|NFR-09 |持久化环境 |`MySqlSchemaTests.NFR03_deploymentDdlMatchesEntityConstraints`：NFR-03 NFR-09 在真实 MySQL 上，部署建表脚本的主键、唯一约束、外键与检查约束与实体声明一致 |通用
+|NFR-10 |退出语义 |`FirstReviewWorkflowTests.FR01_loginReturnsBearerAndNeverCreatesServerSession`：FR-01 NFR-10 登录返回 Bearer JWT，不创建服务端会话，库中也没有会话表 +
+`frontend/tests/workspace.test.cjs`：FR-16 FR-21 FR-22 NFR-10 前端资源管理、授权工作台、接口绑定、窄屏与退出 |浏览器（两条路线各跑一遍）、结构化 + DDD
+|NFR-11 |分层日志 |`ApplicationIdentityTests.NFR11_menuSwitchProducesLayeredLogs`：NFR-11 前端菜单切换携带 X-Client-Menu，后端 logback 日志按菜单记录请求与各层调用 +
+`ApplicationIdentityTests.NFR11_loginPasswordIsNeverLogged`：NFR-11 登录请求体中的密码不进入任何日志 +
+`LayerLoggingTests.NFR11_sensitiveArgumentsAreMasked`：NFR-11 令牌、登录与密码相关参数一律打码，普通标识照常输出 +
+`LayerLoggingTests.NFR11_sensitiveParameterNamesAreMasked`：NFR-11 方法名不敏感时，参数名含 password、secret、token、credential 的参数单独打码 +
+`LayerLoggingTests.NFR11_controlCharactersCannotForgeLogLines`：NFR-11 参数中的换行等控制字符被替换，不能伪造日志行 +
+`LayerLoggingTests.NFR11_menuHeaderIsSanitized`：NFR-11 X-Client-Menu 只接受简单菜单标识 +
+`LayerLoggingTests.NFR11_layersFollowPackages`：NFR-11 按包名区分 Controller / Service / DDD-Application / Infrastructure 层 |结构化 + DDD、通用
+|NFR-12 |容器化部署 |部署后核对，见第 4 节与 link:05-deployment.adoc[部署说明] |—
+|===
+
+=== 错误码—测试
+
+每个业务错误码至少有一个测试断言响应体的 `code`；按 id 操作的接口在 `ErrorCodeContractTests.NFR07_everyByIdEndpointRejectsMissingIds` 中逐个覆盖不存在的 id。
+
+[cols="2,1,5",options="header"]
+|===
+|错误码 |HTTP |断言它的测试方法
+|`ACCESS_WINDOW_INVALID` |400 |`DualDesignBoundaryTests.FR26_expiryIncludesLastDayAndExcludesFollowingMidnight`、`ErrorCodeContractTests.FR04_accessWindowCodes`
+|`API_OPERATION_EXISTS` |409 |`ErrorCodeContractTests.FR09_resourceCodes`
+|`API_OPERATION_ID_INVALID` |400 |`DddErrorCodeContractTests.FR26_domainObjectsGuardFormats`
+|`API_OPERATION_NOT_FOUND` |404 |`ApplicationIdentityTests.FR34_apiPermissionByOperationId`
+|`API_RESOURCE_CODE_INVALID` |400 |`DddErrorCodeContractTests.FR26_domainObjectsGuardFormats`
+|`API_RESOURCE_EXISTS` |409 |`ErrorCodeContractTests.FR09_resourceCodes`
+|`API_RESOURCE_IN_USE` |409 |`ErrorCodeContractTests.FR09_resourceCodes`
+|`API_RESOURCE_NOT_FOUND` |404 |`ErrorCodeContractTests.NFR07_everyByIdEndpointRejectsMissingIds`
+|`API_RESOURCE_PATH_INVALID` |400 |`DddErrorCodeContractTests.FR26_domainObjectsGuardFormats`
+|`AUDIT_SNAPSHOT_TOO_LARGE` |400 |`ErrorCodeContractTests.FR29_auditSnapshotTooLarge`
+|`BAD_REQUEST` |400 |`DirectorySyncTests.FR24_invalidSheetsAreRejectedWithRowNumbers`、`ErrorCodeContractTests.NFR07_malformedRequestsReturnBadRequest`
+|`BINDING_SYSTEM_MISMATCH` |400 |`ErrorCodeContractTests.FR12_bindingAcrossSystems`
+|`BUTTON_PARENT_REQUIRED` |400 |`ErrorCodeContractTests.FR08_permissionTreeCodes`
+|`BUTTON_PATH_NOT_ALLOWED` |400 |`ErrorCodeContractTests.FR08_permissionTreeCodes`
+|`DATA_CONFLICT` |409 |`DddErrorCodeContractTests.NFR03_adapterTranslatesUniqueViolation`、`ErrorCodeContractTests.NFR03_uniqueViolationFallsBackToDataConflict`
+|`DEPARTMENT_CODE_EXISTS` |409 |`ErrorCodeContractTests.FR05_departmentCodes`
+|`DEPARTMENT_CODE_INVALID` |400 |`DddErrorCodeContractTests.FR26_domainObjectsGuardFormats`
+|`DEPARTMENT_CYCLE` |400 |`ErrorCodeContractTests.FR05_departmentCodes`
+|`DEPARTMENT_IN_USE` |409 |`ErrorCodeContractTests.FR05_departmentCodes`
+|`DEPARTMENT_NAME_EXISTS` |409 |`ErrorCodeContractTests.FR05_departmentCodes`
+|`DEPARTMENT_NOT_FOUND` |404 |`ErrorCodeContractTests.FR03_userCreationCodes`、`ErrorCodeContractTests.NFR07_everyByIdEndpointRejectsMissingIds`
+|`EMPLOYEE_SHEET_INVALID` |400 |`DirectorySyncTests.FR24_invalidSheetsAreRejectedWithRowNumbers`
+|`EXCEL_INVALID` |400 |`DirectorySyncTests.FR24_invalidSheetsAreRejectedWithRowNumbers`
+|`FORBIDDEN` |403 |`ApplicationIdentityTests.FR35_departmentQueryValidationAndAccess`、`ConsoleRbacTests.FR38_personalEndpointsAndFailClosed`、`ErrorCodeContractTests.NFR01_authenticationAndAuthorizationCodes`
+|`GRANT_TARGET_INACTIVE` |400 |`ErrorCodeContractTests.FR10_inactiveGrantTargets`
+|`IDENTITY_DEPARTMENT_NOT_FOUND` |404 |`ApplicationIdentityTests.FR35_departmentQueryValidationAndAccess`、`ApplicationIdentityTests.FR36_departmentUsers`
+|`IDENTITY_USER_NOT_FOUND` |404 |`ApplicationIdentityTests.FR28_lookupUserByIdentityId`
+|`LOGIN_SYSTEM_UNKNOWN` |400 |`ErrorCodeContractTests.FR31_applicationLoginTargets`
+|`LOGIN_TARGET_NOT_IN_SYSTEMS` |400 |`ApplicationIdentityTests.FR31_loginRejectsBadCredentialsAndSystems`、`ErrorCodeContractTests.FR31_applicationLoginTargets`
+|`PASSWORD_POLICY_VIOLATION` |400 |`ErrorCodeContractTests.FR02_passwordChangeCodes`、`ErrorCodeContractTests.FR03_userCreationCodes`
+|`PERMISSION_CODE_EXISTS` |409 |`ErrorCodeContractTests.FR08_permissionTreeCodes`
+|`PERMISSION_CYCLE` |400 |`ErrorCodeContractTests.FR08_permissionTreeCodes`
+|`PERMISSION_HAS_CHILDREN` |409 |`ErrorCodeContractTests.FR08_permissionTreeCodes`
+|`PERMISSION_IN_USE` |409 |`ErrorCodeContractTests.FR08_permissionTreeCodes`
+|`PERMISSION_NOT_FOUND` |404 |`ErrorCodeContractTests.NFR07_everyByIdEndpointRejectsMissingIds`
+|`PERMISSION_PARENT_INVALID` |400 |`ErrorCodeContractTests.FR08_permissionTreeCodes`
+|`ROLE_CODE_EXISTS` |409 |`ErrorCodeContractTests.FR07_roleCodes`
+|`ROLE_DISABLED` |400 |`ErrorCodeContractTests.FR18_hierarchyCodes`
+|`ROLE_HAS_INHERITANCE` |409 |`ErrorCodeContractTests.FR07_roleCodes`
+|`ROLE_INHERITANCE_CYCLE` |400 |`ErrorCodeContractTests.FR18_hierarchyCodes`
+|`ROLE_IN_USE` |409 |`ErrorCodeContractTests.FR07_roleCodes`
+|`ROLE_NOT_FOUND` |404 |`ErrorCodeContractTests.NFR07_everyByIdEndpointRejectsMissingIds`
+|`ROLE_SELF_INHERITANCE` |400 |`ErrorCodeContractTests.FR18_hierarchyCodes`
+|`SYNC_ADMINISTRATOR_CONFLICT` |409 |`DirectorySyncTests.FR25_administratorConflictRollsBackEverything`
+|`SYNC_PREVIEW_MISMATCH` |400 |`DirectorySyncTests.FR25_digestMustMatchFileAndRule`
+|`SYNC_ROLE_NOT_FOUND` |400 |`DirectorySyncTests.FR24_invalidSheetsAreRejectedWithRowNumbers`
+|`SYSTEM_CODE_EXISTS` |409 |`ErrorCodeContractTests.FR06_systemCodes`
+|`SYSTEM_IN_USE` |409 |`ErrorCodeContractTests.FR06_systemCodes`
+|`SYSTEM_NOT_FOUND` |404 |`ErrorCodeContractTests.FR06_systemCodes`、`ErrorCodeContractTests.NFR07_everyByIdEndpointRejectsMissingIds`
+|`UNAUTHORIZED` |401 |`ApplicationIdentityTests.FR27_disabledApplicationAndMissingToken`、`ApplicationIdentityTests.FR31_loginRejectsBadCredentialsAndSystems`、`ErrorCodeContractTests.FR02_passwordChangeCodes`、`ErrorCodeContractTests.NFR01_authenticationAndAuthorizationCodes`
+|`USERNAME_EXISTS` |409 |`ErrorCodeContractTests.FR03_userCreationCodes`
+|`USER_NOT_FOUND` |404 |`ErrorCodeContractTests.NFR07_everyByIdEndpointRejectsMissingIds`
+|===
+
+// end::generated[]
+
+== 跨系统联调记录（2026-11-21）
+
+环境：本机 MySQL 8.4 容器；权限系统后端以 `prod` 配置连接 MySQL（`ddl-auto=validate`）；课程系统前后端按老师仓库 master（e9a6dff）原样构建，不打补丁。两种设计路线各完整跑一遍：
 
 [cols="4,1",options="header"]
 |===
 |检查项 |结果
-|`register-course-app.py` 登记 `cpm`：17 个菜单/按钮、17 个 API 资源、4 个角色、`course-admin → teacher` 继承；重复执行无副作用 |通过
-|`verify-course-integration.py`：`/auth/me` 继承角色；课程系统按 `TEC`/`TC`/`CV` 放行或拒绝；撤回按钮后同一 Token 下一次请求 403；解除继承后角色即时变化；审计写入与课程端查询 |19/19 通过
-|课程前端：未登录访问被引导到统一身份登录页；“课程督导”登录后“管理”组只亮“课程、日志”（link:evidence/course-observer-menus-before.jpg[截图]）；权限系统给该角色加“学期管理”后刷新，“学期”变为可用（link:evidence/course-observer-menus-after-grant.png[截图]） |通过（浏览器核对）
-|权限系统前端：切换“API 资源”“角色继承”菜单，后端日志出现 `[menu=resources]`、`[menu=hierarchy]` 及 Controller、Service 两层日志（link:evidence/menu-switch-hierarchy-log.txt[日志摘录]、link:evidence/rbac-api-resources-with-codes.jpg[API 资源截图]、link:evidence/rbac-course-admin-inherits-teacher.jpg[继承截图]） |通过（浏览器核对）
+|`register-course-app.py` 登记课程应用的菜单、按钮、API 资源与角色，并用员工信息表同步 10000 名人员、120 个部门、10000 条角色授权；重复执行无变化 |通过（结构化、DDD）
+|`verify-course-integration.py`：统一身份登录与 `/auth/me`、部门与人员目录、课程系统按权限码放行或拒绝、撤回授权后同一令牌下一次请求 403、审计写入与查询 |42/42 通过（结构化、DDD）
+|`frontend/tests/course-walkthrough.cjs`：课程管理员、教师登录课程前端，菜单随权限系统授权变化；权限系统审计页能看到课程应用写入的记录（13 张截图，见 link:evidence/course-integration/[evidence/course-integration]） |通过（结构化、DDD）
+|权限系统前端 5 组浏览器测试（`npm run test:e2e`）：角色继承与权限来源、菜单随授权显示、浏览器前进后退、员工信息同步、资源管理与授权工作台 |5/5 通过（结构化、DDD）
+|日志检查：后端、课程系统、脚本输出中没有令牌和密码 |通过
 |===
 
-限制：本机没有课程要求的 CloneFactory 0.0.2，课程后端以仓库附带的 0.0.1-SNAPSHOT 构建，课程系统内部 record 拷贝为空，导致“新建学期”等落库返回 409（鉴权已通过）；课程侧建课、加学生等写审计链路未在本机走通，改为按课程审计客户端相同的请求格式直接写入验证。正式部署应使用课程提供的 CloneFactory 0.0.2 构建课程后端。
+部署后的公网核对见 link:05-deployment.adoc[部署说明]。

@@ -34,6 +34,7 @@ public class ApiAccessConfig implements WebMvcConfigurer {
   private final AuthorizationUseCase authorization;
   private final String[] allowedOrigins;
 
+  /** {@code permission.cors.allowed-origins} 为逗号分隔的来源列表，空白项忽略；未配置时不开放跨域。 */
   public ApiAccessConfig(
       AuthenticationUseCase auth,
       AuthorizationUseCase authorization,
@@ -72,6 +73,22 @@ public class ApiAccessConfig implements WebMvcConfigurer {
     return route.equals("/api/me") || route.startsWith("/api/me/") || route.startsWith("/api/apps/");
   }
 
+  /**
+   * 为 {@code /api/**} 注册鉴权拦截器；控制台登录 {@code /api/auth/login} 与接入应用登录
+   * {@code /api/apps/{应用编码}/auth/login} 不经过拦截器。
+   *
+   * <p>拦截器依次处理：
+   *
+   * <ol>
+   *   <li>响应头加 {@code Cache-Control: no-store}；处理器不是 Controller 方法时直接放行；
+   *   <li>校验 Bearer 令牌、账号状态、凭证版本，并要求令牌 {@code aud} 包含 {@code audience} 算出的系统，
+   *       失败返回 401 {@code UNAUTHORIZED}；
+   *   <li>把用户 ID 写入 MDC，把 {@link CurrentUser} 写入请求属性；
+   *   <li>标注 {@link AppAccess} 的方法按该应用的 API 资源授权，路径去掉 {@code /api/apps/{应用编码}} 前缀；
+   *       其余个人接口与 {@code /api/apps/**} 接口只要求登录；其他接口按 {@link BusinessAccess} 登记的应用授权；
+   *       没有登记访问规则的接口一律拒绝。授权失败返回 403 {@code FORBIDDEN}。
+   * </ol>
+   */
   @Override
   public void addInterceptors(InterceptorRegistry registry) {
     registry

@@ -15,6 +15,7 @@ import com.cdwy.permission.service.role.RoleService;
 import com.cdwy.permission.service.user.UserService;
 import java.time.Instant;
 import java.util.*;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.server.PathContainer;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +23,7 @@ import org.springframework.web.util.pattern.*;
 
 /** RBAC1：合并直接及继承角色权限，独立 API 绑定鉴权；导航祖先只作容器。 */
 @Service
+@RequiredArgsConstructor
 @org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(
     name = "app.backend-strategy",
     havingValue = "structured",
@@ -44,37 +46,25 @@ public class AuthorizationService implements AuthorizationUseCase {
   private final PermissionService permissions;
   private final com.cdwy.permission.repository.system.BusinessSystemRepository systems;
 
-  public AuthorizationService(
-      RoleHierarchyService hierarchy,
-      UserRoleRepository userRoles,
-      RolePermissionRepository rolePermissions,
-      PermissionApiRepository bindings,
-      ApiResourceRepository resources,
-      UserService users,
-      RoleService roles,
-      PermissionService permissions,
-      com.cdwy.permission.repository.system.BusinessSystemRepository systems) {
-    this.systems = systems;
-    this.hierarchy = hierarchy;
-    this.userRoles = userRoles;
-    this.rolePermissions = rolePermissions;
-    this.bindings = bindings;
-    this.resources = resources;
-    this.users = users;
-    this.roles = roles;
-    this.permissions = permissions;
-  }
-
+  /**
+   * 给用户分配角色：两端须存在（{@code USER_NOT_FOUND}、{@code ROLE_NOT_FOUND}）；账号已停用或已过期、
+   * 角色已停用时抛 {@code GRANT_TARGET_INACTIVE}；已分配时幂等。授权不写入令牌，下一次请求即生效，
+   * 无需重新登录；不写审计日志。
+   */
   @Transactional
   public void grantRole(Long userId, Long roleId) {
     UserAccount user = users.require(userId);
     Role role = roles.require(roleId);
     if (!user.usable(Instant.now()) || !role.getEnabled())
-      throw new IllegalArgumentException("不能给失效账号或停用角色新增授权");
+      throw new InvalidDataException("GRANT_TARGET_INACTIVE", "不能给失效账号或停用角色新增授权");
     if (!userRoles.existsByUser_IdAndRole_Id(userId, roleId))
       userRoles.save(new UserRole(user, role));
   }
 
+  /**
+   * 撤销用户的一条直接角色分配：两端须存在（{@code USER_NOT_FOUND}、{@code ROLE_NOT_FOUND}），未分配时幂等，
+   * 不看启停状态。经其他角色得到的相同权限仍保留；已签发令牌的下一次请求即按新授权鉴权，不写审计日志。
+   */
   @Transactional
   public void revokeRole(Long userId, Long roleId) {
     users.require(userId);
@@ -82,16 +72,25 @@ public class AuthorizationService implements AuthorizationUseCase {
     userRoles.deleteByUser_IdAndRole_Id(userId, roleId);
   }
 
+  /**
+   * 给角色授予菜单或按钮：两端须存在（{@code ROLE_NOT_FOUND}、{@code PERMISSION_NOT_FOUND}）；角色已停用，
+   * 或权限本身、任一上级失效、所属应用停用时抛 {@code GRANT_TARGET_INACTIVE}；已授予时幂等。
+   * 只授予该节点本身，不连带上级或下级；下一次请求即生效，不写审计日志。
+   */
   @Transactional
   public void grantPermission(Long roleId, Long permissionId) {
     Role role = roles.require(roleId);
     Permission p = permissions.require(permissionId);
     if (!role.getEnabled() || !PermissionService.usable(p))
-      throw new IllegalArgumentException("不能新增失效角色或权限的授权");
+      throw new InvalidDataException("GRANT_TARGET_INACTIVE", "不能新增失效角色或权限的授权");
     if (!rolePermissions.existsByRole_IdAndPermission_Id(roleId, permissionId))
       rolePermissions.save(new RolePermission(role, p));
   }
 
+  /**
+   * 撤销角色的一项直接权限：两端须存在（{@code ROLE_NOT_FOUND}、{@code PERMISSION_NOT_FOUND}），未授予时幂等。
+   * 继承该角色的角色同时失去这一来源，下一次请求即生效；不写审计日志。
+   */
   @Transactional
   public void revokePermission(Long roleId, Long permissionId) {
     roles.require(roleId);
@@ -99,6 +98,7 @@ public class AuthorizationService implements AuthorizationUseCase {
     rolePermissions.deleteByRole_IdAndPermission_Id(roleId, permissionId);
   }
 
+  /** 用户直接分配的角色，不含继承得到的、含已停用的；用户不存在抛 {@code USER_NOT_FOUND}。 */
   public List<RoleData.View> roles(Long userId) {
     users.require(userId);
     return userRoles.findAllByUser_Id(userId).stream()
@@ -106,6 +106,7 @@ public class AuthorizationService implements AuthorizationUseCase {
         .toList();
   }
 
+  /** 角色直接授予的菜单与按钮，不含继承来的、含已失效的；角色不存在抛 {@code ROLE_NOT_FOUND}。 */
   public List<PermissionData.View> rolePermissions(Long roleId) {
     roles.require(roleId);
     return rolePermissions.findAllByRole_Id(roleId).stream()
@@ -174,10 +175,12 @@ public class AuthorizationService implements AuthorizationUseCase {
         .toList();
   }
 
+  /** 有效权限的结果视图，规则同 {@link #effective}：账号不可用时为空，用户不存在抛 {@code USER_NOT_FOUND}。 */
   public List<PermissionData.View> effectiveViews(Long id) {
     return effective(id).stream().map(PermissionService::view).toList();
   }
 
+  /** 用户在全部应用内的有效菜单树（含按钮）：补出的祖先只作导航容器（{@code granted} 为 false），不代表拥有其授权。 */
   public List<PermissionData.Tree> menu(Long id) {
     return PermissionService.tree(effective(id));
   }
@@ -194,6 +197,13 @@ public class AuthorizationService implements AuthorizationUseCase {
             .toList());
   }
 
+  /**
+   * 接口鉴权，API 拦截器对需要按 RBAC 授权的每个请求调用；管理员没有豁免，令牌也不携带授权，每次按当前数据计算。
+   *
+   * <p>在该应用（须启用）同一 HTTP 方法的 API 资源中选路径匹配且最具体的一项：没有匹配时拒绝；该项已停用时直接拒绝，
+   * 不回退到更宽泛的模式；用户有效权限中没有任何一项绑定该资源时拒绝。拒绝均抛 {@link ForbiddenException}
+   * （错误码 {@code FORBIDDEN}），通过时正常返回。
+   */
   public void requireApi(Long userId, String systemCode, String method, String path) {
     List<ApiResource> candidates =
         resources.findAllBySystem_CodeAndMethod(systemCode, method).stream()

@@ -22,7 +22,7 @@ onMounted(async () => {
       ...(['systems', 'roles', 'permissions', 'resources', 'edges'] as const).map((key) =>
         load([key]),
       ),
-      usersApi.list(0, 1).then((page) => (userTotal.value = page.total)),
+      usersApi.list(1, 1).then((page) => (userTotal.value = page.total)),
       auditApi.list(SELF_SYSTEM, 1, 6).then((page) => (recent.value = page.items)),
     ]);
   } finally {

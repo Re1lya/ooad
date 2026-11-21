@@ -8,7 +8,7 @@ public final class LikePattern {
   public static String of(String keyword) {
     if (keyword == null || keyword.isBlank()) return null;
     String escaped =
-        keyword.trim().toLowerCase().replace("!", "!!").replace("%", "!%").replace("_", "!_");
+        keyword.trim().toLowerCase(java.util.Locale.ROOT).replace("!", "!!").replace("%", "!%").replace("_", "!_");
     return "%" + escaped + "%";
   }
 }

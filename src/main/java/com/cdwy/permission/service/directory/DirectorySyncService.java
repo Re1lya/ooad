@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.cdwy.permission.service.port.error.InvalidDataException;
 
 /**
  * 结构化事务脚本：员工信息同步按“读表 → 角色 → 部门 → 人员 → 角色补授”的固定步骤处理，直接使用 Spring Data Repository。
@@ -51,6 +52,10 @@ public class DirectorySyncService implements DirectorySyncUseCase {
     return "structured";
   }
 
+  /**
+   * 在只读事务内走与确认相同的步骤，只计数不写入。规则中的角色不存在抛 {@code SYNC_ROLE_NOT_FOUND}（400），表中用户名属于管理员账号抛
+   * {@code SYNC_ADMINISTRATOR_CONFLICT}（409）；文件不合法时由读取器抛 {@code EXCEL_INVALID} 或 {@code EMPLOYEE_SHEET_INVALID}（400）。
+   */
   @Override
   @Transactional(readOnly = true)
   public DirectoryData.Summary preview(byte[] workbook, DirectoryData.Rule rule) {
@@ -58,6 +63,7 @@ public class DirectorySyncService implements DirectorySyncUseCase {
     return run(sheet, rule, DirectoryData.digest(sheet, rule), false);
   }
 
+  /** 重新读取文件并计算摘要，与预览返回的不一致抛 {@code SYNC_PREVIEW_MISMATCH}（400）；其余校验同预览，任何失败都整批回滚。 */
   @Override
   @Transactional
   public DirectoryData.Summary commit(byte[] workbook, DirectoryData.Rule rule, String digest) {
@@ -80,7 +86,7 @@ public class DirectorySyncService implements DirectorySyncUseCase {
             code,
             roles
                 .findByCode(code)
-                .orElseThrow(() -> new IllegalArgumentException("角色不存在：" + code)));
+                .orElseThrow(() -> new InvalidDataException("SYNC_ROLE_NOT_FOUND", "角色不存在：" + code)));
 
     // 步骤 2：分公司为根部门、部门为其子部门，按“上级 + 名称”复用已有部门。
     Map<String, Department> existing = new HashMap<>();
@@ -129,7 +135,8 @@ public class DirectorySyncService implements DirectorySyncUseCase {
         people.put(row.username(), user);
         created.add(user);
       } else if (user.getAdministrator())
-        throw new ConflictException("用户名 " + row.username() + " 是管理员账号，员工信息不能覆盖它");
+        throw new ConflictException(
+            "SYNC_ADMINISTRATOR_CONFLICT", "用户名 " + row.username() + " 是管理员账号，员工信息不能覆盖它");
       else if (differs(user, row, department)) {
         if (write) apply(user, row, department);
         usersUpdated++;
@@ -180,11 +187,12 @@ public class DirectorySyncService implements DirectorySyncUseCase {
     value.setName(name);
     value.setParent(parent);
     if (!write) return value;
-    departments.saveAndFlush(value);
+    departments.save(value);
     value.setCode(DepartmentData.defaultCode(value.getId()));
     return value;
   }
 
+  /** 来源字段（姓名、部门、分公司、来源部门、岗位、电话）是否与员工表不同，决定计入“更新”还是“未变化”。 */
   private static boolean differs(UserAccount user, DirectoryData.Row row, Department department) {
     return !Objects.equals(user.getDisplayName(), row.name())
         || !Objects.equals(user.getDepartmentId(), department.getId())
@@ -194,6 +202,7 @@ public class DirectorySyncService implements DirectorySyncUseCase {
         || !Objects.equals(user.getPhone(), row.phone());
   }
 
+  /** 只覆盖员工表的来源字段；密码、启用状态、人员类型、有效期和角色授权保持不变。 */
   private static void apply(UserAccount user, DirectoryData.Row row, Department department) {
     user.setDisplayName(row.name());
     user.setDepartment(department);

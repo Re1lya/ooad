@@ -15,11 +15,13 @@ public final class ConsoleCatalog {
   /** 应用编码，与 JWT 中控制台令牌的 aud 一致。 */
   public static final String SYSTEM = JwtTokenService.CONSOLE_AUDIENCE;
 
+  /** rbac 应用首次登记时的名称；之后管理员改的名称不会被覆盖。 */
   public static final String SYSTEM_NAME = "权限管理系统";
 
   /** 内置管理员角色：拥有 rbac 应用的全部菜单与按钮，分配给启动管理员。 */
   public static final String ADMIN_ROLE = "rbac-admin";
 
+  /** 内置管理员角色首次创建时的名称。 */
   public static final String ADMIN_ROLE_NAME = "权限管理员";
 
   /** 菜单或按钮；按钮的 parent 是所属菜单的编码。 */
@@ -40,6 +42,7 @@ public final class ConsoleCatalog {
     return new Api(name, method, path, List.of(grantedBy));
   }
 
+  /** 控制台的菜单与按钮。顺序有意义：按钮必须排在所属菜单之后，登记时按顺序查找上级。 */
   public static final List<Entry> ENTRIES =
       List.of(
           menu("rbac.overview", "工作台", "/overview"),
@@ -65,6 +68,10 @@ public final class ConsoleCatalog {
 
   private static final String USERS = "rbac.users", USERS_W = "rbac.users.write";
 
+  /**
+   * 控制台的管理接口及其绑定的菜单或按钮。按应用 rbac 鉴权的控制器接口（{@code /api/me} 个人接口除外）必须与本清单一一对应，
+   * 由测试 FR-38 校验；未登记的接口请求一律拒绝（403）。
+   */
   public static final List<Api> APIS =
       List.of(
           api("系统信息", "GET", "/api/system-info", "rbac.overview"),

@@ -5,9 +5,11 @@ import com.cdwy.permission.service.ddd.domain.repository.*;
 import com.cdwy.permission.service.ddd.domain.repository.AssignmentRepository.Link;
 import com.cdwy.permission.service.port.auth.CredentialGateway;
 import com.cdwy.permission.service.port.data.IdentityData;
+import com.cdwy.permission.service.port.data.AuditData;
 import com.cdwy.permission.service.port.data.PermissionData;
 import com.cdwy.permission.service.port.data.UserData;
 import com.cdwy.permission.service.port.error.ResourceNotFoundException;
+import com.cdwy.permission.service.port.error.ForbiddenException;
 import com.cdwy.permission.service.port.identity.ApplicationIdentityUseCase;
 import java.util.*;
 import lombok.RequiredArgsConstructor;
@@ -42,6 +44,7 @@ public class DddApplicationIdentityService implements ApplicationIdentityUseCase
   private final AssignmentRepository assignments;
   private final DepartmentDirectory departments;
   private final CredentialGateway credentials;
+  private final com.cdwy.permission.service.port.audit.AuditTrailUseCase audit;
 
   /** 返回实际装载模式。 */
   @Override
@@ -148,7 +151,7 @@ public class DddApplicationIdentityService implements ApplicationIdentityUseCase
     system(systemCode);
     if (parentId != null && departments.find(parentId).isEmpty()) throw missingDepartment();
     UserData.Page<DepartmentNode> rows =
-        departments.level(parentId, query.keyword(), query.page() - 1, query.pageSize());
+        departments.level(parentId, query.keyword(), query.page(), query.pageSize());
     Set<Long> parents =
         departments.withChildren(rows.items().stream().map(DepartmentNode::getId).toList());
     return new IdentityData.Page<>(
@@ -174,7 +177,7 @@ public class DddApplicationIdentityService implements ApplicationIdentityUseCase
     system(systemCode);
     DepartmentNode department = departments.find(departmentId).orElseThrow(this::missingDepartment);
     UserData.Page<Account> rows =
-        accounts.members(departmentId, query.keyword(), query.page() - 1, query.pageSize());
+        accounts.members(departmentId, query.keyword(), query.page(), query.pageSize());
     return new IdentityData.Page<>(
         query.page(),
         query.pageSize(),
@@ -201,12 +204,32 @@ public class DddApplicationIdentityService implements ApplicationIdentityUseCase
         assignments.rolePermissions());
   }
 
+  /** 应用启用且账号可用（启用、未过期）时，用户在该应用内才有任何角色与权限。 */
   private boolean usable(ManagedSystem app, Account account) {
     return app.getEnabled() && account.usable(credentials.now());
   }
 
+  /** 应用存在 → 管理员直接放行，否则须在本应用内至少拥有一项有效权限 → 查询。 */
+  @Override
+  public AuditData.Page auditLogs(
+      Long userId, boolean administrator, String systemCode, AuditData.Query query) {
+    system(systemCode);
+    if (!administrator && current(userId, systemCode).permissions().isEmpty())
+      throw new ForbiddenException("当前用户在该应用内没有任何有效权限，不能查看审计日志");
+    return audit.query(systemCode, query);
+  }
+
+  /** 应用存在 → 账号存在 → 写入（操作人快照由审计服务记录）。 */
+  @Override
+  @Transactional
+  public AuditData.Entry writeAuditLog(Long userId, String systemCode, AuditData.Write write) {
+    system(systemCode);
+    account(userId);
+    return audit.write(systemCode, userId, write);
+  }
+
   private Account account(Long id) {
-    return accounts.find(id).orElseThrow(() -> new ResourceNotFoundException("用户不存在"));
+    return accounts.find(id).orElseThrow(() -> new ResourceNotFoundException("USER_NOT_FOUND", "用户不存在"));
   }
 
   private ManagedSystem system(String code) {
@@ -217,6 +240,6 @@ public class DddApplicationIdentityService implements ApplicationIdentityUseCase
   }
 
   private ResourceNotFoundException missingDepartment() {
-    return new ResourceNotFoundException("DEPARTMENT_NOT_FOUND", "部门不存在");
+    return new ResourceNotFoundException("IDENTITY_DEPARTMENT_NOT_FOUND", "部门不存在");
   }
 }

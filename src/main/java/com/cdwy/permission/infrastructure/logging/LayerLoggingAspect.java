@@ -22,7 +22,9 @@ import org.springframework.stereotype.Component;
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class LayerLoggingAspect {
+  /** 字符串参数最多输出的字符数，超出部分截断。 */
   private static final int MAX_TEXT = 64;
+  /** 每个请求都会调用的方法名（令牌校验、取当前时间），与基础设施层一样只在 DEBUG 输出。 */
   private static final java.util.Set<String> PER_REQUEST = java.util.Set.of("verify", "resolve", "now");
 
   /** 记录各层方法完成、耗时与失败原因。 */
@@ -92,6 +94,7 @@ public class LayerLoggingAspect {
     return String.join(", ", parts);
   }
 
+  /** 参数名（不区分大小写）含 password、secret、token 或 credential 时视为敏感。 */
   private static boolean sensitiveName(String name) {
     String lower = name.toLowerCase(Locale.ROOT);
     return SENSITIVE_PARAMETERS.stream().anyMatch(lower::contains);
@@ -100,19 +103,29 @@ public class LayerLoggingAspect {
   private static final java.util.List<String> SENSITIVE_PARAMETERS =
       java.util.List.of("password", "secret", "token", "credential");
 
+  /** 方法名（不区分大小写）含其中任一词时，不输出任何参数。 */
   private static final java.util.List<String> SENSITIVE_METHODS =
       java.util.List.of(
           "password", "login", "resolve", "verify", "token", "issue", "secret", "credential");
+  /** 形似 Bearer 认证头或 JWT 的字符串，输出时打码。 */
   private static final java.util.regex.Pattern TOKEN_LIKE =
       java.util.regex.Pattern.compile("(?i)^bearer\\s.*|^[A-Za-z0-9_-]{8,}\\.[A-Za-z0-9_-]{8,}\\..*");
 
+  /** 换行等控制字符：写日志前替换掉，防止参数伪造日志行。 */
+  private static final java.util.regex.Pattern CONTROL = java.util.regex.Pattern.compile("\\p{Cntrl}");
+
+  /**
+   * 单个参数的日志文本：数字、布尔、枚举原样输出；字符串形似令牌时打码，过长时截断，控制字符替换为 {@code ?}；请求对象输出
+   * {@code request}，其余只输出类型名。
+   */
   private static String describe(Object value) {
     if (value == null) return "null";
     if (value instanceof Number || value instanceof Boolean || value instanceof Enum<?>)
       return String.valueOf(value);
     if (value instanceof CharSequence text) {
       if (TOKEN_LIKE.matcher(text).matches()) return "***";
-      return text.length() <= MAX_TEXT ? "\"" + text + "\"" : "\"" + text.subSequence(0, MAX_TEXT) + "…\"";
+      String shown = text.length() <= MAX_TEXT ? text.toString() : text.subSequence(0, MAX_TEXT) + "…";
+      return "\"" + CONTROL.matcher(shown).replaceAll("?") + "\"";
     }
     if (value instanceof jakarta.servlet.ServletRequest) return "request";
     return value.getClass().getSimpleName();

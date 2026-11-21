@@ -30,3 +30,4 @@ public @interface CopyFrom {
         Class<?>[] value();
     }
 }
+

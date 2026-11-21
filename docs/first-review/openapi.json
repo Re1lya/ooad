@@ -3,7 +3,7 @@
   "info": {
     "title": "Cdwy 统一权限管理系统 · RBAC1 增强",
     "version": "2026.11.18",
-    "description": "当前实现61个HTTP操作；RBAC1核心双实现、课程项目管理系统接入（统一身份、审计）、三表导入与无登录会话JWT。"
+    "description": "当前实现66个HTTP操作；RBAC1核心双实现、课程项目管理系统接入（统一身份、审计）、三表导入与无登录会话JWT。"
   },
   "servers": [
     {
@@ -11,6 +11,104 @@
     }
   ],
   "paths": {
+    "/api/apps/{systemCode}/auth/api-permissions/{operationId}": {
+      "get": {
+        "summary": "校验接口调用权限",
+        "description": "按 operationId 判断能否调用接口；未登记返回 404 API_OPERATION_NOT_FOUND。",
+        "operationId": "ApplicationIdentityController_api",
+        "tags": [
+          "ApplicationIdentity"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-access-scope": "已登录",
+        "x-source": "src/main/java/com/cdwy/permission/controller/identity/ApplicationIdentityController.java#api",
+        "responses": {
+          "200": {
+            "description": "校验接口调用权限成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiAuthorityCheck"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数或业务规则不合法",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token缺失、过期或账号凭证失效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "缺少管理员身份或业务授权",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "资源不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "唯一性或关联约束冲突",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "systemCode",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "operationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ]
+      }
+    },
     "/api/apps/{systemCode}/auth/audit-logs": {
       "get": {
         "summary": "查询接入应用审计记录",
@@ -267,6 +365,340 @@
         }
       }
     },
+    "/api/apps/{systemCode}/auth/departments": {
+      "get": {
+        "summary": "逐层查询部门",
+        "description": "不传 parentId 为根部门；page 从 1 开始，pageSize 1–100；上级部门不存在返回 404。",
+        "operationId": "ApplicationIdentityController_departments",
+        "tags": [
+          "ApplicationIdentity"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-access-scope": "业务授权",
+        "x-source": "src/main/java/com/cdwy/permission/controller/identity/ApplicationIdentityController.java#departments",
+        "responses": {
+          "200": {
+            "description": "逐层查询部门成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdentityDepartmentPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数或业务规则不合法",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token缺失、过期或账号凭证失效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "缺少管理员身份或业务授权",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "资源不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "唯一性或关联约束冲突",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "systemCode",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/api/apps/{systemCode}/auth/departments/{departmentId}/users": {
+      "get": {
+        "summary": "查询部门下的人员",
+        "description": "按工号或姓名查询，不含联系方式；部门不存在返回 404 IDENTITY_DEPARTMENT_NOT_FOUND。",
+        "operationId": "ApplicationIdentityController_departmentUsers",
+        "tags": [
+          "ApplicationIdentity"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-access-scope": "业务授权",
+        "x-source": "src/main/java/com/cdwy/permission/controller/identity/ApplicationIdentityController.java#departmentUsers",
+        "responses": {
+          "200": {
+            "description": "查询部门下的人员成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdentityDepartmentUserPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数或业务规则不合法",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token缺失、过期或账号凭证失效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "缺少管理员身份或业务授权",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "资源不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "唯一性或关联约束冲突",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "systemCode",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "departmentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ]
+      }
+    },
+    "/api/apps/{systemCode}/auth/login": {
+      "post": {
+        "summary": "接入应用登录",
+        "description": "用学号或工号与密码登录；systems 必须包含当前应用（LOGIN_TARGET_NOT_IN_SYSTEMS）且都已登记（LOGIN_SYSTEM_UNKNOWN），签发的令牌 aud 为 systems。",
+        "operationId": "ApplicationIdentityController_login",
+        "tags": [
+          "ApplicationIdentity"
+        ],
+        "security": [],
+        "x-access-scope": "公开",
+        "x-source": "src/main/java/com/cdwy/permission/controller/identity/ApplicationIdentityController.java#login",
+        "responses": {
+          "200": {
+            "description": "接入应用登录成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdentityToken"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数或业务规则不合法",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token缺失、过期或账号凭证失效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "systemCode",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IdentityLogin"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/apps/{systemCode}/auth/logout": {
+      "post": {
+        "summary": "接入应用退出",
+        "description": "本人已签发的令牌全部失效（凭证版本加一，不保存令牌）。",
+        "operationId": "ApplicationIdentityController_logout",
+        "tags": [
+          "ApplicationIdentity"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-access-scope": "已登录",
+        "x-source": "src/main/java/com/cdwy/permission/controller/identity/ApplicationIdentityController.java#logout",
+        "responses": {
+          "204": {
+            "description": "无响应体"
+          },
+          "400": {
+            "description": "参数或业务规则不合法",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token缺失、过期或账号凭证失效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "缺少管理员身份或业务授权",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "资源不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "唯一性或关联约束冲突",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "systemCode",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
     "/api/apps/{systemCode}/auth/me": {
       "get": {
         "summary": "接入应用查询当前身份",
@@ -356,11 +788,11 @@
         ]
       }
     },
-    "/api/apps/{systemCode}/identity/users/{userId}": {
+    "/api/apps/{systemCode}/auth/permissions/{permission}": {
       "get": {
-        "summary": "接入应用按统一身份查人",
-        "description": "按登录名查询姓名与工号，供课程系统登记教师；应用或用户不存在返回404。",
-        "operationId": "ApplicationIdentityController_user",
+        "summary": "校验前端权限码",
+        "description": "接入应用前端切换路由时判断菜单或按钮权限，只返回 allowed。",
+        "operationId": "ApplicationIdentityController_permission",
         "tags": [
           "ApplicationIdentity"
         ],
@@ -370,10 +802,108 @@
           }
         ],
         "x-access-scope": "已登录",
+        "x-source": "src/main/java/com/cdwy/permission/controller/identity/ApplicationIdentityController.java#permission",
+        "responses": {
+          "200": {
+            "description": "校验前端权限码成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PermissionCheck"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数或业务规则不合法",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token缺失、过期或账号凭证失效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "缺少管理员身份或业务授权",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "资源不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "唯一性或关联约束冲突",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "systemCode",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "permission",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ]
+      }
+    },
+    "/api/apps/{systemCode}/auth/users/{userId}": {
+      "get": {
+        "summary": "按统一身份查人",
+        "description": "按工号或学号查询姓名，供课程系统登记教师；用户不存在返回 404 IDENTITY_USER_NOT_FOUND。",
+        "operationId": "ApplicationIdentityController_user",
+        "tags": [
+          "ApplicationIdentity"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-access-scope": "业务授权",
         "x-source": "src/main/java/com/cdwy/permission/controller/identity/ApplicationIdentityController.java#user",
         "responses": {
           "200": {
-            "description": "接入应用按统一身份查人成功",
+            "description": "按统一身份查人成功",
             "content": {
               "application/json": {
                 "schema": {
@@ -621,88 +1151,6 @@
               "example": {
                 "username": "admin",
                 "password": "<启动时设置的密码>"
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/demo/courses": {
-      "get": {
-        "summary": "课程API鉴权示例",
-        "description": "仅为示例静态课程；需登记course应用的GET /api/demo/courses资源、绑定权限并分配角色。",
-        "operationId": "CourseDemoController_list",
-        "tags": [
-          "CourseDemo"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "x-access-scope": "业务授权",
-        "x-source": "src/main/java/com/cdwy/permission/controller/demo/CourseDemoController.java#list",
-        "responses": {
-          "200": {
-            "description": "课程API鉴权示例成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/CourseExample"
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "参数或业务规则不合法",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Token缺失、过期或账号凭证失效",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "缺少管理员身份或业务授权",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "资源不存在",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "唯一性或关联约束冲突",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
               }
             }
           }
@@ -1067,13 +1515,13 @@
         }
       }
     },
-    "/api/imports/company/commit": {
+    "/api/directory/sync/commit": {
       "post": {
-        "summary": "确认导入公司三表",
-        "description": "管理员上传员工、部门、功能权限三张XLSX；核对原文件摘要后事务导入；自然键复用、来源字段保留；不自动启用账号或授予个人角色。",
-        "operationId": "CompanyImportController_commit",
+        "summary": "确认员工信息同步",
+        "description": "管理员上传课程系统提供的员工信息表（XLSX）及总公司、分公司补授的角色；文件与规则须与预览一致（否则 SYNC_PREVIEW_MISMATCH），在一个事务内建立部门、新建人员（停用）并补授角色；按工号幂等。",
+        "operationId": "DirectorySyncController_commit",
         "tags": [
-          "CompanyImport"
+          "DirectorySync"
         ],
         "security": [
           {
@@ -1081,14 +1529,14 @@
           }
         ],
         "x-access-scope": "管理员",
-        "x-source": "src/main/java/com/cdwy/permission/controller/importing/CompanyImportController.java#commit",
+        "x-source": "src/main/java/com/cdwy/permission/controller/directory/DirectorySyncController.java#commit",
         "responses": {
           "200": {
-            "description": "确认导入公司三表成功",
+            "description": "确认员工信息同步成功",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ImportSummary"
+                  "$ref": "#/components/schemas/SyncSummary"
                 }
               }
             }
@@ -1147,22 +1595,22 @@
         "requestBody": {
           "required": true,
           "content": {
-            "multipart/form-data": {
+            "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ImportCommit"
+                "$ref": "#/components/schemas/SyncCommit"
               }
             }
           }
         }
       }
     },
-    "/api/imports/company/preview": {
+    "/api/directory/sync/preview": {
       "post": {
-        "summary": "预览并校验公司三表",
-        "description": "管理员上传员工、部门、功能权限三张XLSX；只校验并返回摘要，不写入。",
-        "operationId": "CompanyImportController_preview",
+        "summary": "预览员工信息同步",
+        "description": "管理员上传课程系统提供的员工信息表（XLSX）及总公司、分公司补授的角色；逐行校验并只返回变化摘要与文件摘要值，不写入。",
+        "operationId": "DirectorySyncController_preview",
         "tags": [
-          "CompanyImport"
+          "DirectorySync"
         ],
         "security": [
           {
@@ -1170,14 +1618,14 @@
           }
         ],
         "x-access-scope": "管理员",
-        "x-source": "src/main/java/com/cdwy/permission/controller/importing/CompanyImportController.java#preview",
+        "x-source": "src/main/java/com/cdwy/permission/controller/directory/DirectorySyncController.java#preview",
         "responses": {
           "200": {
-            "description": "预览并校验公司三表成功",
+            "description": "预览员工信息同步成功",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ImportSummary"
+                  "$ref": "#/components/schemas/SyncSummary"
                 }
               }
             }
@@ -1236,9 +1684,9 @@
         "requestBody": {
           "required": true,
           "content": {
-            "multipart/form-data": {
+            "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ImportPreview"
+                "$ref": "#/components/schemas/SyncPreview"
               }
             }
           }
@@ -4681,18 +5129,26 @@
             "in": "query",
             "schema": {
               "type": "integer",
-              "minimum": 0,
-              "default": 0
+              "minimum": 1,
+              "default": 1
             }
           },
           {
-            "name": "size",
+            "name": "pageSize",
             "in": "query",
             "schema": {
               "type": "integer",
               "minimum": 1,
               "maximum": 100,
-              "default": 25
+              "default": 20
+            }
+          },
+          {
+            "name": "keyword",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 100
             }
           }
         ]
@@ -5883,21 +6339,21 @@
       "UserPage": {
         "type": "object",
         "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/UserView"
-            }
+          "page": {
+            "type": "integer"
+          },
+          "pageSize": {
+            "type": "integer"
           },
           "total": {
             "type": "integer",
             "format": "int64"
           },
-          "page": {
-            "type": "integer"
-          },
-          "size": {
-            "type": "integer"
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserView"
+            }
           }
         }
       },
@@ -6320,7 +6776,7 @@
       "Error": {
         "type": "object",
         "properties": {
-          "error": {
+          "code": {
             "type": "string"
           },
           "message": {
@@ -6328,7 +6784,7 @@
           }
         },
         "required": [
-          "error",
+          "code",
           "message"
         ]
       },
@@ -6422,40 +6878,45 @@
           }
         }
       },
-      "ImportSummary": {
+      "SyncSummary": {
         "type": "object",
         "properties": {
-          "employees": {
+          "rows": {
             "type": "integer",
             "format": "int64",
             "minimum": 0
           },
-          "departments": {
+          "companies": {
             "type": "integer",
             "format": "int64",
             "minimum": 0
           },
-          "systems": {
+          "departmentsCreated": {
             "type": "integer",
             "format": "int64",
             "minimum": 0
           },
-          "modules": {
+          "departmentsKept": {
             "type": "integer",
             "format": "int64",
             "minimum": 0
           },
-          "functions": {
+          "usersCreated": {
             "type": "integer",
             "format": "int64",
             "minimum": 0
           },
-          "roleTemplates": {
+          "usersUpdated": {
             "type": "integer",
             "format": "int64",
             "minimum": 0
           },
-          "qualifiedDepartments": {
+          "usersUnchanged": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "roleGrants": {
             "type": "integer",
             "format": "int64",
             "minimum": 0
@@ -6463,61 +6924,68 @@
           "digest": {
             "type": "string"
           },
-          "notes": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+          "applied": {
+            "type": "boolean"
           }
         }
       },
-      "ImportPreview": {
+      "SyncPreview": {
         "type": "object",
         "properties": {
           "employees": {
             "type": "string",
             "format": "binary"
           },
-          "departments": {
+          "headOffice": {
             "type": "string",
-            "format": "binary"
+            "maxLength": 64,
+            "default": "总公司"
           },
-          "permissions": {
+          "headOfficeRole": {
             "type": "string",
-            "format": "binary"
+            "maxLength": 64,
+            "nullable": true
+          },
+          "branchRole": {
+            "type": "string",
+            "maxLength": 64,
+            "nullable": true
           }
         },
         "required": [
-          "employees",
-          "departments",
-          "permissions"
+          "employees"
         ]
       },
-      "ImportCommit": {
+      "SyncCommit": {
         "type": "object",
         "properties": {
           "employees": {
             "type": "string",
             "format": "binary"
           },
-          "departments": {
+          "headOffice": {
             "type": "string",
-            "format": "binary"
+            "maxLength": 64,
+            "default": "总公司"
           },
-          "permissions": {
+          "headOfficeRole": {
             "type": "string",
-            "format": "binary"
+            "maxLength": 64,
+            "nullable": true
+          },
+          "branchRole": {
+            "type": "string",
+            "maxLength": 64,
+            "nullable": true
           },
           "digest": {
             "type": "string",
-            "minLength": 64,
-            "maxLength": 64
+            "maxLength": 64,
+            "minLength": 1
           }
         },
         "required": [
           "employees",
-          "departments",
-          "permissions",
           "digest"
         ]
       },
@@ -6538,6 +7006,12 @@
             "items": {
               "type": "string"
             }
+          },
+          "name": {
+            "type": "string"
+          },
+          "no": {
+            "type": "string"
           }
         }
       },
@@ -6552,6 +7026,172 @@
           },
           "name": {
             "type": "string"
+          }
+        }
+      },
+      "IdentityLogin": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 256,
+            "minLength": 1,
+            "format": "password"
+          },
+          "systems": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "required": [
+          "username",
+          "password",
+          "systems"
+        ],
+        "additionalProperties": false
+      },
+      "IdentityToken": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string"
+          },
+          "tokenType": {
+            "type": "string",
+            "enum": [
+              "Bearer"
+            ]
+          },
+          "expiresIn": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "accessToken",
+          "tokenType",
+          "expiresIn"
+        ]
+      },
+      "PermissionCheck": {
+        "type": "object",
+        "properties": {
+          "allowed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "allowed"
+        ]
+      },
+      "ApiAuthorityCheck": {
+        "type": "object",
+        "properties": {
+          "operationId": {
+            "type": "string"
+          },
+          "allowed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "operationId",
+          "allowed"
+        ]
+      },
+      "IdentityDepartment": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "code": {
+            "type": "string",
+            "nullable": true
+          },
+          "name": {
+            "type": "string"
+          },
+          "parentId": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "hasChildren": {
+            "type": "boolean"
+          }
+        }
+      },
+      "IdentityDepartmentPage": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer"
+          },
+          "pageSize": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IdentityDepartment"
+            }
+          }
+        }
+      },
+      "IdentityDepartmentUser": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          },
+          "no": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "departmentId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "departmentName": {
+            "type": "string"
+          }
+        }
+      },
+      "IdentityDepartmentUserPage": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer"
+          },
+          "pageSize": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IdentityDepartmentUser"
+            }
           }
         }
       },

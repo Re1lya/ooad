@@ -2,6 +2,7 @@ package com.cdwy.permission.service.port.identity;
 
 import com.cdwy.permission.service.port.BackendUseCase;
 import com.cdwy.permission.service.port.data.IdentityData;
+import com.cdwy.permission.service.port.data.AuditData;
 
 /**
  * 接入应用身份用例：课程管理系统等接入应用携带用户本人的 JWT，查询该用户在本应用内的有效角色与权限，以及统一身份目录。
@@ -25,7 +26,29 @@ public interface ApplicationIdentityUseCase extends BackendUseCase {
   IdentityData.Page<IdentityData.Department> departments(
       String systemCode, Long parentId, IdentityData.Query query);
 
-  /** 部门下的用户：关键字匹配工号、学号或姓名；数据库分页；部门不存在返回 404 DEPARTMENT_NOT_FOUND。 */
+  /** 部门下的用户：关键字匹配工号、学号或姓名；数据库分页；部门不存在返回 404 IDENTITY_DEPARTMENT_NOT_FOUND。 */
   IdentityData.Page<IdentityData.DepartmentUser> departmentUsers(
       String systemCode, Long departmentId, IdentityData.Query query);
+
+  /**
+   * 查询本应用的审计记录。管理员，或在本应用内至少拥有一项有效权限的用户可以查询，否则返回 403；应用不存在返回 404。
+   *
+   * @param userId 当前用户
+   * @param administrator 当前用户是否为首次管理员
+   * @param systemCode 应用编码
+   * @param query 查询条件
+   * @return 按时间倒序的一页记录
+   */
+  AuditData.Page auditLogs(
+      Long userId, boolean administrator, String systemCode, AuditData.Query query);
+
+  /**
+   * 以当前用户为操作人写入本应用的审计记录；应用不存在返回 404，同一 requestId 只记录一次。
+   *
+   * @param userId 当前用户
+   * @param systemCode 应用编码
+   * @param write 审计内容
+   * @return 写入或已存在的记录
+   */
+  AuditData.Entry writeAuditLog(Long userId, String systemCode, AuditData.Write write);
 }

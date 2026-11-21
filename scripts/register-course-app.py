@@ -248,7 +248,7 @@ def sync_employees(api, workbook):
 
 
 def find_user(api, username):
-    query = urllib.parse.urlencode({"keyword": username, "page": 0, "size": 20})
+    query = urllib.parse.urlencode({"keyword": username, "page": 1, "pageSize": 20})
     for user in api.call("GET", f"/api/users?{query}")["items"]:
         if user["username"] == username:
             return user

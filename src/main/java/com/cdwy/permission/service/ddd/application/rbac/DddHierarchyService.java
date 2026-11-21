@@ -34,7 +34,7 @@ public class DddHierarchyService implements HierarchyUseCase {
 
   /** 读取业务角色。 */
   private AccessRole require(Long id) {
-    return roles.find(id).orElseThrow(() -> new ResourceNotFoundException("角色不存在"));
+    return roles.find(id).orElseThrow(() -> new ResourceNotFoundException("ROLE_NOT_FOUND", "角色不存在"));
   }
 
   /** 只返回显式边。 */
@@ -57,10 +57,10 @@ public class DddHierarchyService implements HierarchyUseCase {
   public void inherit(Long senior, Long inherited) {
     roles.lockGraph();
     AccessRole first = require(senior), second = require(inherited);
-    if (senior.equals(inherited)) throw new IllegalArgumentException("角色不能继承自身");
+    if (senior.equals(inherited)) throw new InvalidDataException("ROLE_SELF_INHERITANCE", "角色不能继承自身");
     if (assignments.hierarchy().contains(new Link(senior, inherited))) return;
     if (!first.getEnabled() || !second.getEnabled())
-      throw new IllegalArgumentException("请先启用关系两端的角色");
+      throw new InvalidDataException("ROLE_DISABLED", "请先启用关系两端的角色");
     Map<Long, AccessRole> byId = new LinkedHashMap<>();
     roles.all().forEach(r -> byId.put(r.getId(), r));
     Map<Long, List<com.cdwy.permission.service.port.rbac.RoleGraphUseCase.Node>> graph =

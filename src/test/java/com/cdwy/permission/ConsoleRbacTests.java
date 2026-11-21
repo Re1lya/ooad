@@ -1,5 +1,6 @@
 package com.cdwy.permission;
 
+import static com.cdwy.permission.support.TestUrls.url;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -7,6 +8,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.cdwy.permission.config.BusinessAccess;
 import com.cdwy.permission.service.auth.AdminBootstrapService;
 import com.cdwy.permission.service.auth.ConsoleCatalog;
+import com.cdwy.permission.support.RequestTransactionBoundary;
+import com.cdwy.permission.support.TestDatabase;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import org.junit.jupiter.api.*;
@@ -14,9 +17,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.*;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -30,13 +38,32 @@ import tools.jackson.databind.json.JsonMapper;
  *   <li>没有登记访问规则的接口一律拒绝。
  * </ul>
  */
+@ActiveProfiles("test")
+@Transactional
+@Import(RequestTransactionBoundary.class)
 @SpringBootTest(
     properties = {
-      "spring.datasource.url=jdbc:h2:mem:console_rbac_tests;DB_CLOSE_DELAY=-1",
       "permission.jwt.secret=first-review-integration-signing-secret-32-bytes"
     })
 @AutoConfigureMockMvc
 class ConsoleRbacTests {
+  private static final String AUDIT_LOGS_URL = "/api/audit-logs";
+  private static final String LOGIN_URL = "/api/auth/login";
+  private static final String ME_URL = "/api/me";
+  private static final String MY_MENU_OF_SYSTEM_URL = "/api/me/menu?system={system}";
+  private static final String MY_PERMISSIONS_URL = "/api/me/permissions";
+  private static final String MY_PERMISSION_ORIGINS_URL = "/api/me/permission-origins";
+  private static final String ROLES_URL = "/api/roles";
+  private static final String ROLE_HIERARCHY_URL = "/api/role-hierarchy";
+  private static final String ROLE_INHERIT_URL = "/api/roles/{roleId}/inherits/{inheritedId}";
+  private static final String ROLE_PERMISSION_URL =
+      "/api/roles/{roleId}/permissions/{permissionId}";
+  private static final String SYSTEMS_URL = "/api/systems";
+  private static final String SYSTEM_INFO_URL = "/api/system-info";
+  private static final String UNREGISTERED_URL = "/api/test/unregistered";
+  private static final String USERS_URL = "/api/users";
+  private static final String USER_ROLE_URL = "/api/users/{userId}/roles/{roleId}";
+
   static final String PASSWORD = "Review-2026!";
   @Autowired MockMvc mvc;
   @Autowired JsonMapper json;
@@ -52,29 +79,14 @@ class ConsoleRbacTests {
 
   @BeforeEach
   void fixture() throws Exception {
-    db.execute("SET REFERENTIAL_INTEGRITY FALSE");
-    for (String table :
-        List.of(
-            "sys_audit_log",
-            "sys_role_hierarchy",
-            "permission_api",
-            "sys_role_permission",
-            "sys_user_role",
-            "api_resource",
-            "sys_permission",
-            "sys_account",
-            "sys_user",
-            "sys_role",
-            "biz_system",
-            "sys_department")) db.update("delete from " + table);
-    db.execute("SET REFERENTIAL_INTEGRITY TRUE");
+    TestDatabase.clear(db);
     bootstrap.initialize("admin", PASSWORD);
     admin = login("admin");
     auditorId =
         result(
                 call(
                     "POST",
-                    "/api/users",
+                    USERS_URL,
                     admin,
                     Map.of("username", "auditor", "displayName", "审计员", "password", PASSWORD),
                     201))
@@ -93,7 +105,7 @@ class ConsoleRbacTests {
             (info, method) -> {
               BusinessAccess rule = method.getBeanType().getAnnotation(BusinessAccess.class);
               if (rule == null || !ConsoleCatalog.SYSTEM.equals(rule.value())) return;
-              for (var verb : info.getMethodsCondition().getMethods())
+              for (RequestMethod verb : info.getMethodsCondition().getMethods())
                 for (String path : info.getPatternValues())
                   if (!path.startsWith("/api/me")) endpoints.add(verb.name() + " " + path);
             });
@@ -119,21 +131,21 @@ class ConsoleRbacTests {
     long adminId = db.queryForObject("select id from sys_user where display_name = '系统管理员'", Long.class);
 
     long overview = db.queryForObject("select id from sys_permission where code = 'rbac.overview'", Long.class);
-    call("DELETE", "/api/roles/" + role + "/permissions/" + overview, admin, null, 204);
-    call("GET", "/api/system-info", admin, null, 403);
+    call("DELETE", url(ROLE_PERMISSION_URL, role, overview), admin, null, 204);
+    call("GET", SYSTEM_INFO_URL, admin, null, 403);
     bootstrap.initialize("admin", PASSWORD);
-    call("GET", "/api/system-info", admin, null, 200);
+    call("GET", SYSTEM_INFO_URL, admin, null, 200);
 
     db.update("delete from sys_user_role where user_id = ?", adminId);
-    call("GET", "/api/users", admin, null, 403);
+    call("GET", USERS_URL, admin, null, 403);
     bootstrap.initialize("admin", PASSWORD);
-    call("GET", "/api/users", admin, null, 200);
+    call("GET", USERS_URL, admin, null, 200);
   }
 
   @Test
   @DisplayName("FR-38 管理员的导航包含全部 11 个控制台菜单，按钮挂在所属菜单下")
   void FR38_administratorSeesEveryConsoleMenu() throws Exception {
-    JsonNode menu = result(call("GET", "/api/me/menu?system=rbac", admin, null, 200));
+    JsonNode menu = result(call("GET", url(MY_MENU_OF_SYSTEM_URL, "rbac"), admin, null, 200));
     List<String> codes = new ArrayList<>();
     menu.forEach(node -> codes.add(node.get("permission").get("code").asString()));
     assertEquals(
@@ -147,48 +159,48 @@ class ConsoleRbacTests {
     Set<String> buttons = new TreeSet<>();
     users.get("children").forEach(c -> buttons.add(c.get("permission").get("code").asString()));
     assertEquals(Set.of("rbac.users.write", "rbac.directory.sync"), buttons);
-    call("GET", "/api/me/menu?system=nowhere", admin, null, 404);
+    call("GET", url(MY_MENU_OF_SYSTEM_URL, "nowhere"), admin, null, 404);
   }
 
   @Test
   @DisplayName("FR-38 菜单根据后端授权动态显示：授予后出现、页面接口放行，撤销后下一次请求立即消失并返回 403")
   void FR38_menuAndApisFollowGrants() throws Exception {
-    assertEquals(0, result(call("GET", "/api/me/menu?system=rbac", auditor, null, 200)).size());
-    call("GET", "/api/audit-logs", auditor, null, 403);
+    assertEquals(0, result(call("GET", url(MY_MENU_OF_SYSTEM_URL, "rbac"), auditor, null, 200)).size());
+    call("GET", AUDIT_LOGS_URL, auditor, null, 403);
 
-    long role = result(call("POST", "/api/roles", admin, Map.of("code", "rbac-auditor", "name", "审计员"), 201)).get("id").asLong();
+    long role = result(call("POST", ROLES_URL, admin, Map.of("code", "rbac-auditor", "name", "审计员"), 201)).get("id").asLong();
     long audit = db.queryForObject("select id from sys_permission where code = 'rbac.audit'", Long.class);
     long hierarchy = db.queryForObject("select id from sys_permission where code = 'rbac.hierarchy'", Long.class);
-    call("PUT", "/api/roles/" + role + "/permissions/" + audit, admin, null, 204);
-    call("PUT", "/api/users/" + auditorId + "/roles/" + role, admin, null, 204);
+    call("PUT", url(ROLE_PERMISSION_URL, role, audit), admin, null, 204);
+    call("PUT", url(USER_ROLE_URL, auditorId, role), admin, null, 204);
 
-    JsonNode menu = result(call("GET", "/api/me/menu?system=rbac", auditor, null, 200));
+    JsonNode menu = result(call("GET", url(MY_MENU_OF_SYSTEM_URL, "rbac"), auditor, null, 200));
     assertEquals(1, menu.size());
     assertEquals("rbac.audit", menu.get(0).get("permission").get("code").asString());
-    call("GET", "/api/audit-logs", auditor, null, 200);
-    call("GET", "/api/systems", auditor, null, 200);
-    call("GET", "/api/users", auditor, null, 403);
-    call("PUT", "/api/roles/" + role + "/inherits/" + role, auditor, null, 403);
+    call("GET", AUDIT_LOGS_URL, auditor, null, 200);
+    call("GET", SYSTEMS_URL, auditor, null, 200);
+    call("GET", USERS_URL, auditor, null, 403);
+    call("PUT", url(ROLE_INHERIT_URL, role, role), auditor, null, 403);
 
-    call("PUT", "/api/roles/" + role + "/permissions/" + hierarchy, admin, null, 204);
-    assertEquals(2, result(call("GET", "/api/me/menu?system=rbac", auditor, null, 200)).size());
-    call("GET", "/api/role-hierarchy", auditor, null, 200);
-    call("PUT", "/api/roles/" + role + "/inherits/" + role, auditor, null, 403);
+    call("PUT", url(ROLE_PERMISSION_URL, role, hierarchy), admin, null, 204);
+    assertEquals(2, result(call("GET", url(MY_MENU_OF_SYSTEM_URL, "rbac"), auditor, null, 200)).size());
+    call("GET", ROLE_HIERARCHY_URL, auditor, null, 200);
+    call("PUT", url(ROLE_INHERIT_URL, role, role), auditor, null, 403);
 
-    call("DELETE", "/api/roles/" + role + "/permissions/" + audit, admin, null, 204);
-    menu = result(call("GET", "/api/me/menu?system=rbac", auditor, null, 200));
+    call("DELETE", url(ROLE_PERMISSION_URL, role, audit), admin, null, 204);
+    menu = result(call("GET", url(MY_MENU_OF_SYSTEM_URL, "rbac"), auditor, null, 200));
     assertEquals(1, menu.size());
     assertEquals("rbac.hierarchy", menu.get(0).get("permission").get("code").asString());
-    call("GET", "/api/audit-logs", auditor, null, 403);
+    call("GET", AUDIT_LOGS_URL, auditor, null, 403);
   }
 
   @Test
   @DisplayName("FR-38 个人接口只要求登录；没有登记访问规则的接口一律拒绝；控制台管理员也不能绕过")
   void FR38_personalEndpointsAndFailClosed() throws Exception {
-    call("GET", "/api/me", auditor, null, 200);
-    call("GET", "/api/me/permissions", auditor, null, 200);
-    call("GET", "/api/me/permission-origins", auditor, null, 200);
-    JsonNode denied = result(call("GET", "/api/test/unregistered", admin, null, 403));
+    call("GET", ME_URL, auditor, null, 200);
+    call("GET", MY_PERMISSIONS_URL, auditor, null, 200);
+    call("GET", MY_PERMISSION_ORIGINS_URL, auditor, null, 200);
+    JsonNode denied = result(call("GET", UNREGISTERED_URL, admin, null, 403));
     assertEquals("FORBIDDEN", denied.get("code").asString());
   }
 
@@ -205,7 +217,7 @@ class ConsoleRbacTests {
 
   MvcResult call(String method, String path, String token, Object body, int status)
       throws Exception {
-    var b =
+    MockHttpServletRequestBuilder b =
         request(org.springframework.http.HttpMethod.valueOf(method), path)
             .contentType(MediaType.APPLICATION_JSON);
     if (token != null) b.header("Authorization", "Bearer " + token);
@@ -217,7 +229,7 @@ class ConsoleRbacTests {
     return result(
             call(
                 "POST",
-                "/api/auth/login",
+                LOGIN_URL,
                 null,
                 Map.of("username", name, "password", PASSWORD),
                 200))

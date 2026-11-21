@@ -27,13 +27,8 @@ public class AccessRole {
   /** 授权和继承关系必须先解除再删除角色。 */
   public void assertDeletable(boolean hierarchy, boolean granted) {
     if (hierarchy)
-      throw new com.cdwy.permission.service.port.error.ConflictException("仍有角色继承关系，请先解除关联");
+      throw new com.cdwy.permission.service.port.error.ConflictException("ROLE_HAS_INHERITANCE", "仍有角色继承关系，请先解除关联");
     if (granted)
-      throw new com.cdwy.permission.service.port.error.ConflictException("仍有授权或资源引用，请先解除关联");
-  }
-
-  /** CloneFactory 的布尔 get 访问器约定。 */
-  public boolean getEnabled() {
-    return enabled;
+      throw new com.cdwy.permission.service.port.error.ConflictException("ROLE_IN_USE", "仍有授权或资源引用，请先解除关联");
   }
 }

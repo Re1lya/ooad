@@ -1,6 +1,6 @@
 # API 设计（RBAC1 增强版）
 
-接口清单从通过验收测试的 Spring MVC 路由导出，与 [OpenAPI](openapi.json) 同步生成。当前 61 个 HTTP 操作。
+接口清单从通过验收测试的 Spring MVC 路由导出，与 [OpenAPI](openapi.json) 同步生成。当前 66 个 HTTP 操作。
 
 ## 约定
 
@@ -17,19 +17,24 @@
 
 | 方法 | 路径 | 含义／必要性 | 输入DTO | 成功响应 | 访问主体 | 源码 |
 |---|---|---|---|---|---|---|
+| GET | `/api/apps/{systemCode}/auth/api-permissions/{operationId}` | 校验接口调用权限：按 operationId 判断能否调用接口；未登记返回 404 API_OPERATION_NOT_FOUND。 | — | 200 | 已登录 | [ApplicationIdentityController.api](../../src/main/java/com/cdwy/permission/controller/identity/ApplicationIdentityController.java) |
 | GET | `/api/apps/{systemCode}/auth/audit-logs` | 查询接入应用审计记录：管理员或在该应用内拥有有效权限的用户可查询；按操作人、对象、时间筛选，时间倒序分页。 | — | 200 | 已登录 | [ApplicationIdentityController.logs](../../src/main/java/com/cdwy/permission/controller/identity/ApplicationIdentityController.java) |
 | POST | `/api/apps/{systemCode}/auth/audit-logs` | 写入接入应用审计记录：接入应用在业务事务提交后写入；requestId 幂等，操作人取自JWT并保存姓名与角色快照。 | AuditWrite | 201 | 已登录 | [ApplicationIdentityController.write](../../src/main/java/com/cdwy/permission/controller/identity/ApplicationIdentityController.java) |
+| GET | `/api/apps/{systemCode}/auth/departments` | 逐层查询部门：不传 parentId 为根部门；page 从 1 开始，pageSize 1–100；上级部门不存在返回 404。 | — | 200 | 业务授权 | [ApplicationIdentityController.departments](../../src/main/java/com/cdwy/permission/controller/identity/ApplicationIdentityController.java) |
+| GET | `/api/apps/{systemCode}/auth/departments/{departmentId}/users` | 查询部门下的人员：按工号或姓名查询，不含联系方式；部门不存在返回 404 IDENTITY_DEPARTMENT_NOT_FOUND。 | — | 200 | 业务授权 | [ApplicationIdentityController.departmentUsers](../../src/main/java/com/cdwy/permission/controller/identity/ApplicationIdentityController.java) |
+| POST | `/api/apps/{systemCode}/auth/login` | 接入应用登录：用学号或工号与密码登录；systems 必须包含当前应用（LOGIN_TARGET_NOT_IN_SYSTEMS）且都已登记（LOGIN_SYSTEM_UNKNOWN），签发的令牌 aud 为 systems。 | IdentityLogin | 200 | 公开 | [ApplicationIdentityController.login](../../src/main/java/com/cdwy/permission/controller/identity/ApplicationIdentityController.java) |
+| POST | `/api/apps/{systemCode}/auth/logout` | 接入应用退出：本人已签发的令牌全部失效（凭证版本加一，不保存令牌）。 | — | 204 | 已登录 | [ApplicationIdentityController.logout](../../src/main/java/com/cdwy/permission/controller/identity/ApplicationIdentityController.java) |
 | GET | `/api/apps/{systemCode}/auth/me` | 接入应用查询当前身份：课程系统等接入应用携带用户本人JWT调用；返回有效角色编码（含继承）与该应用内菜单、按钮权限码及其绑定的后端API权限码，授权变化下一次调用即生效。 | — | 200 | 已登录 | [ApplicationIdentityController.me](../../src/main/java/com/cdwy/permission/controller/identity/ApplicationIdentityController.java) |
-| GET | `/api/apps/{systemCode}/identity/users/{userId}` | 接入应用按统一身份查人：按登录名查询姓名与工号，供课程系统登记教师；应用或用户不存在返回404。 | — | 200 | 已登录 | [ApplicationIdentityController.user](../../src/main/java/com/cdwy/permission/controller/identity/ApplicationIdentityController.java) |
+| GET | `/api/apps/{systemCode}/auth/permissions/{permission}` | 校验前端权限码：接入应用前端切换路由时判断菜单或按钮权限，只返回 allowed。 | — | 200 | 已登录 | [ApplicationIdentityController.permission](../../src/main/java/com/cdwy/permission/controller/identity/ApplicationIdentityController.java) |
+| GET | `/api/apps/{systemCode}/auth/users/{userId}` | 按统一身份查人：按工号或学号查询姓名，供课程系统登记教师；用户不存在返回 404 IDENTITY_USER_NOT_FOUND。 | — | 200 | 业务授权 | [ApplicationIdentityController.user](../../src/main/java/com/cdwy/permission/controller/identity/ApplicationIdentityController.java) |
 | GET | `/api/audit-logs` | 查看审计记录：管理员按应用编码查看审计记录；本系统角色继承变更使用应用编码 rbac。 | — | 200 | 管理员 | [AuditLogController.list](../../src/main/java/com/cdwy/permission/controller/audit/AuditLogController.java) |
 | POST | `/api/auth/login` | 账号密码登录：验证当前账号和密码后签发JWT；不创建登录会话，不在Token保存权限列表。 | Login | 200 | 公开 | [AuthController.login](../../src/main/java/com/cdwy/permission/controller/auth/AuthController.java) |
-| GET | `/api/demo/courses` | 课程API鉴权示例：仅为示例静态课程；需登记course应用的GET /api/demo/courses资源、绑定权限并分配角色。 | — | 200 | 业务授权 | [CourseDemoController.list](../../src/main/java/com/cdwy/permission/controller/demo/CourseDemoController.java) |
 | GET | `/api/departments` | 查询部门列表：查询部门资源；用户分页，其余为当前小规模演示的完整列表。 | — | 200 | 管理员 | [DepartmentController.list](../../src/main/java/com/cdwy/permission/controller/organization/DepartmentController.java) |
 | POST | `/api/departments` | 创建部门：创建独立部门记录，默认启用；不隐式创建授权关系。 | DepartmentInput | 201 | 管理员 | [DepartmentController.create](../../src/main/java/com/cdwy/permission/controller/organization/DepartmentController.java) |
 | DELETE | `/api/departments/{id}` | 删除部门：删除该资源；除用户会清理其用户角色关系外，关联引用需要先解除，否则409。 | — | 204 | 管理员 | [DepartmentController.delete](../../src/main/java/com/cdwy/permission/controller/organization/DepartmentController.java) |
 | PUT | `/api/departments/{id}` | 编辑部门资料：修改资料；创建时的身份标识保持固定，enabled/active不在此DTO，夹带将返回400。 | DepartmentInput | 200 | 管理员 | [DepartmentController.update](../../src/main/java/com/cdwy/permission/controller/organization/DepartmentController.java) |
-| POST | `/api/imports/company/commit` | 确认导入公司三表：管理员上传员工、部门、功能权限三张XLSX；核对原文件摘要后事务导入；自然键复用、来源字段保留；不自动启用账号或授予个人角色。 | ImportCommit | 200 | 管理员 | [CompanyImportController.commit](../../src/main/java/com/cdwy/permission/controller/importing/CompanyImportController.java) |
-| POST | `/api/imports/company/preview` | 预览并校验公司三表：管理员上传员工、部门、功能权限三张XLSX；只校验并返回摘要，不写入。 | ImportPreview | 200 | 管理员 | [CompanyImportController.preview](../../src/main/java/com/cdwy/permission/controller/importing/CompanyImportController.java) |
+| POST | `/api/directory/sync/commit` | 确认员工信息同步：管理员上传课程系统提供的员工信息表（XLSX）及总公司、分公司补授的角色；文件与规则须与预览一致（否则 SYNC_PREVIEW_MISMATCH），在一个事务内建立部门、新建人员（停用）并补授角色；按工号幂等。 | SyncCommit | 200 | 管理员 | [DirectorySyncController.commit](../../src/main/java/com/cdwy/permission/controller/directory/DirectorySyncController.java) |
+| POST | `/api/directory/sync/preview` | 预览员工信息同步：管理员上传课程系统提供的员工信息表（XLSX）及总公司、分公司补授的角色；逐行校验并只返回变化摘要与文件摘要值，不写入。 | SyncPreview | 200 | 管理员 | [DirectorySyncController.preview](../../src/main/java/com/cdwy/permission/controller/directory/DirectorySyncController.java) |
 | GET | `/api/me` | 查询本人资料：主体取自Token，不允许指定他人ID。 | — | 200 | 已登录 | [MeController.me](../../src/main/java/com/cdwy/permission/controller/me/MeController.java) |
 | GET | `/api/me/menu` | 查询本人导航树：为直接授权节点补齐祖先导航容器；granted=false的容器不获得接口权限。 | — | 200 | 已登录 | [MeController.menu](../../src/main/java/com/cdwy/permission/controller/me/MeController.java) |
 | PUT | `/api/me/password` | 修改本人密码：验证原密码，更新BCrypt摘要与凭证版本；全部旧Token失效，需重新登录。 | PasswordChange | 204 | 已登录 | [MeController.password](../../src/main/java/com/cdwy/permission/controller/me/MeController.java) |

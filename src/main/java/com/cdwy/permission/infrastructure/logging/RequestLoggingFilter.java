@@ -24,7 +24,9 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 10)
 public class RequestLoggingFilter extends OncePerRequestFilter {
+  /** 前端报告当前菜单的请求头。 */
   public static final String MENU_HEADER = "X-Client-Menu";
+  /** 回写请求号的响应头。 */
   public static final String REQUEST_ID_HEADER = "X-Request-Id";
   private static final Pattern SAFE_MENU = Pattern.compile("[A-Za-z0-9_:/-]{1,48}");
   private static final Logger log = LoggerFactory.getLogger(RequestLoggingFilter.class);
@@ -35,6 +37,10 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
     return !request.getRequestURI().startsWith(request.getContextPath() + "/api/");
   }
 
+  /**
+   * 生成 8 位请求号写入 MDC（{@code requestId}、{@code menu}）和响应头 {@code X-Request-Id}，记录请求开始与结束（状态、耗时）；
+   * 结束时清空整个 MDC，包括拦截器写入的 {@code userId}，避免线程复用时串号。
+   */
   @Override
   protected void doFilterInternal(
       HttpServletRequest request, HttpServletResponse response, FilterChain chain)

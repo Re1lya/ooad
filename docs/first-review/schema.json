@@ -1,395 +1,390 @@
 {
-  "API_RESOURCE": [
+  "api_resource": [
     {
-      "COLUMN_NAME": "ACTIVE",
-      "DATA_TYPE": "BOOLEAN",
+      "COLUMN_NAME": "id",
+      "DATA_TYPE": "bigint",
       "IS_NULLABLE": "NO"
     },
     {
-      "COLUMN_NAME": "ID",
-      "DATA_TYPE": "BIGINT",
+      "COLUMN_NAME": "system_id",
+      "DATA_TYPE": "bigint",
       "IS_NULLABLE": "NO"
     },
     {
-      "COLUMN_NAME": "METHOD",
-      "DATA_TYPE": "CHARACTER VARYING",
+      "COLUMN_NAME": "name",
+      "DATA_TYPE": "varchar",
       "IS_NULLABLE": "NO"
     },
     {
-      "COLUMN_NAME": "SYSTEM_ID",
-      "DATA_TYPE": "BIGINT",
-      "IS_NULLABLE": "NO"
-    },
-    {
-      "COLUMN_NAME": "CODE",
-      "DATA_TYPE": "CHARACTER VARYING",
+      "COLUMN_NAME": "code",
+      "DATA_TYPE": "varchar",
       "IS_NULLABLE": "YES"
     },
     {
-      "COLUMN_NAME": "NAME",
-      "DATA_TYPE": "CHARACTER VARYING",
+      "COLUMN_NAME": "operation_id",
+      "DATA_TYPE": "varchar",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "method",
+      "DATA_TYPE": "varchar",
       "IS_NULLABLE": "NO"
     },
     {
-      "COLUMN_NAME": "PATH",
-      "DATA_TYPE": "CHARACTER VARYING",
+      "COLUMN_NAME": "path",
+      "DATA_TYPE": "varchar",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "COLUMN_NAME": "active",
+      "DATA_TYPE": "bit",
       "IS_NULLABLE": "NO"
     }
   ],
-  "BIZ_SYSTEM": [
+  "biz_system": [
     {
-      "COLUMN_NAME": "ENABLED",
-      "DATA_TYPE": "BOOLEAN",
+      "COLUMN_NAME": "id",
+      "DATA_TYPE": "bigint",
       "IS_NULLABLE": "NO"
     },
     {
-      "COLUMN_NAME": "ID",
-      "DATA_TYPE": "BIGINT",
+      "COLUMN_NAME": "code",
+      "DATA_TYPE": "varchar",
       "IS_NULLABLE": "NO"
     },
     {
-      "COLUMN_NAME": "CODE",
-      "DATA_TYPE": "CHARACTER VARYING",
+      "COLUMN_NAME": "name",
+      "DATA_TYPE": "varchar",
       "IS_NULLABLE": "NO"
     },
     {
-      "COLUMN_NAME": "NAME",
-      "DATA_TYPE": "CHARACTER VARYING",
-      "IS_NULLABLE": "NO"
-    },
-    {
-      "COLUMN_NAME": "BASE_URL",
-      "DATA_TYPE": "CHARACTER VARYING",
+      "COLUMN_NAME": "base_url",
+      "DATA_TYPE": "varchar",
       "IS_NULLABLE": "YES"
-    }
-  ],
-  "PERMISSION_API": [
-    {
-      "COLUMN_NAME": "ID",
-      "DATA_TYPE": "BIGINT",
-      "IS_NULLABLE": "NO"
     },
     {
-      "COLUMN_NAME": "PERMISSION_ID",
-      "DATA_TYPE": "BIGINT",
-      "IS_NULLABLE": "NO"
-    },
-    {
-      "COLUMN_NAME": "RESOURCE_ID",
-      "DATA_TYPE": "BIGINT",
+      "COLUMN_NAME": "enabled",
+      "DATA_TYPE": "bit",
       "IS_NULLABLE": "NO"
     }
   ],
-  "SYS_ACCOUNT": [
+  "permission_api": [
     {
-      "COLUMN_NAME": "USER_ID",
-      "DATA_TYPE": "BIGINT",
+      "COLUMN_NAME": "id",
+      "DATA_TYPE": "bigint",
       "IS_NULLABLE": "NO"
     },
     {
-      "COLUMN_NAME": "USERNAME",
-      "DATA_TYPE": "CHARACTER VARYING",
+      "COLUMN_NAME": "permission_id",
+      "DATA_TYPE": "bigint",
       "IS_NULLABLE": "NO"
     },
     {
-      "COLUMN_NAME": "PASSWORD_HASH",
-      "DATA_TYPE": "CHARACTER VARYING",
-      "IS_NULLABLE": "NO"
-    }
-  ],
-  "SYS_AUDIT_LOG": [
-    {
-      "COLUMN_NAME": "ACTOR_ID",
-      "DATA_TYPE": "BIGINT",
-      "IS_NULLABLE": "YES"
-    },
-    {
-      "COLUMN_NAME": "ID",
-      "DATA_TYPE": "BIGINT",
-      "IS_NULLABLE": "NO"
-    },
-    {
-      "COLUMN_NAME": "OCCURRED_AT",
-      "DATA_TYPE": "TIMESTAMP WITH TIME ZONE",
-      "IS_NULLABLE": "NO"
-    },
-    {
-      "COLUMN_NAME": "OBJECT_TYPE",
-      "DATA_TYPE": "CHARACTER VARYING",
-      "IS_NULLABLE": "YES"
-    },
-    {
-      "COLUMN_NAME": "REQUEST_ID",
-      "DATA_TYPE": "CHARACTER VARYING",
-      "IS_NULLABLE": "YES"
-    },
-    {
-      "COLUMN_NAME": "SYSTEM_CODE",
-      "DATA_TYPE": "CHARACTER VARYING",
-      "IS_NULLABLE": "NO"
-    },
-    {
-      "COLUMN_NAME": "TYPE",
-      "DATA_TYPE": "CHARACTER VARYING",
-      "IS_NULLABLE": "NO"
-    },
-    {
-      "COLUMN_NAME": "ACTOR_NAME",
-      "DATA_TYPE": "CHARACTER VARYING",
-      "IS_NULLABLE": "YES"
-    },
-    {
-      "COLUMN_NAME": "CLASS_ID",
-      "DATA_TYPE": "CHARACTER VARYING",
-      "IS_NULLABLE": "YES"
-    },
-    {
-      "COLUMN_NAME": "COURSE_ID",
-      "DATA_TYPE": "CHARACTER VARYING",
-      "IS_NULLABLE": "YES"
-    },
-    {
-      "COLUMN_NAME": "OBJECT_ID",
-      "DATA_TYPE": "CHARACTER VARYING",
-      "IS_NULLABLE": "YES"
-    },
-    {
-      "COLUMN_NAME": "TERM_ID",
-      "DATA_TYPE": "CHARACTER VARYING",
-      "IS_NULLABLE": "YES"
-    },
-    {
-      "COLUMN_NAME": "AFTER_JSON",
-      "DATA_TYPE": "CHARACTER VARYING",
-      "IS_NULLABLE": "YES"
-    },
-    {
-      "COLUMN_NAME": "BEFORE_JSON",
-      "DATA_TYPE": "CHARACTER VARYING",
-      "IS_NULLABLE": "YES"
-    },
-    {
-      "COLUMN_NAME": "ACTOR_ROLES",
-      "DATA_TYPE": "CHARACTER VARYING",
-      "IS_NULLABLE": "YES"
-    },
-    {
-      "COLUMN_NAME": "TARGET",
-      "DATA_TYPE": "CHARACTER VARYING",
-      "IS_NULLABLE": "YES"
-    }
-  ],
-  "SYS_DEPARTMENT": [
-    {
-      "COLUMN_NAME": "ID",
-      "DATA_TYPE": "BIGINT",
-      "IS_NULLABLE": "NO"
-    },
-    {
-      "COLUMN_NAME": "PARENT_ID",
-      "DATA_TYPE": "BIGINT",
-      "IS_NULLABLE": "YES"
-    },
-    {
-      "COLUMN_NAME": "MANAGER_NAME",
-      "DATA_TYPE": "CHARACTER VARYING",
-      "IS_NULLABLE": "YES"
-    },
-    {
-      "COLUMN_NAME": "NAME",
-      "DATA_TYPE": "CHARACTER VARYING",
+      "COLUMN_NAME": "resource_id",
+      "DATA_TYPE": "bigint",
       "IS_NULLABLE": "NO"
     }
   ],
-  "SYS_PERMISSION": [
+  "sys_account": [
     {
-      "COLUMN_NAME": "ACTIVE",
-      "DATA_TYPE": "BOOLEAN",
+      "COLUMN_NAME": "user_id",
+      "DATA_TYPE": "bigint",
       "IS_NULLABLE": "NO"
     },
     {
-      "COLUMN_NAME": "ID",
-      "DATA_TYPE": "BIGINT",
+      "COLUMN_NAME": "username",
+      "DATA_TYPE": "varchar",
       "IS_NULLABLE": "NO"
     },
     {
-      "COLUMN_NAME": "PARENT_ID",
-      "DATA_TYPE": "BIGINT",
-      "IS_NULLABLE": "YES"
-    },
-    {
-      "COLUMN_NAME": "SYSTEM_ID",
-      "DATA_TYPE": "BIGINT",
-      "IS_NULLABLE": "NO"
-    },
-    {
-      "COLUMN_NAME": "CODE",
-      "DATA_TYPE": "CHARACTER VARYING",
-      "IS_NULLABLE": "NO"
-    },
-    {
-      "COLUMN_NAME": "NAME",
-      "DATA_TYPE": "CHARACTER VARYING",
-      "IS_NULLABLE": "NO"
-    },
-    {
-      "COLUMN_NAME": "SOURCE_DESCRIPTION",
-      "DATA_TYPE": "CHARACTER VARYING",
-      "IS_NULLABLE": "YES"
-    },
-    {
-      "COLUMN_NAME": "SOURCE_GRANTS",
-      "DATA_TYPE": "CHARACTER VARYING",
-      "IS_NULLABLE": "YES"
-    },
-    {
-      "COLUMN_NAME": "MENU_PATH",
-      "DATA_TYPE": "CHARACTER VARYING",
-      "IS_NULLABLE": "YES"
-    },
-    {
-      "COLUMN_NAME": "TYPE",
-      "DATA_TYPE": "ENUM",
+      "COLUMN_NAME": "password_hash",
+      "DATA_TYPE": "varchar",
       "IS_NULLABLE": "NO"
     }
   ],
-  "SYS_ROLE": [
+  "sys_audit_log": [
     {
-      "COLUMN_NAME": "ENABLED",
-      "DATA_TYPE": "BOOLEAN",
+      "COLUMN_NAME": "id",
+      "DATA_TYPE": "bigint",
       "IS_NULLABLE": "NO"
     },
     {
-      "COLUMN_NAME": "ID",
-      "DATA_TYPE": "BIGINT",
+      "COLUMN_NAME": "system_code",
+      "DATA_TYPE": "varchar",
       "IS_NULLABLE": "NO"
     },
     {
-      "COLUMN_NAME": "CODE",
-      "DATA_TYPE": "CHARACTER VARYING",
+      "COLUMN_NAME": "request_id",
+      "DATA_TYPE": "varchar",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "occurred_at",
+      "DATA_TYPE": "datetime",
       "IS_NULLABLE": "NO"
     },
     {
-      "COLUMN_NAME": "NAME",
-      "DATA_TYPE": "CHARACTER VARYING",
+      "COLUMN_NAME": "actor_id",
+      "DATA_TYPE": "bigint",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "actor_name",
+      "DATA_TYPE": "varchar",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "actor_roles",
+      "DATA_TYPE": "varchar",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "type",
+      "DATA_TYPE": "varchar",
       "IS_NULLABLE": "NO"
     },
     {
-      "COLUMN_NAME": "DESCRIPTION",
-      "DATA_TYPE": "CHARACTER VARYING",
+      "COLUMN_NAME": "object_type",
+      "DATA_TYPE": "varchar",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "object_id",
+      "DATA_TYPE": "varchar",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "target",
+      "DATA_TYPE": "varchar",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "before_json",
+      "DATA_TYPE": "varchar",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "after_json",
+      "DATA_TYPE": "varchar",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "term_id",
+      "DATA_TYPE": "varchar",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "course_id",
+      "DATA_TYPE": "varchar",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "class_id",
+      "DATA_TYPE": "varchar",
       "IS_NULLABLE": "YES"
     }
   ],
-  "SYS_ROLE_HIERARCHY": [
+  "sys_department": [
     {
-      "COLUMN_NAME": "ID",
-      "DATA_TYPE": "BIGINT",
+      "COLUMN_NAME": "id",
+      "DATA_TYPE": "bigint",
       "IS_NULLABLE": "NO"
     },
     {
-      "COLUMN_NAME": "INHERITED_ROLE_ID",
-      "DATA_TYPE": "BIGINT",
+      "COLUMN_NAME": "name",
+      "DATA_TYPE": "varchar",
       "IS_NULLABLE": "NO"
     },
     {
-      "COLUMN_NAME": "SENIOR_ROLE_ID",
-      "DATA_TYPE": "BIGINT",
+      "COLUMN_NAME": "code",
+      "DATA_TYPE": "varchar",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "parent_id",
+      "DATA_TYPE": "bigint",
+      "IS_NULLABLE": "YES"
+    }
+  ],
+  "sys_permission": [
+    {
+      "COLUMN_NAME": "id",
+      "DATA_TYPE": "bigint",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "COLUMN_NAME": "system_id",
+      "DATA_TYPE": "bigint",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "COLUMN_NAME": "code",
+      "DATA_TYPE": "varchar",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "COLUMN_NAME": "name",
+      "DATA_TYPE": "varchar",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "COLUMN_NAME": "type",
+      "DATA_TYPE": "enum",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "COLUMN_NAME": "menu_path",
+      "DATA_TYPE": "varchar",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "parent_id",
+      "DATA_TYPE": "bigint",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "active",
+      "DATA_TYPE": "bit",
       "IS_NULLABLE": "NO"
     }
   ],
-  "SYS_ROLE_PERMISSION": [
+  "sys_role": [
     {
-      "COLUMN_NAME": "ID",
-      "DATA_TYPE": "BIGINT",
+      "COLUMN_NAME": "id",
+      "DATA_TYPE": "bigint",
       "IS_NULLABLE": "NO"
     },
     {
-      "COLUMN_NAME": "PERMISSION_ID",
-      "DATA_TYPE": "BIGINT",
+      "COLUMN_NAME": "code",
+      "DATA_TYPE": "varchar",
       "IS_NULLABLE": "NO"
     },
     {
-      "COLUMN_NAME": "ROLE_ID",
-      "DATA_TYPE": "BIGINT",
+      "COLUMN_NAME": "name",
+      "DATA_TYPE": "varchar",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "COLUMN_NAME": "description",
+      "DATA_TYPE": "varchar",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "enabled",
+      "DATA_TYPE": "bit",
       "IS_NULLABLE": "NO"
     }
   ],
-  "SYS_USER": [
+  "sys_role_hierarchy": [
     {
-      "COLUMN_NAME": "ADMINISTRATOR",
-      "DATA_TYPE": "BOOLEAN",
+      "COLUMN_NAME": "id",
+      "DATA_TYPE": "bigint",
       "IS_NULLABLE": "NO"
     },
     {
-      "COLUMN_NAME": "ENABLED",
-      "DATA_TYPE": "BOOLEAN",
+      "COLUMN_NAME": "senior_role_id",
+      "DATA_TYPE": "bigint",
       "IS_NULLABLE": "NO"
     },
     {
-      "COLUMN_NAME": "CREDENTIAL_VERSION",
-      "DATA_TYPE": "BIGINT",
-      "IS_NULLABLE": "NO"
-    },
-    {
-      "COLUMN_NAME": "DEPARTMENT_ID",
-      "DATA_TYPE": "BIGINT",
-      "IS_NULLABLE": "YES"
-    },
-    {
-      "COLUMN_NAME": "EXPIRES_AT",
-      "DATA_TYPE": "TIMESTAMP WITH TIME ZONE",
-      "IS_NULLABLE": "YES"
-    },
-    {
-      "COLUMN_NAME": "ID",
-      "DATA_TYPE": "BIGINT",
-      "IS_NULLABLE": "NO"
-    },
-    {
-      "COLUMN_NAME": "PHONE",
-      "DATA_TYPE": "CHARACTER VARYING",
-      "IS_NULLABLE": "YES"
-    },
-    {
-      "COLUMN_NAME": "COMPANY_NAME",
-      "DATA_TYPE": "CHARACTER VARYING",
-      "IS_NULLABLE": "YES"
-    },
-    {
-      "COLUMN_NAME": "DISPLAY_NAME",
-      "DATA_TYPE": "CHARACTER VARYING",
-      "IS_NULLABLE": "NO"
-    },
-    {
-      "COLUMN_NAME": "JOB_TITLE",
-      "DATA_TYPE": "CHARACTER VARYING",
-      "IS_NULLABLE": "YES"
-    },
-    {
-      "COLUMN_NAME": "SOURCE_DEPARTMENT",
-      "DATA_TYPE": "CHARACTER VARYING",
-      "IS_NULLABLE": "YES"
-    },
-    {
-      "COLUMN_NAME": "PERSON_TYPE",
-      "DATA_TYPE": "ENUM",
+      "COLUMN_NAME": "inherited_role_id",
+      "DATA_TYPE": "bigint",
       "IS_NULLABLE": "NO"
     }
   ],
-  "SYS_USER_ROLE": [
+  "sys_role_permission": [
     {
-      "COLUMN_NAME": "ID",
-      "DATA_TYPE": "BIGINT",
+      "COLUMN_NAME": "id",
+      "DATA_TYPE": "bigint",
       "IS_NULLABLE": "NO"
     },
     {
-      "COLUMN_NAME": "ROLE_ID",
-      "DATA_TYPE": "BIGINT",
+      "COLUMN_NAME": "role_id",
+      "DATA_TYPE": "bigint",
       "IS_NULLABLE": "NO"
     },
     {
-      "COLUMN_NAME": "USER_ID",
-      "DATA_TYPE": "BIGINT",
+      "COLUMN_NAME": "permission_id",
+      "DATA_TYPE": "bigint",
+      "IS_NULLABLE": "NO"
+    }
+  ],
+  "sys_user": [
+    {
+      "COLUMN_NAME": "id",
+      "DATA_TYPE": "bigint",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "COLUMN_NAME": "display_name",
+      "DATA_TYPE": "varchar",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "COLUMN_NAME": "department_id",
+      "DATA_TYPE": "bigint",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "company_name",
+      "DATA_TYPE": "varchar",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "source_department",
+      "DATA_TYPE": "varchar",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "job_title",
+      "DATA_TYPE": "varchar",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "phone",
+      "DATA_TYPE": "varchar",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "person_type",
+      "DATA_TYPE": "enum",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "COLUMN_NAME": "expires_at",
+      "DATA_TYPE": "datetime",
+      "IS_NULLABLE": "YES"
+    },
+    {
+      "COLUMN_NAME": "enabled",
+      "DATA_TYPE": "bit",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "COLUMN_NAME": "administrator",
+      "DATA_TYPE": "bit",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "COLUMN_NAME": "credential_version",
+      "DATA_TYPE": "bigint",
+      "IS_NULLABLE": "NO"
+    }
+  ],
+  "sys_user_role": [
+    {
+      "COLUMN_NAME": "id",
+      "DATA_TYPE": "bigint",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "COLUMN_NAME": "user_id",
+      "DATA_TYPE": "bigint",
+      "IS_NULLABLE": "NO"
+    },
+    {
+      "COLUMN_NAME": "role_id",
+      "DATA_TYPE": "bigint",
       "IS_NULLABLE": "NO"
     }
   ]

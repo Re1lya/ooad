@@ -28,7 +28,7 @@ public class DddRoleService implements RoleUseCase {
 
   /** 读取业务角色。 */
   private AccessRole require(Long id) {
-    return roles.find(id).orElseThrow(() -> new ResourceNotFoundException("对象不存在"));
+    return roles.find(id).orElseThrow(() -> new ResourceNotFoundException("ROLE_NOT_FOUND", "角色不存在"));
   }
 
   /** 角色结果。 */
@@ -46,7 +46,7 @@ public class DddRoleService implements RoleUseCase {
   @Transactional
   public RoleData.View create(RoleData.Create input) {
     if (roles.all().stream().anyMatch(n -> n.getCode().equals(input.code())))
-      throw new ConflictException("编码已存在");
+      throw new ConflictException("ROLE_CODE_EXISTS", "编码已存在");
     AccessRole n = new AccessRole();
     n.setCode(input.code());
     n.rename(input.name(), input.description());

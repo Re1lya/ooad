@@ -9,6 +9,7 @@ import com.cdwy.permission.repository.user.UserAccountRepository;
 import com.cdwy.permission.service.port.audit.AuditTrailUseCase;
 import com.cdwy.permission.service.port.auth.CurrentActorProvider;
 import com.cdwy.permission.service.port.data.AuditData;
+import com.cdwy.permission.service.port.error.InvalidDataException;
 import jakarta.persistence.criteria.Predicate;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -16,6 +17,7 @@ import java.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -32,7 +34,11 @@ import tools.jackson.databind.json.JsonMapper;
 @Service
 @Transactional(readOnly = true)
 public class AuditTrailService implements AuditTrailUseCase {
+  /** 审计对象描述的列宽。 */
+  private static final int TARGET_LENGTH = 255;
+
   private static final Logger log = LoggerFactory.getLogger(AuditTrailService.class);
+  /** before/after 序列化为 JSON 后允许的最大字符数，与列宽一致。 */
   private static final int MAX_JSON = 4000;
   private static final TypeReference<Map<String, Object>> MAP = new TypeReference<>() {};
 
@@ -43,6 +49,7 @@ public class AuditTrailService implements AuditTrailUseCase {
   private final JsonMapper json;
   private final ZoneId zone;
 
+  /** {@code zone} 取 {@code permission.policy.zone}（默认 Asia/Shanghai），只用于把记录时间换算为带时区偏移的结果。 */
   public AuditTrailService(
       AuditLogRepository logs,
       UserAccountRepository users,
@@ -58,11 +65,14 @@ public class AuditTrailService implements AuditTrailUseCase {
     this.zone = ZoneId.of(zone);
   }
 
+  /**
+   * 接口约定之外的规则：requestId 为空时不做幂等；对象描述超过 255 字时截断并以“…”结尾；before/after 序列化后超过 4000 字符抛
+   * {@code AUDIT_SNAPSHOT_TOO_LARGE}（400）；termId、courseId、classId 未显式给出时，objectType 为 term、course、class 的记录取
+   * objectId 填入对应字段；操作人姓名与直接角色编码在写入时快照，操作人为空时不记快照。
+   */
   @Override
   @Transactional
   public AuditData.Entry write(String systemCode, Long actorId, AuditData.Write input) {
-    if (input.type() == null || input.type().isBlank())
-      throw new IllegalArgumentException("审计类型不能为空");
     if (input.requestId() != null) {
       Optional<AuditLog> existing = logs.findBySystemCodeAndRequestId(systemCode, input.requestId());
       if (existing.isPresent()) {
@@ -72,12 +82,12 @@ public class AuditTrailService implements AuditTrailUseCase {
     }
     AuditLog value = new AuditLog();
     value.setSystemCode(systemCode);
-    value.setRequestId(limit(input.requestId(), 64, "requestId"));
+    value.setRequestId(input.requestId());
     value.setOccurredAt(Instant.now());
-    value.setType(limit(input.type(), 64, "type"));
-    value.setObjectType(limit(input.objectType(), 64, "objectType"));
-    value.setObjectId(limit(input.objectId(), 128, "objectId"));
-    value.setTarget(limit(input.target(), 255, "target"));
+    value.setType(input.type());
+    value.setObjectType(input.objectType());
+    value.setObjectId(input.objectId());
+    value.setTarget(fit(input.target(), TARGET_LENGTH));
     value.setBeforeJson(toJson(input.before()));
     value.setAfterJson(toJson(input.after()));
     value.setTermId(scope(input.termId(), "term", input));
@@ -94,10 +104,12 @@ public class AuditTrailService implements AuditTrailUseCase {
     return entry(saved);
   }
 
+  /**
+   * actor 按操作人姓名、target 按对象描述做不区分大小写的包含匹配（转义 LIKE 通配符），actorId 精确匹配，from、to 为闭区间；
+   * 按时间、标识倒序。page 从 1 开始，由 API 层保证合法。
+   */
   @Override
   public AuditData.Page query(String systemCode, AuditData.Query query) {
-    if (query.page() < 1 || query.pageSize() < 1 || query.pageSize() > 100)
-      throw new IllegalArgumentException("page 从 1 开始，pageSize 取 1 到 100");
     Specification<AuditLog> filter =
         (root, criteria, builder) -> {
           List<Predicate> predicates = new ArrayList<>();
@@ -118,7 +130,7 @@ public class AuditTrailService implements AuditTrailUseCase {
             predicates.add(builder.lessThanOrEqualTo(root.get("occurredAt"), query.to().toInstant()));
           return builder.and(predicates.toArray(Predicate[]::new));
         };
-    var page =
+    Page<AuditLog> page =
         logs.findAll(
             filter,
             PageRequest.of(
@@ -132,6 +144,7 @@ public class AuditTrailService implements AuditTrailUseCase {
         page.getContent().stream().map(this::entry).toList());
   }
 
+  /** 以应用 rbac 写入；requestId 每次随机生成，因此不去重；非 HTTP 调用或未登录时操作人为空。目前由角色继承的建立与解除调用。 */
   @Override
   @Transactional
   public void record(
@@ -172,6 +185,7 @@ public class AuditTrailService implements AuditTrailUseCase {
     value.setActorRoles(roles.length() > 255 ? roles.substring(0, 255) : roles);
   }
 
+  /** 转换为用例结果：时间换算到项目时区，角色快照按逗号拆分；操作人账号已被删除时 {@code deleted} 为 true（逐条查询账号）。 */
   private AuditData.Entry entry(AuditLog value) {
     AuditData.Actor actor =
         value.getActorId() == null
@@ -201,16 +215,19 @@ public class AuditTrailService implements AuditTrailUseCase {
 
   /** 课程系统按 objectType 区分学期、课程、教学班；显式传入时优先使用显式值。 */
   private static String scope(String explicit, String type, AuditData.Write input) {
-    if (explicit != null && !explicit.isBlank()) return limit(explicit, 128, type + "Id");
-    return type.equals(input.objectType()) ? limit(input.objectId(), 128, "objectId") : null;
+    if (explicit != null && !explicit.isBlank()) return explicit;
+    return type.equals(input.objectType()) ? input.objectId() : null;
   }
 
-  private static String limit(String value, int max, String field) {
-    if (value != null && value.length() > max)
-      throw new IllegalArgumentException(field + " 不能超过 " + max + " 个字符");
-    return value;
+  /**
+   * 对象描述按列宽截断。接入应用的请求已由 API 层限制长度；内部写入（例如“角色 A 继承 角色 B”）由两个最长
+   * 128 字的角色名拼成，可能超出列宽，截断后仍可读。
+   */
+  private static String fit(String value, int max) {
+    return value == null || value.length() <= max ? value : value.substring(0, max - 1) + "…";
   }
 
+  /** 构造不区分大小写的包含匹配模式：先转小写，再用反斜杠转义 LIKE 的通配符 {@code %}、{@code _} 和反斜杠本身。 */
   private static String contains(String text) {
     String escaped =
         text.toLowerCase(Locale.ROOT)
@@ -220,11 +237,12 @@ public class AuditTrailService implements AuditTrailUseCase {
     return "%" + escaped + "%";
   }
 
+  /** 序列化快照；超过 {@link #MAX_JSON} 个字符抛 {@code AUDIT_SNAPSHOT_TOO_LARGE}（400），不截断 JSON。 */
   private String toJson(Map<String, Object> value) {
     if (value == null) return null;
     String text = json.writeValueAsString(value);
     if (text.length() > MAX_JSON)
-      throw new IllegalArgumentException("before/after 内容过长，不能超过 " + MAX_JSON + " 个字符");
+      throw new InvalidDataException("AUDIT_SNAPSHOT_TOO_LARGE", "before/after 内容过长，不能超过 " + MAX_JSON + " 个字符");
     return text;
   }
 

@@ -63,7 +63,7 @@
 		<dependency>
 			<groupId>cn.edu.xmu</groupId>
 			<artifactId>clonefactory</artifactId>
-			<version>0.0.1-SNAPSHOT</version>
+			<version>0.0.2</version>
 		</dependency>
 		<dependency>
 			<groupId>io.jsonwebtoken</groupId>
@@ -145,15 +145,16 @@
 							<goal>compile</goal>
 						</goals>
 						<configuration>
+							<!-- Lombok 先于 CloneFactory：CloneFactory 生成拷贝代码时才能看到 Lombok 生成的访问器 -->
 							<annotationProcessorPaths>
-								<path>
-									<groupId>cn.edu.xmu</groupId>
-									<artifactId>clonefactory</artifactId>
-									<version>0.0.1-SNAPSHOT</version>
-								</path>
 								<path>
 									<groupId>org.projectlombok</groupId>
 									<artifactId>lombok</artifactId>
+								</path>
+								<path>
+									<groupId>cn.edu.xmu</groupId>
+									<artifactId>clonefactory</artifactId>
+									<version>0.0.2</version>
 								</path>
 							</annotationProcessorPaths>
 						</configuration>
@@ -165,15 +166,16 @@
 							<goal>testCompile</goal>
 						</goals>
 						<configuration>
+							<!-- Lombok 先于 CloneFactory：CloneFactory 生成拷贝代码时才能看到 Lombok 生成的访问器 -->
 							<annotationProcessorPaths>
-								<path>
-									<groupId>cn.edu.xmu</groupId>
-									<artifactId>clonefactory</artifactId>
-									<version>0.0.1-SNAPSHOT</version>
-								</path>
 								<path>
 									<groupId>org.projectlombok</groupId>
 									<artifactId>lombok</artifactId>
+								</path>
+								<path>
+									<groupId>cn.edu.xmu</groupId>
+									<artifactId>clonefactory</artifactId>
+									<version>0.0.2</version>
 								</path>
 							</annotationProcessorPaths>
 						</configuration>

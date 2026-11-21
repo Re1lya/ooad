@@ -15,7 +15,9 @@ import com.cdwy.permission.repository.resource.ApiResourceRepository;
 import com.cdwy.permission.repository.system.BusinessSystemRepository;
 import com.cdwy.permission.repository.user.UserAccountRepository;
 import com.cdwy.permission.service.port.data.IdentityData;
+import com.cdwy.permission.service.port.data.AuditData;
 import com.cdwy.permission.service.port.error.ResourceNotFoundException;
+import com.cdwy.permission.service.port.error.ForbiddenException;
 import com.cdwy.permission.service.port.identity.ApplicationIdentityUseCase;
 import com.cdwy.permission.service.rbac.AuthorizationService;
 import com.cdwy.permission.service.rbac.RoleHierarchyService;
@@ -55,6 +57,7 @@ public class ApplicationIdentityService implements ApplicationIdentityUseCase {
   private final DepartmentRepository departments;
   private final RoleHierarchyService hierarchy;
   private final AuthorizationService authorization;
+  private final com.cdwy.permission.service.port.audit.AuditTrailUseCase audit;
 
   /** 返回事务脚本实现标识。 */
   @Override
@@ -210,8 +213,27 @@ public class ApplicationIdentityService implements ApplicationIdentityUseCase {
         .toList();
   }
 
+  /** 步骤：应用存在 → 管理员直接放行，否则须在本应用内至少拥有一项有效权限 → 查询。 */
+  @Override
+  public AuditData.Page auditLogs(
+      Long userId, boolean administrator, String systemCode, AuditData.Query query) {
+    BusinessSystem app = requireSystem(systemCode);
+    if (!administrator && granted(userId, app).isEmpty())
+      throw new ForbiddenException("当前用户在该应用内没有任何有效权限，不能查看审计日志");
+    return audit.query(systemCode, query);
+  }
+
+  /** 步骤：应用存在 → 账号存在 → 写入（操作人快照由审计服务记录）。 */
+  @Override
+  @Transactional
+  public AuditData.Entry writeAuditLog(Long userId, String systemCode, AuditData.Write write) {
+    requireSystem(systemCode);
+    requireUser(userId);
+    return audit.write(systemCode, userId, write);
+  }
+
   private UserAccount requireUser(Long id) {
-    return users.findById(id).orElseThrow(() -> new ResourceNotFoundException("用户不存在"));
+    return users.findById(id).orElseThrow(() -> new ResourceNotFoundException("USER_NOT_FOUND", "用户不存在"));
   }
 
   private BusinessSystem requireSystem(String code) {
@@ -221,6 +243,6 @@ public class ApplicationIdentityService implements ApplicationIdentityUseCase {
   }
 
   private ResourceNotFoundException missingDepartment() {
-    return new ResourceNotFoundException("DEPARTMENT_NOT_FOUND", "部门不存在");
+    return new ResourceNotFoundException("IDENTITY_DEPARTMENT_NOT_FOUND", "部门不存在");
   }
 }

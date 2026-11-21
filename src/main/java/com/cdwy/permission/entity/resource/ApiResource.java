@@ -1,11 +1,19 @@
 package com.cdwy.permission.entity.resource;
 
+import cn.edu.xmu.clonefactory.CopyFrom;
+import cn.edu.xmu.clonefactory.CopyTo;
+import com.cdwy.permission.service.ddd.domain.model.ProtectedResource;
 import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.Setter;
 
-@cn.edu.xmu.clonefactory.CopyTo(
-    com.cdwy.permission.service.ddd.domain.model.ProtectedResource.class)
-@cn.edu.xmu.clonefactory.CopyFrom(
-    com.cdwy.permission.service.ddd.domain.model.ProtectedResource.class)
+/**
+ * API 资源（表 {@code api_resource}）：应用登记的一个接口，方法与路径模式在应用内唯一；DDD 路线的持久化适配器按 {@code @CopyTo}/{@code
+ * @CopyFrom} 与 {@link ProtectedResource} 互相拷贝。
+ */
+@CopyTo(ProtectedResource.class)
+@CopyFrom(ProtectedResource.class)
 @Entity
 @Table(
     name = "api_resource",
@@ -17,9 +25,14 @@ import jakarta.persistence.*;
             name = "uk_api_operation",
             columnNames = {"system_id", "operation_id"})
     })
+@Getter
+@Setter
 public class ApiResource {
+  /** 主键由数据库生成：不提供 setter，从领域对象拷回实体时也不覆盖。 */
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
+  @Setter(AccessLevel.NONE)
+  @CopyFrom.Exclude(ProtectedResource.class)
   private Long id;
 
   @Column(nullable = false, length = 128)
@@ -38,70 +51,24 @@ public class ApiResource {
   @Column(name = "operation_id", length = 128)
   private String operationId;
 
+  /** HTTP 方法：GET、POST、PUT、PATCH 或 DELETE。 */
   @Column(nullable = false, length = 8)
   private String method;
 
+  /**
+   * 路径模式，Spring {@code PathPattern} 语法，例如 {@code /api/users/{id}}；统一身份目录接口登记去掉
+   * {@code /api/apps/{应用编码}} 前缀后的路径。鉴权时在同一应用、同一方法下取匹配的最具体模式，再检查绑定到它的菜单或按钮。
+   */
   @Column(nullable = false, length = 255)
   private String path;
 
+  /** 所属应用。 */
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "system_id", nullable = false)
   private com.cdwy.permission.entity.system.BusinessSystem system;
 
+  /** 启用状态：最具体的匹配资源已停用时直接拒绝请求，不回退到更宽泛的资源。 */
   @Column(nullable = false)
   private boolean active = true;
 
-  public ApiResource() {}
-
-  public Long getId() {
-    return id;
-  }
-
-  public String getName() {
-    return name;
-  }
-
-  public void setName(String value) {
-    name = value;
-  }
-
-  public String getCode() {
-    return code;
-  }
-
-  public void setCode(String value) {
-    code = value;
-  }
-
-  public String getMethod() {
-    return method;
-  }
-
-  public void setMethod(String value) {
-    method = value;
-  }
-
-  public String getPath() {
-    return path;
-  }
-
-  public void setPath(String value) {
-    path = value;
-  }
-
-  public com.cdwy.permission.entity.system.BusinessSystem getSystem() {
-    return system;
-  }
-
-  public void setSystem(com.cdwy.permission.entity.system.BusinessSystem value) {
-    system = value;
-  }
-
-  public boolean getActive() {
-    return active;
-  }
-
-  public void setActive(boolean value) {
-    active = value;
-  }
 }

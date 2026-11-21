@@ -2,6 +2,7 @@ package com.cdwy.permission.service.ddd.domain.model;
 
 import lombok.Getter;
 import lombok.Setter;
+import com.cdwy.permission.service.port.error.InvalidDataException;
 
 /** ManagedSystem 领域对象：只维护业务状态和不变量，不依赖 JPA。 */
 @Getter
@@ -27,7 +28,7 @@ public class ManagedSystem {
   /** 防止删除仍有资源的应用。 */
   public void assertDeletable(boolean referenced) {
     if (referenced)
-      throw new com.cdwy.permission.service.port.error.ConflictException("仍有授权或资源引用，请先解除关联");
+      throw new com.cdwy.permission.service.port.error.ConflictException("SYSTEM_IN_USE", "仍有授权或资源引用，请先解除关联");
   }
 
   /**
@@ -42,17 +43,12 @@ public class ManagedSystem {
       String target,
       java.util.Collection<ManagedSystem> known) {
     if (!requested.contains(target))
-      throw new IllegalArgumentException("systems 必须包含当前应用 " + target);
+      throw new InvalidDataException("LOGIN_TARGET_NOT_IN_SYSTEMS", "systems 必须包含当前应用 " + target);
     java.util.Set<String> codes = new java.util.HashSet<>();
     known.forEach(app -> codes.add(app.getCode()));
     java.util.List<String> distinct = requested.stream().distinct().toList();
     for (String code : distinct)
-      if (!codes.contains(code)) throw new IllegalArgumentException("未登记的目标系统：" + code);
+      if (!codes.contains(code)) throw new InvalidDataException("LOGIN_SYSTEM_UNKNOWN", "未登记的目标系统：" + code);
     return distinct;
-  }
-
-  /** CloneFactory 的布尔 get 访问器约定。 */
-  public boolean getEnabled() {
-    return enabled;
   }
 }

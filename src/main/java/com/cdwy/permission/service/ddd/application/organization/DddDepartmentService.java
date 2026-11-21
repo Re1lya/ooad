@@ -28,7 +28,7 @@ public class DddDepartmentService implements DepartmentUseCase {
 
   /** 读取部门。 */
   private DepartmentNode require(Long id) {
-    return departments.find(id).orElseThrow(() -> new ResourceNotFoundException("部门不存在"));
+    return departments.find(id).orElseThrow(() -> new ResourceNotFoundException("DEPARTMENT_NOT_FOUND", "部门不存在"));
   }
 
   /** 返回无持久化技术的只读视图。 */

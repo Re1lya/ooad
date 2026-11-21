@@ -18,9 +18,9 @@ export interface UserUpdate {
 }
 
 export const usersApi = {
-  /** 数据库分页；keyword 按工号、姓名检索。 */
-  list: (page: number, size: number, keyword?: string) =>
-    request<Page<User>>('/api/users', { query: { page, size, keyword } }),
+  /** 数据库分页（page 从 1 开始）；keyword 按工号、姓名检索。 */
+  list: (page: number, pageSize: number, keyword?: string) =>
+    request<Page<User>>('/api/users', { query: { page, pageSize, keyword } }),
   get: (id: number) => request<User>(`/api/users/${id}`),
   create: (body: UserCreate) => request<User>('/api/users', { method: 'POST', body }),
   update: (id: number, body: UserUpdate) =>

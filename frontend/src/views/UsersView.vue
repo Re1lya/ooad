@@ -23,7 +23,7 @@ const writable = computed(() => can('rbac.users.write'));
 
 async function refresh() {
   const text = keyword.value.trim();
-  const result = await track(usersApi.list(page.value, SIZE, text || undefined));
+  const result = await track(usersApi.list(page.value + 1, SIZE, text || undefined));
   if (!result) return;
   rows.value = result.items;
   total.value = result.total;
@@ -194,11 +194,7 @@ async function savePassword() {
       placeholder="搜索工号、姓名或部门"
       aria-label="搜索当前列表"
     />
-    <button
-      v-if="can('rbac.directory.sync')"
-      class="btn ghost"
-      @click="router.push('/users/sync')"
-    >
+    <button v-if="can('rbac.directory.sync')" class="btn ghost" @click="router.push('/users/sync')">
       同步员工信息
     </button>
     <button v-if="writable" class="btn" @click="openEditor()">新增用户</button>

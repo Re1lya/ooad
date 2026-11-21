@@ -21,141 +21,140 @@
 
 ## 字段字典
 
-以下字段、类型、可空性取自测试启动后实际JPA模型；MySQL长度、约束与DDL见[建表脚本](database-mysql.sql)。H2枚举/时区时间与MySQL存储类型存在方言差异。
+以下字段、类型、可空性取自测试库（真实MySQL，由[建表脚本](database-mysql.sql)建立，Hibernate以validate启动）的information_schema；长度与约束见建表脚本。
 
 ### api_resource
 
-| 字段 | H2实际类型 | 可空 |
+| 字段 | MySQL类型 | 可空 |
 |---|---|---|
-| `active` | BOOLEAN | 否 |
-| `id` | BIGINT | 否 |
-| `method` | CHARACTER VARYING | 否 |
-| `system_id` | BIGINT | 否 |
-| `code` | CHARACTER VARYING | 是 |
-| `name` | CHARACTER VARYING | 否 |
-| `path` | CHARACTER VARYING | 否 |
+| `id` | bigint | 否 |
+| `system_id` | bigint | 否 |
+| `name` | varchar | 否 |
+| `code` | varchar | 是 |
+| `operation_id` | varchar | 是 |
+| `method` | varchar | 否 |
+| `path` | varchar | 否 |
+| `active` | bit | 否 |
 
 ### biz_system
 
-| 字段 | H2实际类型 | 可空 |
+| 字段 | MySQL类型 | 可空 |
 |---|---|---|
-| `enabled` | BOOLEAN | 否 |
-| `id` | BIGINT | 否 |
-| `code` | CHARACTER VARYING | 否 |
-| `name` | CHARACTER VARYING | 否 |
-| `base_url` | CHARACTER VARYING | 是 |
+| `id` | bigint | 否 |
+| `code` | varchar | 否 |
+| `name` | varchar | 否 |
+| `base_url` | varchar | 是 |
+| `enabled` | bit | 否 |
 
 ### permission_api
 
-| 字段 | H2实际类型 | 可空 |
+| 字段 | MySQL类型 | 可空 |
 |---|---|---|
-| `id` | BIGINT | 否 |
-| `permission_id` | BIGINT | 否 |
-| `resource_id` | BIGINT | 否 |
+| `id` | bigint | 否 |
+| `permission_id` | bigint | 否 |
+| `resource_id` | bigint | 否 |
 
 ### sys_account
 
-| 字段 | H2实际类型 | 可空 |
+| 字段 | MySQL类型 | 可空 |
 |---|---|---|
-| `user_id` | BIGINT | 否 |
-| `username` | CHARACTER VARYING | 否 |
-| `password_hash` | CHARACTER VARYING | 否 |
+| `user_id` | bigint | 否 |
+| `username` | varchar | 否 |
+| `password_hash` | varchar | 否 |
 
 ### sys_audit_log
 
-| 字段 | H2实际类型 | 可空 |
+| 字段 | MySQL类型 | 可空 |
 |---|---|---|
-| `actor_id` | BIGINT | 是 |
-| `id` | BIGINT | 否 |
-| `occurred_at` | TIMESTAMP WITH TIME ZONE | 否 |
-| `object_type` | CHARACTER VARYING | 是 |
-| `request_id` | CHARACTER VARYING | 是 |
-| `system_code` | CHARACTER VARYING | 否 |
-| `type` | CHARACTER VARYING | 否 |
-| `actor_name` | CHARACTER VARYING | 是 |
-| `class_id` | CHARACTER VARYING | 是 |
-| `course_id` | CHARACTER VARYING | 是 |
-| `object_id` | CHARACTER VARYING | 是 |
-| `term_id` | CHARACTER VARYING | 是 |
-| `after_json` | CHARACTER VARYING | 是 |
-| `before_json` | CHARACTER VARYING | 是 |
-| `actor_roles` | CHARACTER VARYING | 是 |
-| `target` | CHARACTER VARYING | 是 |
+| `id` | bigint | 否 |
+| `system_code` | varchar | 否 |
+| `request_id` | varchar | 是 |
+| `occurred_at` | datetime | 否 |
+| `actor_id` | bigint | 是 |
+| `actor_name` | varchar | 是 |
+| `actor_roles` | varchar | 是 |
+| `type` | varchar | 否 |
+| `object_type` | varchar | 是 |
+| `object_id` | varchar | 是 |
+| `target` | varchar | 是 |
+| `before_json` | varchar | 是 |
+| `after_json` | varchar | 是 |
+| `term_id` | varchar | 是 |
+| `course_id` | varchar | 是 |
+| `class_id` | varchar | 是 |
 
 ### sys_department
 
-| 字段 | H2实际类型 | 可空 |
+| 字段 | MySQL类型 | 可空 |
 |---|---|---|
-| `id` | BIGINT | 否 |
-| `parent_id` | BIGINT | 是 |
-| `manager_name` | CHARACTER VARYING | 是 |
-| `name` | CHARACTER VARYING | 否 |
+| `id` | bigint | 否 |
+| `name` | varchar | 否 |
+| `code` | varchar | 是 |
+| `parent_id` | bigint | 是 |
 
 ### sys_permission
 
-| 字段 | H2实际类型 | 可空 |
+| 字段 | MySQL类型 | 可空 |
 |---|---|---|
-| `active` | BOOLEAN | 否 |
-| `id` | BIGINT | 否 |
-| `parent_id` | BIGINT | 是 |
-| `system_id` | BIGINT | 否 |
-| `code` | CHARACTER VARYING | 否 |
-| `name` | CHARACTER VARYING | 否 |
-| `source_description` | CHARACTER VARYING | 是 |
-| `source_grants` | CHARACTER VARYING | 是 |
-| `menu_path` | CHARACTER VARYING | 是 |
-| `type` | ENUM | 否 |
+| `id` | bigint | 否 |
+| `system_id` | bigint | 否 |
+| `code` | varchar | 否 |
+| `name` | varchar | 否 |
+| `type` | enum | 否 |
+| `menu_path` | varchar | 是 |
+| `parent_id` | bigint | 是 |
+| `active` | bit | 否 |
 
 ### sys_role
 
-| 字段 | H2实际类型 | 可空 |
+| 字段 | MySQL类型 | 可空 |
 |---|---|---|
-| `enabled` | BOOLEAN | 否 |
-| `id` | BIGINT | 否 |
-| `code` | CHARACTER VARYING | 否 |
-| `name` | CHARACTER VARYING | 否 |
-| `description` | CHARACTER VARYING | 是 |
+| `id` | bigint | 否 |
+| `code` | varchar | 否 |
+| `name` | varchar | 否 |
+| `description` | varchar | 是 |
+| `enabled` | bit | 否 |
 
 ### sys_role_hierarchy
 
-| 字段 | H2实际类型 | 可空 |
+| 字段 | MySQL类型 | 可空 |
 |---|---|---|
-| `id` | BIGINT | 否 |
-| `inherited_role_id` | BIGINT | 否 |
-| `senior_role_id` | BIGINT | 否 |
+| `id` | bigint | 否 |
+| `senior_role_id` | bigint | 否 |
+| `inherited_role_id` | bigint | 否 |
 
 ### sys_role_permission
 
-| 字段 | H2实际类型 | 可空 |
+| 字段 | MySQL类型 | 可空 |
 |---|---|---|
-| `id` | BIGINT | 否 |
-| `permission_id` | BIGINT | 否 |
-| `role_id` | BIGINT | 否 |
+| `id` | bigint | 否 |
+| `role_id` | bigint | 否 |
+| `permission_id` | bigint | 否 |
 
 ### sys_user
 
-| 字段 | H2实际类型 | 可空 |
+| 字段 | MySQL类型 | 可空 |
 |---|---|---|
-| `administrator` | BOOLEAN | 否 |
-| `enabled` | BOOLEAN | 否 |
-| `credential_version` | BIGINT | 否 |
-| `department_id` | BIGINT | 是 |
-| `expires_at` | TIMESTAMP WITH TIME ZONE | 是 |
-| `id` | BIGINT | 否 |
-| `phone` | CHARACTER VARYING | 是 |
-| `company_name` | CHARACTER VARYING | 是 |
-| `display_name` | CHARACTER VARYING | 否 |
-| `job_title` | CHARACTER VARYING | 是 |
-| `source_department` | CHARACTER VARYING | 是 |
-| `person_type` | ENUM | 否 |
+| `id` | bigint | 否 |
+| `display_name` | varchar | 否 |
+| `department_id` | bigint | 是 |
+| `company_name` | varchar | 是 |
+| `source_department` | varchar | 是 |
+| `job_title` | varchar | 是 |
+| `phone` | varchar | 是 |
+| `person_type` | enum | 否 |
+| `expires_at` | datetime | 是 |
+| `enabled` | bit | 否 |
+| `administrator` | bit | 否 |
+| `credential_version` | bigint | 否 |
 
 ### sys_user_role
 
-| 字段 | H2实际类型 | 可空 |
+| 字段 | MySQL类型 | 可空 |
 |---|---|---|
-| `id` | BIGINT | 否 |
-| `role_id` | BIGINT | 否 |
-| `user_id` | BIGINT | 否 |
+| `id` | bigint | 否 |
+| `user_id` | bigint | 否 |
+| `role_id` | bigint | 否 |
 
 ## 约束与事务
 
@@ -165,8 +164,7 @@
 - 删除用户时删除其用户角色关系；有引用的角色、应用、权限、资源、部门禁止直接删除并返回409，避免误删共享配置。
 - 数据库外键保证引用存在；同应用、父节点类型、防环、有效期等业务约束由Service处理。前端校验只用于交互。
 - MySQL脚本只用于新空库。RBAC0十表版本的增量建表脚本见[迁移说明](../phase-two/README.md#数据库升级)；脚本未在真实MySQL执行，不要使用Hibernate update让旧库自动变形。
-- DDL已通过隔离H2 MySQL模式结构对比（表、列、长度、可空、主键、唯一键、14外键）；这不等同于真实MySQL运行验证。
-- H2内部`HT_SYS_USER`/`HTE_SYS_USER`是Hibernate临时bulk mutation表，不计入业务表；没有把它们作为核心实体。
+- 测试库在真实MySQL上由本建表脚本建立，Hibernate以validate核对列与类型；`MySqlSchemaTests`另外核对主键、唯一约束、14个外键与检查约束和实体声明一致。
 - MySQL中到期时间使用UTC datetime(6)，Hibernate JDBC时区固定为UTC；有效期日期按可配置业务时区解释。
 
 ## 图
