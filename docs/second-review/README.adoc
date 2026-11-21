@@ -26,7 +26,7 @@ Cdwy 小组：温家正、姚景云、杜奕含、陈浩贤
 |检查项 |证据
 |RBAC1 双设计后端 |`app.backend-strategy=structured\|ddd`；`GET /api/system-info` 显示 11 个模块的实际实现
 |部分前端 |“角色继承”“授权工作台”“我的权限”页面；课程系统登录与菜单
-|Swarm 部署 |`deploy/stack.yml`、`deploy/permission/*`、`deploy/course/*`；部署说明第 8 节核对清单
+|Swarm 部署 |已部署：权限系统 http://120.46.213.158/ui/index.html （stack `cdwy`），课程系统 http://124.70.102.248/ （stack `course-project`）；`deploy/stack.yml`、`deploy/course/stack.yml`、`deploy/permission/*`；部署说明“验收”一节的核对清单；`evidence/deployment/`
 |两个系统权限由权限系统管理 |`/api/apps/cpm/**` 接口；`scripts/register-course-app.py`；`scripts/verify-course-integration.py`
 |菜单切换与 logback 日志 |前端请求头 `X-Client-Menu`；`RequestLoggingFilter`、`LayerLoggingAspect`；日志行 `[menu=…]`
 |需求与测试 |需求—测试追踪表；`mvn clean verify` 103 个测试全部通过

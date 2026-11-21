@@ -19,7 +19,7 @@
 | 检查要求 | 本版落实 |
 |---|---|
 | 两个系统的权限都由权限系统管理 | 新增 `/api/apps/{应用编码}/auth/me`、`/identity/users/{userId}`、`/auth/audit-logs`，与老师课程项目管理系统的统一身份契约一致；课程系统只需配置 `APP_IDENTITY_BASE_URL=http://rbac-backend:18081/api/apps/cpm`。API 资源新增后端权限码（`TC`、`CV` 等），随角色及继承下发 |
-| 前后端部署到 Docker Swarm | [deploy/stack.yml](deploy/stack.yml)：权限系统前端/后端、课程系统前端/后端 4 个服务；Dockerfile、Nginx、docker secret、健康检查（Actuator）；[部署说明](docs/second-review/05-deployment.adoc) |
+| 前后端部署到 Docker Swarm | 已部署：权限系统 http://120.46.213.158/ui/index.html （stack `cdwy`，[deploy/stack.yml](deploy/stack.yml)），课程系统 http://124.70.102.248/ （stack `course-project`，[deploy/course/stack.yml](deploy/course/stack.yml)，老师 master 未改代码）；镜像在服务器上构建，密码用 docker secret，健康检查用 Actuator；[部署说明](docs/second-review/05-deployment.adoc)、[部署证据](docs/second-review/evidence/deployment/README.md) |
 | 菜单切换产生 logback 日志 | 前端每个请求带 `X-Client-Menu`；`logback-spring.xml` + `RequestLoggingFilter`（请求号、菜单、操作人）+ `LayerLoggingAspect`（Controller / Service / DDD 应用服务 / 基础设施分层日志，令牌与密码打码） |
 | 需求与测试对应 | [需求规格](docs/second-review/01-requirements.adoc) FR-01~FR-30、NFR-01~NFR-12；[需求—测试追踪](docs/second-review/04-test-traceability.adoc) |
 | 包图、类图、顺序图、GRASP、结构化与 DDD 区别、JavaEE 技术 | [详细设计](docs/second-review/03-detailed-design.adoc)：包图、DFD、模块结构图、两个答辩 API 的两种类图与顺序图 |
