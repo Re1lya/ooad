@@ -1,0 +1,12 @@
+应用 课程项目管理系统（course-project-management，id=2）
+菜单 4 个、按钮 12 个
+API 资源 20 个
+菜单与按钮绑定接口 19 条
+角色：教师（teacher）、学生（student）、课程督导（course-observer）、课程管理员（course-admin）
+继承：course-observer → teacher；course-admin → course-observer
+员工信息同步：10000 行、10 个公司；新建部门 120、沿用 0；新建人员 10000、更新 0、未变 0；补授角色 10000 条
+演示账号 SG000001 薛峰：已启用，分配 course-admin
+演示账号 SG000002 严天信：已启用，分配 course-observer
+演示账号 SG000003 秦哲：已启用
+演示账号 SG000191 曾禄：已启用
+完成。课程系统配置 IDENTITY_BASE_URL=<权限系统地址>/api/apps/course-project-management

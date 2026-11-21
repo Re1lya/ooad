@@ -1,0 +1,3 @@
+老师课程系统 master e9a6dff 后端测试，连本地 MySQL 8.4 的独立测试库（mvn -o test）
+Tests run: 495, Failures: 0, Errors: 0, Skipped: 0
+BUILD SUCCESS
