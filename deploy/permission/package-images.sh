@@ -19,12 +19,12 @@ if [ -n "$(git status --porcelain -- src frontend/src frontend/package.json pom.
 fi
 read -r -a mvn_args <<< "${MVN_ARGS:-}"
 
-mvn -B -q "${mvn_args[@]}" -f third-party/clonefactory/pom.xml install -Dmaven.test.skip=true
+mvn -B -q ${mvn_args[@]+"${mvn_args[@]}"} -f third-party/clonefactory/pom.xml install -Dmaven.test.skip=true
 (cd frontend && npm ci --no-audit --no-fund && npm run build)
 if [ "${SKIP_TESTS:-0}" = 1 ]; then
-  mvn -B -q "${mvn_args[@]}" clean package -DskipTests
+  mvn -B -q ${mvn_args[@]+"${mvn_args[@]}"} clean package -DskipTests
 else
-  mvn -B -q "${mvn_args[@]}" clean verify
+  mvn -B -q ${mvn_args[@]+"${mvn_args[@]}"} clean verify
 fi
 
 NAME="rbac-images-${TAG}"

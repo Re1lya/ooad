@@ -26,7 +26,7 @@ if [ -n "$(git -C "${REPO}" status --porcelain -- backend/src backend/pom.xml we
 fi
 read -r -a mvn_args <<< "${MVN_ARGS:-}"
 
-(cd "${REPO}/backend" && mvn -B -q "${mvn_args[@]}" clean package -Dmaven.test.skip=true)
+(cd "${REPO}/backend" && mvn -B -q ${mvn_args[@]+"${mvn_args[@]}"} clean package -Dmaven.test.skip=true)
 (cd "${REPO}/web" && npm ci --no-audit --no-fund \
   && VITE_API_BASE_URL=/api VITE_IDENTITY_BASE_URL="${IDENTITY_URL}" VITE_MOCK_ENABLED=false npm run build)
 

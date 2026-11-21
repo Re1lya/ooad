@@ -7,17 +7,20 @@ lab4             3          Swarm
 
 $ docker stack services cdwy
 ID             NAME                 MODE         REPLICAS   IMAGE                        PORTS
-24a6bbknguag   cdwy_rbac-backend    replicated   1/1        cdwy/rbac-backend:6f650e1    
-jfrem1e6fpvv   cdwy_rbac-frontend   replicated   1/1        cdwy/rbac-frontend:6f650e1   
+24a6bbknguag   cdwy_rbac-backend    replicated   1/1        cdwy/rbac-backend:5c58665    
+jfrem1e6fpvv   cdwy_rbac-frontend   replicated   1/1        cdwy/rbac-frontend:5c58665   
 
 $ docker stack services course-project
 ID             NAME                                 MODE         REPLICAS   IMAGE                         PORTS
 kc0iol1smjvq   course-project_course-mgt-backend    replicated   1/1        course-mgt-backend:e9a6dff    
 1lzd1mbktz2k   course-project_course-mgt-frontend   replicated   1/1        course-mgt-frontend:e9a6dff   
 
-$ docker service ps cdwy_rbac-backend cdwy_rbac-frontend course-project_course-mgt-backend course-project_course-mgt-frontend
-NAME                                   IMAGE                         NODE            DESIRED STATE   CURRENT STATE                PORTS
-cdwy_rbac-backend.1                    cdwy/rbac-backend:6f650e1     hcss-ecs-a955   Running         Running 2 minutes ago        
-cdwy_rbac-frontend.1                   cdwy/rbac-frontend:6f650e1    hcss-ecs-a955   Running         Running 2 minutes ago        *:80->80/tcp,*:80->80/tcp
-course-project_course-mgt-backend.1    course-mgt-backend:e9a6dff    hcss-ecs-1488   Running         Running about a minute ago   
-course-project_course-mgt-frontend.1   course-mgt-frontend:e9a6dff   hcss-ecs-1488   Running         Running about a minute ago   *:80->80/tcp,*:80->80/tcp
+$ docker stack ps cdwy --filter desired-state=running
+NAME                   IMAGE                        NODE            CURRENT STATE
+cdwy_rbac-backend.1    cdwy/rbac-backend:5c58665    hcss-ecs-a955   Running 2 minutes ago
+cdwy_rbac-frontend.1   cdwy/rbac-frontend:5c58665   hcss-ecs-a955   Running about a minute ago
+
+$ docker stack ps course-project --filter desired-state=running
+NAME                                   IMAGE                         NODE            CURRENT STATE
+course-project_course-mgt-backend.1    course-mgt-backend:e9a6dff    hcss-ecs-1488   Running 2 hours ago
+course-project_course-mgt-frontend.1   course-mgt-frontend:e9a6dff   hcss-ecs-1488   Running 2 hours ago

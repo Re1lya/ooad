@@ -1,28 +1,18 @@
-2026-11-21 11:01:43.673  INFO [87a40249] [menu=overview] [user=-] c.c.p.i.logging.RequestLoggingFilter     : 请求开始 GET /api/systems 菜单=overview
-2026-11-21 11:01:43.673  INFO [bd1543b8] [menu=overview] [user=-] c.c.p.i.logging.RequestLoggingFilter     : 请求开始 GET /api/permissions 菜单=overview
-2026-11-21 11:01:43.677  INFO [0cd5213f] [menu=overview] [user=-] c.c.p.i.logging.RequestLoggingFilter     : 请求开始 GET /api/resources 菜单=overview
-2026-11-21 11:01:43.677  INFO [3a60229b] [menu=overview] [user=-] c.c.p.i.logging.RequestLoggingFilter     : 请求开始 GET /api/users 菜单=overview
-2026-11-21 11:01:43.678  INFO [e47236fa] [menu=overview] [user=-] c.c.p.i.logging.RequestLoggingFilter     : 请求开始 GET /api/roles 菜单=overview
-2026-11-21 11:01:43.678  INFO [7011fe36] [menu=overview] [user=-] c.c.p.i.logging.RequestLoggingFilter     : 请求开始 GET /api/role-hierarchy 菜单=overview
-2026-11-21 11:01:43.723  INFO [87a40249] [menu=overview] [user=1] c.c.p.i.logging.RequestLoggingFilter     : 请求结束 GET /api/systems 状态=200 耗时=49 ms
-2026-11-21 11:01:43.724  INFO [e47236fa] [menu=overview] [user=1] c.c.p.i.logging.RequestLoggingFilter     : 请求结束 GET /api/roles 状态=200 耗时=46 ms
-2026-11-21 11:01:43.728  INFO [7011fe36] [menu=overview] [user=1] c.c.p.i.logging.RequestLoggingFilter     : 请求结束 GET /api/role-hierarchy 状态=200 耗时=49 ms
-2026-11-21 11:01:43.726  INFO [0cd5213f] [menu=overview] [user=1] c.c.p.i.logging.RequestLoggingFilter     : 请求结束 GET /api/resources 状态=200 耗时=48 ms
-2026-11-21 11:01:43.730  INFO [bd1543b8] [menu=overview] [user=1] c.c.p.i.logging.RequestLoggingFilter     : 请求结束 GET /api/permissions 状态=200 耗时=56 ms
-2026-11-21 11:01:43.740  INFO [3a60229b] [menu=overview] [user=1] c.c.p.i.logging.RequestLoggingFilter     : 请求结束 GET /api/users 状态=200 耗时=62 ms
-2026-11-21 11:01:43.768  INFO [524df6a1] [menu=overview] [user=-] c.c.p.i.logging.RequestLoggingFilter     : 请求开始 GET /api/audit-logs 菜单=overview
-2026-11-21 11:01:43.786  INFO [524df6a1] [menu=overview] [user=1] c.c.p.i.logging.RequestLoggingFilter     : 请求结束 GET /api/audit-logs 状态=200 耗时=18 ms
-2026-11-21 11:01:43.810  INFO [90caae0d] [menu=effective] [user=-] c.c.p.i.logging.RequestLoggingFilter     : 请求开始 GET /api/departments 菜单=effective
-2026-11-21 11:01:43.827  INFO [90caae0d] [menu=effective] [user=1] c.c.p.i.logging.RequestLoggingFilter     : 请求结束 GET /api/departments 状态=200 耗时=16 ms
-2026-11-21 11:01:44.215  INFO [6ac91a66] [menu=effective] [user=-] c.c.p.i.logging.RequestLoggingFilter     : 请求开始 GET /api/users 菜单=effective
-2026-11-21 11:01:44.254  INFO [6ac91a66] [menu=effective] [user=1] c.c.p.i.logging.RequestLoggingFilter     : 请求结束 GET /api/users 状态=200 耗时=38 ms
-2026-11-21 11:01:44.714  INFO [d5177dd4] [menu=effective] [user=-] c.c.p.i.logging.RequestLoggingFilter     : 请求开始 GET /api/users/2 菜单=effective
-2026-11-21 11:01:44.716  INFO [c6729c1e] [menu=effective] [user=-] c.c.p.i.logging.RequestLoggingFilter     : 请求开始 GET /api/users/2/permission-origins 菜单=effective
-2026-11-21 11:01:44.717  INFO [dfe1397f] [menu=effective] [user=-] c.c.p.i.logging.RequestLoggingFilter     : 请求开始 GET /api/users/2/roles 菜单=effective
-2026-11-21 11:01:44.894  INFO [d5177dd4] [menu=effective] [user=1] c.c.p.i.logging.RequestLoggingFilter     : 请求结束 GET /api/users/2 状态=200 耗时=180 ms
-2026-11-21 11:01:44.895  INFO [dfe1397f] [menu=effective] [user=1] c.c.p.i.logging.RequestLoggingFilter     : 请求结束 GET /api/users/2/roles 状态=200 耗时=177 ms
-2026-11-21 11:01:44.907  INFO [c6729c1e] [menu=effective] [user=1] c.c.p.i.logging.RequestLoggingFilter     : 请求结束 GET /api/users/2/permission-origins 状态=200 耗时=190 ms
-2026-11-21 11:01:45.580  INFO [c4901123] [menu=audit] [user=-] c.c.p.i.logging.RequestLoggingFilter     : 请求开始 GET /api/audit-logs 菜单=audit
-2026-11-21 11:01:45.602  INFO [c4901123] [menu=audit] [user=1] c.c.p.i.logging.RequestLoggingFilter     : 请求结束 GET /api/audit-logs 状态=200 耗时=21 ms
-2026-11-21 11:01:45.794  INFO [512331d7] [menu=audit] [user=-] c.c.p.i.logging.RequestLoggingFilter     : 请求开始 GET /api/audit-logs 菜单=audit
-2026-11-21 11:01:45.812  INFO [512331d7] [menu=audit] [user=1] c.c.p.i.logging.RequestLoggingFilter     : 请求结束 GET /api/audit-logs 状态=200 耗时=18 ms
+2026-11-21 13:16:45.273  INFO [1127a1ed] [menu=overview] [user=-] c.c.p.i.logging.RequestLoggingFilter     : 请求开始 GET /api/resources 菜单=overview
+2026-11-21 13:16:45.273  INFO [7c6583be] [menu=overview] [user=-] c.c.p.i.logging.RequestLoggingFilter     : 请求开始 GET /api/roles 菜单=overview
+2026-11-21 13:16:45.274  INFO [29a7badf] [menu=overview] [user=-] c.c.p.i.logging.RequestLoggingFilter     : 请求开始 GET /api/permissions 菜单=overview
+2026-11-21 13:16:45.276  INFO [1d968475] [menu=overview] [user=-] c.c.p.i.logging.RequestLoggingFilter     : 请求开始 GET /api/systems 菜单=overview
+2026-11-21 13:16:45.277  INFO [94de978b] [menu=overview] [user=-] c.c.p.i.logging.RequestLoggingFilter     : 请求开始 GET /api/role-hierarchy 菜单=overview
+2026-11-21 13:16:45.278  INFO [52c71a90] [menu=overview] [user=-] c.c.p.i.logging.RequestLoggingFilter     : 请求开始 GET /api/users 菜单=overview
+2026-11-21 13:16:45.845  INFO [73175d8e] [menu=effective] [user=-] c.c.p.i.logging.RequestLoggingFilter     : 请求开始 GET /api/departments 菜单=effective
+2026-11-21 13:16:45.851  INFO [73175d8e] [menu=effective] [user=1] c.c.permission.service.user.UserService  : [Service] require(1) 完成，耗时 0 ms
+2026-11-21 13:16:45.852  INFO [73175d8e] [menu=effective] [user=1] c.c.p.service.rbac.RoleHierarchyService  : [Service] graph() 完成，耗时 1 ms
+2026-11-21 13:16:45.862  INFO [73175d8e] [menu=effective] [user=1] c.c.p.service.rbac.AuthorizationService  : [Service] requireApi(1, "rbac", "GET", "/api/departments") 完成，耗时 13 ms
+2026-11-21 13:16:45.867  INFO [73175d8e] [menu=effective] [user=1] c.c.p.s.organization.DepartmentService   : [Service] list() 完成，耗时 4 ms
+2026-11-21 13:16:45.867  INFO [73175d8e] [menu=effective] [user=1] c.c.p.c.organization.DepartmentVoMapper  : [Controller] toVO(View) 完成，耗时 0 ms
+2026-11-21 13:16:47.436  INFO [727780f4] [menu=audit] [user=-] c.c.p.i.logging.RequestLoggingFilter     : 请求开始 GET /api/audit-logs 菜单=audit
+2026-11-21 13:16:47.442  INFO [727780f4] [menu=audit] [user=1] c.c.permission.service.user.UserService  : [Service] require(1) 完成，耗时 0 ms
+2026-11-21 13:16:47.445  INFO [727780f4] [menu=audit] [user=1] c.c.p.service.rbac.RoleHierarchyService  : [Service] graph() 完成，耗时 2 ms
+2026-11-21 13:16:47.455  INFO [727780f4] [menu=audit] [user=1] c.c.p.service.rbac.AuthorizationService  : [Service] requireApi(1, "rbac", "GET", "/api/audit-logs") 完成，耗时 15 ms
+2026-11-21 13:16:47.463  INFO [727780f4] [menu=audit] [user=1] c.c.p.service.audit.AuditTrailService    : [Service] query("rbac", Query) 完成，耗时 6 ms
+2026-11-21 13:16:47.463  INFO [727780f4] [menu=audit] [user=1] c.c.p.c.identity.IdentityVoMapper        : [Controller] toVO(Page) 完成，耗时 0 ms

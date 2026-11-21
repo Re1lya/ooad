@@ -8,12 +8,12 @@ Cdwy 小组
 
 == 部署结果
 
-2026-11-21 部署在小组的 5 节点 Swarm 集群上，取代 CDWY3 上的旧版权限系统。
+2026-11-21 部署在小组的 5 节点 Swarm 集群上，取代 CDWY3 上的旧版权限系统。同日按课程代码规范整改后，权限系统滚动更新到 `5c58665`（`.env` 中只改镜像标签，数据库结构不变），更新后公网接口验收 42/42、浏览器走查 13 步重新通过。
 
 [cols="2,3,2,3",options="header"]
 |===
 |系统 |访问地址 |stack |位置与镜像
-|统一权限管理系统 |http://120.46.213.158/ui/index.html |`cdwy` |CDWY3（`hcss-ecs-a955`）；`cdwy/rbac-backend:6f650e1`、`cdwy/rbac-frontend:6f650e1`；结构化路线
+|统一权限管理系统 |http://120.46.213.158/ui/index.html |`cdwy` |CDWY3（`hcss-ecs-a955`）；`cdwy/rbac-backend:5c58665`、`cdwy/rbac-frontend:5c58665`；结构化路线
 |课程项目管理系统 |http://124.70.102.248/ |`course-project` |CDWY4（`hcss-ecs-1488`）；老师仓库 master `e9a6dff` 的 `course-mgt-backend`、`course-mgt-frontend`，未改老师代码；DDD 路线
 |数据库 |集群内 `mysql:3306` |`lab`（已有） |CDWY2 的 `lab_mysql`（MySQL 9.2），新建库 `cdwy_rbac`、`course_project`
 |===
@@ -130,7 +130,7 @@ deploy/course/package-images.sh ../course-project-mgt http://120.46.213.158   # 
 +
 [source,bash]
 ----
-cd /root/ooad-deploy && tar xzf rbac-images-6f650e1.tar.gz && rbac-images-6f650e1/build-images.sh        # CDWY3
+cd /root/ooad-deploy && tar xzf rbac-images-5c58665.tar.gz && rbac-images-5c58665/build-images.sh        # CDWY3
 cd /root/ooad-deploy && tar xzf course-images-e9a6dff.tar.gz && course-images-e9a6dff/build-images.sh    # CDWY4
 ----
 
