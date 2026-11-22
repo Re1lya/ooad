@@ -8,17 +8,21 @@ Cdwy 小组
 
 == 部署结果
 
-2026-11-21 部署在小组的 5 节点 Swarm 集群上，取代 CDWY3 上的旧版权限系统。同日按课程代码规范整改后滚动更新到 `5c58665`，随后为防止停用内置对象锁死控制台又更新到 `b56e81c`（两次都只改 `.env` 中的镜像标签，数据库结构不变）；每次更新后公网接口验收 42/42、浏览器走查 13 步都重新通过。
+2026-11-21 部署在小组的 5 节点 Swarm 集群上，取代 CDWY3 上的旧版权限系统。同日按课程代码规范整改后滚动更新到 `5c58665`，随后为防止停用内置对象锁死控制台又更新到 `b56e81c`（两次都只改 `.env` 中的镜像标签，数据库结构不变）。
+
+2026-11-22 按老师的部署通知更新课程系统：后端改用老师发布的镜像，前端按老师最新的 master `990cea2` 重新编译；同时把员工信息表的一万名员工都启用为测试账号（总公司员工是教师，分公司员工是学生）。每次更新后都从公网重跑接口验收和浏览器走查（13 步），全部通过；当前验收脚本共 45 项。
 
 [cols="2,3,2,3",options="header"]
 |===
 |系统 |访问地址 |stack |位置与镜像
 |统一权限管理系统 |http://120.46.213.158/ui/index.html |`cdwy` |CDWY3（`hcss-ecs-a955`）；`cdwy/rbac-backend:b56e81c`、`cdwy/rbac-frontend:b56e81c`；结构化路线
-|课程项目管理系统 |http://124.70.102.248/ |`course-project` |CDWY4（`hcss-ecs-1488`）；老师仓库 master `e9a6dff` 的 `course-mgt-backend`、`course-mgt-frontend`，未改老师代码；DDD 路线
+|课程项目管理系统 |http://124.70.102.248/ |`course-project` |CDWY4（`hcss-ecs-1488`）；后端为老师发布的 `oomall-javaee/course-mgt-backend:0.0.1`（按摘要 `sha256:ed56582e…` 固定），前端 `course-mgt-frontend:990cea2` 由我们按老师仓库编译；未改老师代码；DDD 路线
 |数据库 |集群内 `mysql:3306` |`lab`（已有） |CDWY2 的 `lab_mysql`（MySQL 9.2），新建库 `cdwy_rbac`、`course_project`
 |===
 
-从外部地址运行接口验收脚本，42 项全部通过；浏览器走查与 Swarm 状态见 link:evidence/deployment/README.md[部署证据]。
+测试账号是老师员工信息表中的一万名员工：总公司员工（SG000001～SG000190）从教师入口登录，分公司员工（SG000191～SG010000）从学生入口登录，统一使用测试密码（不写进仓库，检查时当面提供）。
+
+从外部地址运行接口验收脚本，45 项全部通过；浏览器走查与 Swarm 状态见 link:evidence/deployment/README.md[部署证据]。
 
 == 部署拓扑
 
@@ -29,8 +33,8 @@ image::deployment-swarm.png[Swarm 部署图,800]
 |服务 |镜像来源 |端口 |说明
 |`rbac-frontend` |`deploy/permission/Dockerfile.frontend` |host 模式发布 80 |Nginx 托管 `/ui/`，`/api/` 转发到 `rbac-backend:18081`
 |`rbac-backend` |`deploy/permission/Dockerfile.backend` |18081 业务、18082 健康（只在网络内） |`SPRING_PROFILES_ACTIVE=swarm`；logback 写控制台和 `/app/logs`；CORS 只放行课程前端的源地址
-|`course-mgt-frontend` |老师仓库 `web/Dockerfile` |host 模式发布 80 |老师的 Nginx 配置：`/api/` 转发到 `course-mgt-backend:8080`
-|`course-mgt-backend` |老师仓库 `backend/Dockerfile` |8080 业务、8081 健康（只在网络内） |`APP_IDENTITY_BASE_URL=http://rbac-backend:18081/api/apps/course-project-management`
+|`course-mgt-frontend` |老师仓库 `web/Dockerfile`，我们编译 |host 模式发布 80 |老师的 Nginx 配置：`/api/` 转发到 `course-mgt-backend:8080`
+|`course-mgt-backend` |老师发布的镜像 |8080 业务、8081 健康（只在网络内） |`APP_IDENTITY_BASE_URL=http://rbac-backend:18081/api/apps/course-project-management`；登录服务所在的两个包日志为 INFO
 |===
 
 几点说明：
@@ -43,12 +47,14 @@ image::deployment-swarm.png[Swarm 部署图,800]
 +
 host 模式只占用服务所在节点的端口，两个系统因此各用一台节点的 80 端口。
 * 老师 stack 里的 Prometheus 没有部署：集群已有 `lab_prometheus`（网络别名同为 `prometheus`），节点内存也不够。
+* 老师的登录服务在 DEBUG 级别把整个登录结果（含访问令牌）写进日志。课程 stack 用 `BACKEND_LOG_LEVEL_LOGIN=INFO` 把 `cn.edu.xmu.projectmgt.service.ddd.application.auth`、`cn.edu.xmu.projectmgt.service.structured.auth` 两个包调到 INFO，不改老师代码；其余各层仍是 DEBUG，分层切面的“开始/完成”日志和课程后端调用统一身份的外部请求日志照常输出。
 * 每台节点只有约 1.8 GB 内存，所以两个后端放在不同节点，都设了内存上限，更新顺序为先停后启。部署后 CDWY3、CDWY4 各剩约 900 MB 可用内存。
 
 == 准备
 
-* 集群节点为 x86_64。两套 Dockerfile 的基础镜像（SWR `oomall-javaee` 的 `openjdk:21-alpine`、`nginx:stable-alpine`）只有 amd64 版本，所以镜像直接在服务所在节点上构建，不需要镜像仓库。
-* 构建机需要 JDK 21、Maven、Node 22.22.2 或 24.15+。课程后端依赖 CloneFactory 0.0.2，先从 gitee `mingqcn/spring-fundamentals` 的 `clonefactory` 目录执行 `mvn install`。
+* 集群节点为 x86_64。权限系统与课程前端 Dockerfile 的基础镜像（SWR `oomall-javaee` 的 `openjdk:21-alpine`、`nginx:stable-alpine`）只有 amd64 版本，所以这些镜像直接在服务所在节点上构建，不需要镜像仓库。
+* 课程后端用老师发布在 SWR `oomall-javaee` 的公开镜像，在 CDWY4 上直接 `docker pull`，不需要登录。
+* 构建机需要 JDK 21、Maven、Node 22.22.2 或 24.15+。权限系统依赖 CloneFactory 0.0.2，先执行 `mvn -f third-party/clonefactory/pom.xml install`。
 * 节点标签（只需执行一次）：
 +
 [source,bash]
@@ -119,19 +125,21 @@ unset pw
 
 [source,bash]
 ----
-deploy/permission/package-images.sh                      # build/rbac-images-<提交号>.tar.gz
-deploy/course/package-images.sh ../course-project-mgt http://120.46.213.158   # build/course-images-<提交号>.tar.gz
+deploy/permission/package-images.sh                                             # build/rbac-images-<提交号>.tar.gz
+deploy/course/package-frontend.sh ../course-project-mgt http://120.46.213.158  # build/course-frontend-<提交号>.tar.gz
 ----
 
 * 权限系统的打包默认先运行 `mvn clean verify`，测试连接真实 MySQL，须先设置 `TEST_DB_HOST`、`TEST_DB_PORT`、`TEST_DB_NAME`、`TEST_DB_USERNAME`、`TEST_DB_PASSWORD`（见 link:04-test-traceability.adoc[需求—测试追踪]）；已经在同一提交上跑过测试时，可设 `SKIP_TESTS=1` 只打包。
 
-* 课程系统的打包按老师部署文档执行，并做两项检查：前端产物里没有开发地址和 Mock 凭据，并且已写入统一身份地址。
+* 课程系统只打包前端（老师要求前端由各组自己编译，统一身份地址在构建时写入），按老师部署文档执行，并做两项检查：产物里没有开发地址和 Mock 凭据，并且已写入统一身份地址。老师 `e9a6dff` 之后的两个提交没有改前端代码，`990cea2` 编出的资源文件与之前部署的内容哈希相同。
+* 课程后端不需要编译，在 CDWY4 上拉取老师的镜像。
 * 把包传到对应节点后，解包并在节点上构建：
 +
 [source,bash]
 ----
 cd /root/ooad-deploy && tar xzf rbac-images-b56e81c.tar.gz && rbac-images-b56e81c/build-images.sh        # CDWY3
-cd /root/ooad-deploy && tar xzf course-images-e9a6dff.tar.gz && course-images-e9a6dff/build-images.sh    # CDWY4
+cd /root/ooad-deploy && tar xzf course-frontend-990cea2.tar.gz && course-frontend-990cea2/build-image.sh  # CDWY4
+docker pull swr.cn-north-4.myhuaweicloud.com/oomall-javaee/course-mgt-backend:0.0.1                       # CDWY4
 ----
 
 == 部署
@@ -145,13 +153,13 @@ cd /root/ooad-deploy/course && (set -a; . ./.env; set +a; docker stack deploy --
 docker stack services cdwy; docker stack services course-project
 ----
 
-* 镜像只存在于构建它的节点上，`--resolve-image never` 让 Swarm 直接使用节点上的本地镜像。
+* 镜像只存在于构建或拉取它的节点上，`--resolve-image never` 让 Swarm 直接使用节点上的本地镜像。课程后端在 `.env` 中按摘要引用老师的镜像，老师用同一标签重新推送时不会悄悄换版本；要跟进老师的新版本，在 CDWY4 上重新 `docker pull` 并更新 `.env` 中的摘要。
 * 切换设计路线：改 `RBAC_BACKEND_STRATEGY` 或 `BACKEND_STRATEGY`（`structured` / `ddd`）后，重新执行同一条 `docker stack deploy`。
 * 回滚：`docker service rollback <服务名>`。
 
 == 登记课程系统权限
 
-从任意能访问公网地址的机器运行 link:../../scripts/register-course-app.py[register-course-app.py]，管理员密码与演示密码只从环境变量读取：
+从任意能访问公网地址的机器运行 link:../../scripts/register-course-app.py[register-course-app.py]，管理员密码与测试密码只从环境变量读取：
 
 [source,bash]
 ----
@@ -162,8 +170,9 @@ EMPLOYEE_XLSX=市政公司员工信息表.xlsx DEMO_PASSWORD=... python3 scripts
 脚本只调用普通管理 API，可以重复执行，依次完成：
 
 . 登记应用、菜单与按钮、API 资源和角色；角色继承为“课程管理员 → 课程督导 → 教师”。
-. 同步老师的员工信息表。一万名员工都建立了账号（总公司员工补授 `teacher`，分公司员工补授 `student`），在服务器上约 20 秒完成。
-. 启用四个演示工号：SG000001 课程管理员、SG000002 课程督导、SG000003 教师、SG000191 学生。
+. 同步老师的员工信息表。一万名员工都建立了账号（总公司员工补授 `teacher`，分公司员工补授 `student`），在服务器上约 20 秒完成。同步建立的新账号默认停用、没有密码。
+. 按老师“测试账号就是这一万名员工”的约定，为尚未启用的员工设置统一的测试密码并启用。每个账号的密码要做一次 BCrypt，在 CDWY3（2 核）上约 12 分钟；重复执行只处理尚未启用的账号。
+. 四个演示工号另外分配角色：SG000001 课程管理员、SG000002 课程督导；SG000003 是普通教师，SG000191 是学生。
 
 == 验收
 
@@ -183,10 +192,10 @@ RBAC_ADMIN=admin RBAC_ADMIN_PASSWORD=... DEMO_PASSWORD=... python3 scripts/verif
 |3 |依次切换“用户管理”“角色继承”“API 资源”等菜单，同时执行 `docker service logs -f cdwy_rbac-backend` |每次切换都出现 `[menu=users]`、`[menu=hierarchy]` 等请求开始与结束日志（日志时间为 UTC）
 |4 |权限系统“应用管理”“API 资源”“角色继承” |`course-project-management` 应用、20 个带 operationId 的 API、“课程管理员 → 课程督导 → 教师”继承
 |5 |打开 http://124.70.102.248/ ，从教师入口用 SG000001 登录 |侧栏“管理”下有课程、学期、教师、日志
-|6 |用 SG000003 从教师入口登录；用 SG000191 从学生入口登录 |教师没有“管理”组；学生进入学生工作台
+|6 |用 SG000003 或任一总公司工号从教师入口登录；用 SG000191 或任一分公司工号从学生入口登录 |教师没有“管理”组；学生进入学生工作台
 |7 |在权限系统撤销“课程督导”的“课程管理”，刷新课程系统 |课程管理员的“课程”菜单变灰；恢复后重新可用，无需重新登录
 |8 |“添加教师”中选公司、选部门、选人 |姓名、工号来自权限系统，保存后出现在教师列表
-|9 |运行验收脚本 |42/42 通过
+|9 |运行验收脚本 |45/45 通过
 |===
 
 == 旧版权限系统的清理

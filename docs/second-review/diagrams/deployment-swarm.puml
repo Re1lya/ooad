@@ -8,8 +8,8 @@ node "CDWY3 hcss-ecs-a955（标签 cdwy.rbac=true）" {
   node "rbac-backend\nSpring Boot :18081 / 健康 :18082\nlogback → 控制台 + /app/logs" as RB
 }
 node "CDWY4 hcss-ecs-1488（标签 cdwy.course=true）" {
-  node "course-mgt-frontend\n老师镜像 Nginx :80（host 模式发布 80）\nhttp://124.70.102.248/" as CF
-  node "course-mgt-backend\n老师镜像 Spring Boot :8080 / 健康 :8081" as CBK
+  node "course-mgt-frontend\n按老师仓库编译 Nginx :80（host 模式发布 80）\nhttp://124.70.102.248/" as CF
+  node "course-mgt-backend\n老师发布的镜像 0.0.1\nSpring Boot :8080 / 健康 :8081" as CBK
 }
 node "CDWY2 hcss-ecs-8c4a" {
   database "lab_mysql（MySQL 9.2，网络别名 mysql）\ncdwy_rbac / course_project" as DB

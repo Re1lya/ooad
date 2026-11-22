@@ -1,0 +1,25 @@
+2026-11-22T02:13:16.029Z DEBUG 1 --- [course-project-backend] [nio-8080-exec-2] c.e.x.p.i.logging.LayerLoggingAspect     : [API] LoginController.login 开始
+2026-11-22T02:13:16.030Z DEBUG 1 --- [course-project-backend] [nio-8080-exec-2] c.e.x.p.i.logging.LayerLoggingAspect     : [SERVICE] DddLoginService.login 开始
+2026-11-22T02:13:16.038Z DEBUG 1 --- [course-project-backend] [nio-8080-exec-2] e.x.p.i.h.ExternalHttpLoggingInterceptor : 外部 HTTP 请求开始，method=POST, uri=http://rbac-backend:18081/api/apps/course-project-management/auth/login
+2026-11-22T02:13:16.127Z DEBUG 1 --- [course-project-backend] [nio-8080-exec-2] e.x.p.i.h.ExternalHttpLoggingInterceptor : 外部 HTTP 请求完成，method=POST, uri=http://rbac-backend:18081/api/apps/course-project-management/auth/login, status=200, elapsed=89ms
+2026-11-22T02:13:16.128Z DEBUG 1 --- [course-project-backend] [nio-8080-exec-2] e.x.p.i.h.ExternalHttpLoggingInterceptor : 外部 HTTP 请求开始，method=GET, uri=http://rbac-backend:18081/api/apps/course-project-management/auth/me
+2026-11-22T02:13:16.149Z DEBUG 1 --- [course-project-backend] [nio-8080-exec-2] e.x.p.i.h.ExternalHttpLoggingInterceptor : 外部 HTTP 请求完成，method=GET, uri=http://rbac-backend:18081/api/apps/course-project-management/auth/me, status=200, elapsed=21ms
+2026-11-22T02:13:16.150Z DEBUG 1 --- [course-project-backend] [nio-8080-exec-2] c.e.x.p.i.logging.LayerLoggingAspect     : [SERVICE] DddLoginService.login 完成
+2026-11-22T02:13:16.151Z DEBUG 1 --- [course-project-backend] [nio-8080-exec-2] c.e.x.p.i.logging.LayerLoggingAspect     : [API] LoginController.login 完成
+
+2026-11-22T02:13:20.062Z DEBUG 1 --- [course-project-backend] [io-8080-exec-10] c.e.x.p.i.logging.LayerLoggingAspect     : [INFRA] HttpExchangeUnifiedIdentityGateway.currentIdentity 开始
+2026-11-22T02:13:20.063Z DEBUG 1 --- [course-project-backend] [io-8080-exec-10] e.x.p.i.h.ExternalHttpLoggingInterceptor : 外部 HTTP 请求开始，method=GET, uri=http://rbac-backend:18081/api/apps/course-project-management/auth/me
+2026-11-22T02:13:20.086Z DEBUG 1 --- [course-project-backend] [io-8080-exec-10] e.x.p.i.h.ExternalHttpLoggingInterceptor : 外部 HTTP 请求完成，method=GET, uri=http://rbac-backend:18081/api/apps/course-project-management/auth/me, status=200, elapsed=23ms
+2026-11-22T02:13:20.086Z DEBUG 1 --- [course-project-backend] [io-8080-exec-10] c.e.x.p.i.logging.LayerLoggingAspect     : [INFRA] HttpExchangeUnifiedIdentityGateway.currentIdentity 完成
+2026-11-22T02:13:20.087Z DEBUG 1 --- [course-project-backend] [io-8080-exec-10] c.e.x.p.i.logging.LayerLoggingAspect     : [API] TeacherController.createTeacher 开始
+2026-11-22T02:13:20.088Z DEBUG 1 --- [course-project-backend] [io-8080-exec-10] c.e.x.p.i.logging.LayerLoggingAspect     : [API] TeacherVoMapper.toCommand 开始
+2026-11-22T02:13:20.088Z DEBUG 1 --- [course-project-backend] [io-8080-exec-10] c.e.x.p.i.logging.LayerLoggingAspect     : [API] TeacherVoMapper.toCommand 完成
+2026-11-22T02:13:20.088Z DEBUG 1 --- [course-project-backend] [io-8080-exec-10] c.e.x.p.i.logging.LayerLoggingAspect     : [SERVICE] DddTeacherService.createTeacher 开始
+2026-11-22T02:13:20.088Z DEBUG 1 --- [course-project-backend] [io-8080-exec-10] c.e.x.p.i.logging.LayerLoggingAspect     : [INFRA] SecurityTeacherAuthorization.canCreate 开始
+2026-11-22T02:13:20.088Z DEBUG 1 --- [course-project-backend] [io-8080-exec-10] c.e.x.p.i.logging.LayerLoggingAspect     : [INFRA] SecurityTeacherAuthorization.canCreate 完成
+2026-11-22T02:13:20.088Z DEBUG 1 --- [course-project-backend] [io-8080-exec-10] c.e.x.p.i.logging.LayerLoggingAspect     : [INFRA] JpaTeacherManagementRepository.existsByUserId 开始
+2026-11-22T02:13:20.090Z DEBUG 1 --- [course-project-backend] [io-8080-exec-10] c.e.x.p.i.logging.LayerLoggingAspect     : [INFRA] JpaTeacherManagementRepository.existsByUserId 完成
+2026-11-22T02:13:20.090Z DEBUG 1 --- [course-project-backend] [io-8080-exec-10] c.e.x.p.i.logging.LayerLoggingAspect     : [INFRA] HttpExchangeUnifiedIdentityGateway.lookupUser 开始
+2026-11-22T02:13:20.091Z DEBUG 1 --- [course-project-backend] [io-8080-exec-10] e.x.p.i.h.ExternalHttpLoggingInterceptor : 外部 HTTP 请求开始，method=GET, uri=http://rbac-backend:18081/api/apps/course-project-management/auth/users/SG009846
+2026-11-22T02:13:20.104Z DEBUG 1 --- [course-project-backend] [io-8080-exec-10] e.x.p.i.h.ExternalHttpLoggingInterceptor : 外部 HTTP 请求完成，method=GET, uri=http://rbac-backend:18081/api/apps/course-project-management/auth/users/SG009846, status=200, elapsed=13ms
+2026-11-22T02:13:20.106Z DEBUG 1 --- [course-project-backend] [io-8080-exec-10] c.e.x.p.i.logging.LayerLoggingAspect     : [INFRA] HttpExchangeUnifiedIdentityGateway.lookupUser 完成

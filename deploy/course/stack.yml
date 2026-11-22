@@ -1,12 +1,15 @@
 # 课程项目管理系统：Docker Swarm stack（stack 名 course-project），由老师仓库 deploy/stack.yml 改写。
 #
-# 镜像、服务名、网络、健康检查、内存上限与老师的部署文档一致；为接入本集群改了以下几处：
+# 镜像、服务名、网络、健康检查、内存上限与老师的部署文档一致：后端用老师发布的镜像，前端由我们按老师仓库
+# 编译后在课程节点上构建。为接入本集群改了以下几处：
 #   1. 数据库密码改为 docker secret（configtree 读取），不放环境变量；连接池限 5（lab_mysql 多个实验共用）；
 #   2. 统一身份指向权限系统：IDENTITY_BASE_URL=http://rbac-backend:18081/api/apps/course-project-management；
-#   3. 两个服务固定在课程节点（标签 cdwy.course=true，镜像在该节点上构建）；前端用 host 模式发布 80 端口，
+#   3. 两个服务固定在课程节点（标签 cdwy.course=true，前端镜像在该节点上构建）；前端用 host 模式发布 80 端口，
 #      因为集群 ingress 的 8080 已被 lab_productdemoaop 占用，安全组只放行 80、443、8080；
 #      host 端口不能新旧任务同时占用，所以更新顺序改为先停后启；
-#   4. 不带 Prometheus：集群已有 lab_prometheus（网络别名同为 prometheus），节点内存也不够。
+#   4. 不带 Prometheus：集群已有 lab_prometheus（网络别名同为 prometheus），节点内存也不够；
+#   5. 老师的登录服务在 DEBUG 级别把整个登录结果（含访问令牌）写进日志，这里把登录服务所在的两个包调到 INFO；
+#      分层日志切面记录的“开始/完成”不受影响，其余各层仍是 DEBUG。
 #
 # 部署（在管理节点，deploy/course 目录的副本中）：
 #   (set -a; . ./.env; set +a; docker stack deploy --resolve-image never -c stack.yml course-project)
@@ -23,7 +26,7 @@ services:
     image: ${BACKEND_IMAGE:?BACKEND_IMAGE must be set}
     environment:
       SPRING_PROFILES_ACTIVE: swarm
-      APP_BACKEND_STRATEGY: ${BACKEND_STRATEGY:-structured}
+      APP_BACKEND_STRATEGY: ${BACKEND_STRATEGY:-ddd}
       SPRING_CONFIG_IMPORT: optional:configtree:/run/secrets/
       MULTIPART_MAX_FILE_SIZE: ${BACKEND_MULTIPART_MAX_FILE_SIZE:-20MB}
       MULTIPART_MAX_REQUEST_SIZE: ${BACKEND_MULTIPART_MAX_REQUEST_SIZE:-50MB}
@@ -38,6 +41,8 @@ services:
       LOGGING_LEVEL_CN_EDU_XMU_PROJECTMGT_API: ${BACKEND_LOG_LEVEL_API:-DEBUG}
       LOGGING_LEVEL_CN_EDU_XMU_PROJECTMGT_SERVICE: ${BACKEND_LOG_LEVEL_SERVICE:-DEBUG}
       LOGGING_LEVEL_CN_EDU_XMU_PROJECTMGT_INFRASTRUCTURE: ${BACKEND_LOG_LEVEL_INFRASTRUCTURE:-DEBUG}
+      LOGGING_LEVEL_CN_EDU_XMU_PROJECTMGT_SERVICE_DDD_APPLICATION_AUTH: ${BACKEND_LOG_LEVEL_LOGIN:-INFO}
+      LOGGING_LEVEL_CN_EDU_XMU_PROJECTMGT_SERVICE_STRUCTURED_AUTH: ${BACKEND_LOG_LEVEL_LOGIN:-INFO}
     secrets:
       - source: course_db_password
         target: spring.datasource.password

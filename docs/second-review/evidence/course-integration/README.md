@@ -1,21 +1,21 @@
 # 课程项目管理系统接入：本地端到端证据
 
-2026-11-21 在本机完成。两套系统都用 MySQL 8.4，权限系统按 `docs/first-review/database-mysql.sql` 建库并以 `ddl-auto=validate` 启动；课程系统用老师仓库 master（e9a6dff）的后端、前端构建和课程库 dump，未改老师代码。课程前端构建时 `VITE_IDENTITY_BASE_URL` 指向 `<权限系统>/api/apps/course-project-management`，权限系统的 CORS 白名单只放行课程前端的源地址。
+2026-11-21 首次在本机完成，2026-11-22 按老师的部署通知更新后重跑。两套系统都用 MySQL 8.4，权限系统按 `docs/first-review/database-mysql.sql` 建库并以 `ddl-auto=validate` 启动；课程系统后端用老师仓库 master（990cea2，与老师发布的镜像是同一份代码）编译的 JAR，前端用同一提交编译，课程库用老师的 dump，未改老师代码。课程前端构建时 `VITE_IDENTITY_BASE_URL` 指向 `<权限系统>/api/apps/course-project-management`，权限系统的 CORS 白名单只放行课程前端的源地址。课程后端的日志级别与部署时相同：各层 DEBUG，登录服务所在的两个包 INFO（老师的登录服务在 DEBUG 下会打印含令牌的登录结果）。
 
 每种路线都从空库开始，依次运行：
 
-1. `scripts/register-course-app.py`：登记应用、菜单与按钮、API 资源（含 operationId）、角色与继承；同步老师的员工信息表（一万人）；启用四个演示工号。
-2. `scripts/verify-course-integration.py`：42 项接口验收，课程接口经课程前端的 `/api` 代理调用，与浏览器路径一致。
+1. `scripts/register-course-app.py`：登记应用、菜单与按钮、API 资源（含 operationId）、角色与继承；同步老师的员工信息表（一万人）；按老师的约定把一万名员工都启用为测试账号，四个演示工号另外分配课程督导、课程管理员角色。
+2. `scripts/verify-course-integration.py`：45 项接口验收，课程接口经课程前端的 `/api` 代理调用，与浏览器路径一致。
 3. `frontend/tests/course-walkthrough.cjs`：用 Chrome 实际操作课程前端和权限控制台，逐步截图。
 
 | 文件 | 内容 |
 |---|---|
-| `register-course-app.txt` | 登记与员工同步的输出 |
-| `verify-structured.txt`、`verify-ddd.txt` | 两个系统都用结构化路线、都用 DDD 路线时的验收结果，各 42/42 |
-| `course-backend-tests-mysql.txt` | 老师课程后端自带的 495 个测试连 MySQL 的结果 |
+| `register-course-app.txt` | 登记、员工同步与启用测试账号的输出 |
+| `verify-structured.txt`、`verify-ddd.txt` | 两个系统都用结构化路线、都用 DDD 路线时的验收结果，各 45/45 |
+| `course-backend-tests-mysql.txt` | 老师课程后端 e9a6dff 自带的 495 个测试连 MySQL 的结果（2026-11-21） |
 | `01`–`10` | 课程前端：课程管理员的菜单、两级部门选人添加教师、课程日志、撤销与恢复菜单 |
 | `11`–`13` | 权限控制台：薛峰的有效权限及继承路径、两个应用分开的审计日志 |
 
-演示工号：SG000001 薛峰（课程管理员）、SG000002 严天信（课程督导）、SG000003 秦哲（教师）、SG000191 曾禄（学生）。角色继承为“课程管理员 → 课程督导 → 教师”。
+测试账号：员工信息表的一万名员工，总公司员工（SG000001～SG000190）从教师入口登录，分公司员工（SG000191～SG010000）从学生入口登录，统一使用测试密码。演示工号：SG000001 薛峰（课程管理员）、SG000002 严天信（课程督导）、SG000003 秦哲（教师）、SG000191 曾禄（学生）。角色继承为“课程管理员 → 课程督导 → 教师”。
 
 日志、输出和截图中没有令牌和密码；账号密码只从环境变量读取。
