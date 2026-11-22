@@ -61,7 +61,7 @@
 
 下面的图片只用于说明视觉布局，不能替代运行中的页面：
 
-![结构化实现下的权限台账前端静态预览](docs/design/phase-two/full-dual-structured/overview.png)
+![部署环境中权限台账的总览页（结构化路线）](docs/design/phase-two/access-registry-overview.png)
 
 如果你在 GitHub 上只看到这张图，说明你当前停留在 README 页面；这不是前端没有更新。启动服务后访问上面的 `127.0.0.1` 地址，才会进入可登录、可点击、会调用 API 的页面。
 

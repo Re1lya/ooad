@@ -7,8 +7,8 @@ lab4             3          Swarm
 
 $ docker stack services cdwy
 ID             NAME                 MODE         REPLICAS   IMAGE                        PORTS
-24a6bbknguag   cdwy_rbac-backend    replicated   1/1        cdwy/rbac-backend:b56e81c    
-jfrem1e6fpvv   cdwy_rbac-frontend   replicated   1/1        cdwy/rbac-frontend:b56e81c   
+24a6bbknguag   cdwy_rbac-backend    replicated   1/1        cdwy/rbac-backend:39ba5ec    
+jfrem1e6fpvv   cdwy_rbac-frontend   replicated   1/1        cdwy/rbac-frontend:39ba5ec   
 
 $ docker stack services course-project
 ID             NAME                                 MODE         REPLICAS   IMAGE                                                                     PORTS
@@ -17,10 +17,10 @@ kc0iol1smjvq   course-project_course-mgt-backend    replicated   1/1        swr.
 
 $ docker stack ps cdwy --filter desired-state=running
 NAME                   IMAGE                        NODE            CURRENT STATE
-cdwy_rbac-backend.1    cdwy/rbac-backend:b56e81c    hcss-ecs-a955   Running 13 hours ago
-cdwy_rbac-frontend.1   cdwy/rbac-frontend:b56e81c   hcss-ecs-a955   Running 13 hours ago
+cdwy_rbac-backend.1    cdwy/rbac-backend:39ba5ec    hcss-ecs-a955   Running about a minute ago
+cdwy_rbac-frontend.1   cdwy/rbac-frontend:39ba5ec   hcss-ecs-a955   Running about a minute ago
 
 $ docker stack ps course-project --filter desired-state=running
 NAME                                   IMAGE                                                                     NODE            CURRENT STATE
-course-project_course-mgt-backend.1    swr.cn-north-4.myhuaweicloud.com/oomall-javaee/course-mgt-backend:0.0.1   hcss-ecs-1488   Running 15 minutes ago
-course-project_course-mgt-frontend.1   course-mgt-frontend:990cea2                                               hcss-ecs-1488   Running 15 minutes ago
+course-project_course-mgt-backend.1    swr.cn-north-4.myhuaweicloud.com/oomall-javaee/course-mgt-backend:0.0.1   hcss-ecs-1488   Running 10 hours ago
+course-project_course-mgt-frontend.1   course-mgt-frontend:990cea2                                               hcss-ecs-1488   Running 10 hours ago

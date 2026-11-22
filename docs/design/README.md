@@ -26,6 +26,8 @@ python scripts/build-review-diagrams.py
 
 ## 当前界面
 
+2026-11-22 起部署环境的首页是同组重构的权限台账：[总览页](phase-two/access-registry-overview.png)；各页面的浏览器验收见 `frontend-access-registry/tests`。下面是原管理控制台（仍在 `/ui/`）的截图与验收记录。
+
 structured 与 ddd 各三组 Edge 场景在独立隔离 H2 库使用合成数据，共46项检查通过，无未捕获 JavaScript 异常。[业务记录](phase-two/ui-verification.json)、[前进后退记录](phase-two/navigation-verification.json)。
 
 | 页面 | 截图 |

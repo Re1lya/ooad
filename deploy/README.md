@@ -2,15 +2,15 @@
 
 完整说明见 [docs/second-review/05-deployment.adoc](../docs/second-review/05-deployment.adoc)。当前部署（2026-11-22 更新）：
 
-- 统一权限管理系统：http://120.46.213.158/ui/index.html （stack `cdwy`，CDWY3）
+- 统一权限管理系统：http://120.46.213.158/ （stack `cdwy`，CDWY3）：首页进权限台账，原管理控制台在 `/ui/`
 - 课程项目管理系统：http://124.70.102.248/ （stack `course-project`，CDWY4）：后端用老师发布的镜像 `course-mgt-backend:0.0.1`，前端按老师仓库 master `990cea2` 编译，未改老师代码
 - 测试账号：老师员工信息表中的一万名员工，总公司员工从教师入口登录，分公司员工从学生入口登录，统一使用测试密码（不写进仓库）
 
 | 文件 | 用途 |
 |---|---|
 | `stack.yml`、`.env.example` | 权限系统 stack：`rbac-backend`、`rbac-frontend`，接入外部网络 `javaee-proxy` |
-| `permission/Dockerfile.backend`、`permission/Dockerfile.frontend`、`permission/nginx/default.conf` | 权限系统镜像与 Nginx 反向代理 |
-| `permission/package-images.sh` | 本机编译并打包权限系统的镜像构建上下文，到服务器上构建 |
+| `permission/Dockerfile.backend`、`permission/Dockerfile.frontend`、`permission/nginx/default.conf` | 权限系统镜像；Nginx 托管权限台账（`/access-registry/`，首页跳转）与原管理控制台（`/ui/`），并把 `/api/` 转发到后端 |
+| `permission/package-images.sh` | 本机构建两个前端、编译后端，打包权限系统的镜像构建上下文，到服务器上构建 |
 | `course/stack.yml`、`course/env.example` | 课程系统 stack：由老师的 `deploy/stack.yml` 改写，后端用老师的镜像（按摘要固定），数据库密码改用 secret，统一身份指向权限系统，登录服务日志调到 INFO 以免记下令牌 |
 | `course/package-frontend.sh` | 按老师部署文档编译课程前端（构建时写入统一身份地址），打包老师的 Dockerfile 与产物，到课程节点上构建 |
 
