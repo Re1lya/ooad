@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 打包权限系统镜像的构建上下文：本机编译后端 JAR 和前端，连同 Dockerfile、Nginx 配置打成 tar.gz。
+# 打包权限系统镜像的构建上下文：本机编译后端 JAR 和两个前端（权限台账、原管理控制台），连同 Dockerfile、Nginx 配置打成 tar.gz。
 # 服务器是 x86_64，基础镜像（SWR oomall-javaee）只有 amd64 版本，所以镜像在服务器上构建：
 #   scp build/rbac-images-<提交号>.tar.gz root@<权限系统节点>:/root/ooad-deploy/
 #   在该节点：cd /root/ooad-deploy && tar xzf rbac-images-<提交号>.tar.gz && rbac-images-<提交号>/build-images.sh
@@ -13,14 +13,15 @@ cd "$(dirname "$0")/../.."
 
 OUT_DIR="${1:-build}"
 TAG="$(git rev-parse --short=7 HEAD)"
-if [ -n "$(git status --porcelain -- src frontend/src frontend/package.json pom.xml)" ]; then
-  echo "src、frontend 或 pom.xml 有未提交的改动，镜像标签 ${TAG} 会对不上源码" >&2
+if [ -n "$(git status --porcelain -- src frontend/src frontend/package.json frontend-access-registry/src frontend-access-registry/index.html frontend-access-registry/package.json pom.xml)" ]; then
+  echo "src、两个前端或 pom.xml 有未提交的改动，镜像标签 ${TAG} 会对不上源码" >&2
   exit 1
 fi
 read -r -a mvn_args <<< "${MVN_ARGS:-}"
 
 mvn -B -q ${mvn_args[@]+"${mvn_args[@]}"} -f third-party/clonefactory/pom.xml install -Dmaven.test.skip=true
 (cd frontend && npm ci --no-audit --no-fund && npm run build)
+(cd frontend-access-registry && npm ci --no-audit --no-fund && npm run build:backend)
 if [ "${SKIP_TESTS:-0}" = 1 ]; then
   mvn -B -q ${mvn_args[@]+"${mvn_args[@]}"} clean package -DskipTests
 else
@@ -34,6 +35,7 @@ CTX="${STAGE}/${NAME}"
 mkdir -p "${CTX}/target" "${CTX}/src/main/resources/static" "${CTX}/deploy/permission"
 cp target/nified-permission-system-*.jar "${CTX}/target/"
 cp -R src/main/resources/static/ui "${CTX}/src/main/resources/static/ui"
+cp -R src/main/resources/static/access-registry "${CTX}/src/main/resources/static/access-registry"
 cp -R deploy/permission/Dockerfile.backend deploy/permission/Dockerfile.frontend deploy/permission/nginx \
   "${CTX}/deploy/permission/"
 cat > "${CTX}/build-images.sh" <<EOF

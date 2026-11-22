@@ -14,7 +14,7 @@
 | 检查要求 | 本版落实 |
 |---|---|
 | 两个系统的权限都由权限系统管理 | 实现 Apifox「统一身份鉴权」的 8 个接口（`/api/apps/{应用编码}/auth/login`、`logout`、`me`、`permissions/{permission}`、`api-permissions/{operationId}`、`departments`、`departments/{departmentId}/users`、`users/{userId}`）及审计接口 `/auth/audit-logs`，与老师课程项目管理系统的统一身份契约一致；课程系统只需配置 `IDENTITY_BASE_URL=http://rbac-backend:18081/api/apps/course-project-management`。API 资源新增后端权限码（`TC`、`CV` 等），随角色及继承下发 |
-| 前后端部署到 Docker Swarm | 已部署：权限系统 http://120.46.213.158/ui/index.html （stack `cdwy`，[deploy/stack.yml](deploy/stack.yml)），课程系统 http://124.70.102.248/ （stack `course-project`，[deploy/course/stack.yml](deploy/course/stack.yml)，后端用老师发布的镜像，前端按老师 master 编译，未改老师代码）；老师员工信息表的一万名员工都是测试账号（总公司员工是教师，分公司员工是学生）；权限系统与课程前端的镜像在服务器上构建，密码用 docker secret，健康检查用 Actuator；[部署说明](docs/second-review/05-deployment.adoc)、[部署证据](docs/second-review/evidence/deployment/README.md) |
+| 前后端部署到 Docker Swarm | 已部署：权限系统 http://120.46.213.158/ （首页进权限台账，原管理控制台在 `/ui/`；stack `cdwy`，[deploy/stack.yml](deploy/stack.yml)），课程系统 http://124.70.102.248/ （stack `course-project`，[deploy/course/stack.yml](deploy/course/stack.yml)，后端用老师发布的镜像，前端按老师 master 编译，未改老师代码）；老师员工信息表的一万名员工都是测试账号（总公司员工是教师，分公司员工是学生）；权限系统与课程前端的镜像在服务器上构建，密码用 docker secret，健康检查用 Actuator；[部署说明](docs/second-review/05-deployment.adoc)、[部署证据](docs/second-review/evidence/deployment/README.md) |
 | 菜单切换产生 logback 日志 | 前端每个请求带 `X-Client-Menu`；`logback-spring.xml` + `RequestLoggingFilter`（请求号、菜单、操作人）+ `LayerLoggingAspect`（Controller / Service / DDD 应用服务 / 基础设施分层日志，令牌与密码打码） |
 | 需求与测试对应 | [需求规格](docs/second-review/01-requirements.adoc) FR-01~FR-38、NFR-01~NFR-12；[需求—测试追踪](docs/second-review/04-test-traceability.adoc)（由 `scripts/build-test-traceability.py` 按测试源码生成） |
 | 按课程代码规范整改 | DTO/VO 分包并以 `DTO`/`VO` 结尾，Controller 负责 DTO → Command、Result → VO 映射；优先 CloneFactory 0.0.2 拷贝；Lombok 去样板代码，禁用 `var`；全部类与公开方法写中文 Javadoc；列表分页统一 `page`/`pageSize`/`total`；格式校验在 API 层，业务异常带稳定错误码；测试连接真实 MySQL 并回滚、带需求编号、每个错误码与不存在的 id 都有契约测试。见[详细设计](docs/second-review/03-detailed-design.adoc)“代码规范”一节 |
@@ -27,7 +27,8 @@
 
 | 目标 | 入口 |
 |---|---|
-| 直接进入权限台账前端 | `http://127.0.0.1:18081/access-registry/index.html` |
+| 打开已部署的权限台账 | http://120.46.213.158/ |
+| 直接进入本机权限台账前端 | `http://127.0.0.1:18081/access-registry/index.html` |
 | 查看原管理控制台 | `http://127.0.0.1:18081/ui/index.html` |
 | 了解 Vue 前端构建 | [`frontend-access-registry/README.md`](frontend-access-registry/README.md) |
 | 了解 API 设计 | [`docs/first-review/api-design.md`](docs/first-review/api-design.md) |
@@ -43,7 +44,8 @@
 - RBAC1 角色继承，支持多级继承和多继承，阻止自继承与循环继承。
 - 权限来源查询，可以说明一项有效权限来自哪个角色或继承链。
 - 员工信息同步的 Excel 预览、校验、变化摘要和确认导入流程。
-- 审计日志查询，记录登录、授权、撤权、导入和关键管理操作。
+- 审计日志：记录角色继承的建立与解除，以及接入应用（课程系统）报上来的操作，按应用分开查看。
+- 权限台账本身也由统一授权管理：侧栏菜单与写操作按钮按本人在 `rbac` 应用中的授权显示；权限系统自身的内置应用、管理员角色、菜单按钮与管理接口不能停用或注销。
 - 同一套 HTTP API、数据库和 Vue 前端下的结构化与面向对象双后端实现。
 
 ## 前端入口
@@ -52,8 +54,10 @@
 
 | 页面 | 地址 | 用途 |
 |---|---|---|
-| 权限台账 Vue 前端 | `http://127.0.0.1:18081/access-registry/index.html` | 当前整合的现代化管理台，覆盖工作台、用户、部门、应用、角色、继承、权限、API 资源、授权和审计 |
+| 权限台账 Vue 前端 | `http://127.0.0.1:18081/access-registry/index.html` | 当前整合的现代化管理台，覆盖工作台、用户、部门、应用、角色、继承、权限、API 资源、授权、权限来源、员工同步和审计；菜单与写操作按本人授权显示 |
 | 原管理控制台 | `http://127.0.0.1:18081/ui/index.html` | 仓库原有的管理页面，用于兼容和对照 |
+
+服务器上的部署：http://120.46.213.158/ 进入权限台账，http://120.46.213.158/ui/index.html 是原管理控制台（见[部署说明](docs/second-review/05-deployment.adoc)）。
 
 下面的图片只用于说明视觉布局，不能替代运行中的页面：
 
@@ -176,7 +180,7 @@ mvn -B clean verify
 | 后端测试（真实 MySQL 8.4） | 186 个，0 失败、0 错误、0 跳过；两种设计路线运行同一组测试 |
 | 错误码与不存在的 id | 53 个业务错误码全部有契约测试；40 个按 id 操作的请求组合覆盖不存在的 id |
 | JaCoCo | 指令 93.6%、分支 84.0%、行 94.0%、方法 92.0%（含 CloneFactory 生成代码） |
-| 前端 | TypeScript 检查、ESLint、Prettier 与 Vite 生产构建通过；5 组浏览器测试两种模式各自通过 |
+| 前端 | 两个前端的 TypeScript 检查与 Vite 生产构建通过；权限台账 8 个浏览器测试、原管理控制台 5 组浏览器测试，两种设计路线各自通过（2026-11-22） |
 | 跨系统联调 | 与老师课程系统联调（2026-11-22 按老师的部署通知更新：后端用老师发布的镜像，前端按 master `990cea2` 编译，一万名员工都是测试账号），两种模式与公网部署各 45/45 项通过，13 张走查截图 |
 
 需求与测试的对应见[需求—测试追踪](docs/second-review/04-test-traceability.adoc)。完整 JaCoCo 报告在构建后生成到 `target/site/jacoco/index.html`。
@@ -190,13 +194,13 @@ mvn -B clean verify
 | 认证 | JWT、BCrypt |
 | 对象映射 | CloneFactory、Lombok |
 | 前端 | Vue 3、TypeScript、Vite、Vue Router |
-| 测试 | JUnit、Maven Surefire、JaCoCo |
+| 测试 | JUnit、Maven Surefire、JaCoCo；浏览器验收用 playwright-core 与 node:test |
 
 ## 仓库结构
 
 ```text
 frontend/                                  原管理控制台前端
-frontend-access-registry/                  整合后的 Vue 权限台前端源码
+frontend-access-registry/                  整合后的 Vue 权限台前端源码与浏览器测试
 src/main/java/                             Spring Boot 后端源码
 src/main/resources/static/ui/              原管理控制台静态资源
 src/main/resources/static/access-registry/ 权限台前端生产构建资源

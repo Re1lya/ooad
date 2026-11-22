@@ -75,25 +75,31 @@ python3 scripts/build-test-traceability.py   # 按测试源码重新生成本文
 |FR-03 |用户维护 |`ApplicationIdentityTests.FR03_userSearchIsPagedInDatabaseAndKeepsDepartment`：FR-03 用户列表按工号或姓名在数据库层检索并分页；新建用户的所属部门随结果返回 +
 `ErrorCodeContractTests.FR03_userCreationCodes`：FR-03 新建用户：登录名重复 USERNAME_EXISTS，弱密码 PASSWORD_POLICY_VIOLATION，部门不存在 DEPARTMENT_NOT_FOUND +
 `FirstReviewWorkflowTests.FR03_disabledAccountInvalidatesTokenAndReenableDoesNotReviveIt`：FR-03 停用账号使已签发令牌失效，重新启用也不恢复旧令牌 +
-`FirstReviewWorkflowTests.FR03_deletionsRespectReferencesAndProtectAdministrator`：FR-03 删除前检查引用，管理员账号受保护 |结构化 + DDD
+`FirstReviewWorkflowTests.FR03_deletionsRespectReferencesAndProtectAdministrator`：FR-03 删除前检查引用，管理员账号受保护 +
+`frontend-access-registry/tests/records.test.cjs`：FR-03 FR-04 FR-22 登记外部人员须填有效期，部门显示完整路径；注销前二次确认，取消不写入 |浏览器（两条路线各跑一遍）、结构化 + DDD
 |FR-04 |人员身份 |`ErrorCodeContractTests.FR04_accessWindowCodes`：FR-04 人员期限不符合人员类型或超过上限时返回 ACCESS_WINDOW_INVALID +
-`FirstReviewWorkflowTests.FR04_externalAndTemporaryPeopleUseSharedUserEntityAndConfiguredValidityLimits`：FR-04 NFR-06 外部与临时人员共用用户实体，期限受配置上限约束，过期后不能登录 |结构化 + DDD
+`FirstReviewWorkflowTests.FR04_externalAndTemporaryPeopleUseSharedUserEntityAndConfiguredValidityLimits`：FR-04 NFR-06 外部与临时人员共用用户实体，期限受配置上限约束，过期后不能登录 +
+`frontend-access-registry/tests/records.test.cjs`：FR-03 FR-04 FR-22 登记外部人员须填有效期，部门显示完整路径；注销前二次确认，取消不写入 |浏览器（两条路线各跑一遍）、结构化 + DDD
 |FR-05 |部门维护 |`ErrorCodeContractTests.FR05_departmentCodes`：FR-05 部门：同级重名、编码重复、形成环路、仍被使用时分别返回对应错误码 +
-`FirstReviewWorkflowTests.FR05_departmentTreeAndDeleteReferencesRemainConsistent`：FR-05 部门树防环，有子部门或员工时不能删除 |结构化 + DDD
+`FirstReviewWorkflowTests.FR05_departmentTreeAndDeleteReferencesRemainConsistent`：FR-05 部门树防环，有子部门或员工时不能删除 +
+`frontend-access-registry/tests/records.test.cjs`：FR-05 部门编码：新建留空按编号生成，修改时可改编码 |浏览器（两条路线各跑一遍）、结构化 + DDD
 |FR-06 |应用维护 |`ErrorCodeContractTests.FR06_systemCodes`：FR-06 应用：编码重复 SYSTEM_CODE_EXISTS，仍被引用 SYSTEM_IN_USE，引用不存在的应用 SYSTEM_NOT_FOUND |结构化 + DDD
 |FR-07 |角色维护 |`ErrorCodeContractTests.FR07_roleCodes`：FR-07 角色：编码重复 ROLE_CODE_EXISTS，仍有授权 ROLE_IN_USE，仍有继承关系 ROLE_HAS_INHERITANCE |结构化 + DDD
 |FR-08 |前端权限树 |`ErrorCodeContractTests.FR08_permissionTreeCodes`：FR-08 前端权限：编码重复、按钮无上级、按钮带地址、上级不合法、形成环路、有子节点改按钮、仍被使用 +
 `FirstReviewWorkflowTests.FR08_menuTreeRejectsCyclesCrossApplicationParentsAndButtonParents`：FR-08 菜单树拒绝环路、跨应用上级和以按钮为上级 |结构化 + DDD
 |FR-09 |API 资源维护 |`ErrorCodeContractTests.FR09_resourceCodes`：FR-09 API 资源：路由重复 API_RESOURCE_EXISTS，operationId 重复 API_OPERATION_EXISTS，仍被绑定 API_RESOURCE_IN_USE +
-`FirstReviewWorkflowTests.FR09_resourceValidationRejectsDuplicatesAndBroadWildcards`：FR-09 API 资源拒绝重复路由和过宽的通配路径 |结构化 + DDD
+`FirstReviewWorkflowTests.FR09_resourceValidationRejectsDuplicatesAndBroadWildcards`：FR-09 API 资源拒绝重复路由和过宽的通配路径 +
+`frontend-access-registry/tests/records.test.cjs`：FR-09 登记 API 资源时权限码与 operationId 可选，列表按 operationId 检索 |浏览器（两条路线各跑一遍）、结构化 + DDD
 |FR-10 |用户角色分配 |`ErrorCodeContractTests.FR10_inactiveGrantTargets`：FR-10 FR-11 给用户授予停用角色、给角色授予停用权限都返回 GRANT_TARGET_INACTIVE +
-`FirstReviewWorkflowTests.FR10_duplicateAssignmentsAreIdempotentAndGrantUnionSurvivesOneRoleRevocation`：FR-10 重复分配幂等，撤回一个角色后其他角色提供的权限仍然有效 |结构化 + DDD
+`FirstReviewWorkflowTests.FR10_duplicateAssignmentsAreIdempotentAndGrantUnionSurvivesOneRoleRevocation`：FR-10 重复分配幂等，撤回一个角色后其他角色提供的权限仍然有效 +
+`frontend-access-registry/tests/effective.test.cjs`：FR-10 FR-17 FR-19 用户授权盖印后，按人员查看有效权限的来源与继承路径 |浏览器（两条路线各跑一遍）、结构化 + DDD
 |FR-11 |角色权限分配 |`ErrorCodeContractTests.FR10_inactiveGrantTargets`：FR-10 FR-11 给用户授予停用角色、给角色授予停用权限都返回 GRANT_TARGET_INACTIVE +
 `FirstReviewWorkflowTests.FR11_permissionRevocationAndApiUnbindingImmediatelyRejectExistingToken`：FR-11 FR-12 撤回角色权限或解除接口绑定后，已签发的令牌立即被拒绝 |结构化 + DDD
 |FR-12 |前端权限绑定 API |`ErrorCodeContractTests.FR12_bindingAcrossSystems`：FR-12 前端权限绑定其他应用的 API 资源返回 BINDING_SYSTEM_MISMATCH +
 `FirstReviewWorkflowTests.FR11_permissionRevocationAndApiUnbindingImmediatelyRejectExistingToken`：FR-11 FR-12 撤回角色权限或解除接口绑定后，已签发的令牌立即被拒绝 +
 `FirstReviewWorkflowTests.FR14_apiResourcesCannotBindAcrossApplicationsOrBypassMoreSpecificRoute`：FR-12 FR-14 接口不能跨应用绑定，鉴权按最具体的路径匹配且不能绕过 |结构化 + DDD
 |FR-13 |个人导航 |`FirstReviewWorkflowTests.FR13_menuTreeKeepsAncestorsAsContainersWithoutGrantingTheirApi`：FR-13 个人菜单保留祖先容器，祖先不因此获得接口权限 +
+`frontend-access-registry/tests/console.test.cjs`：FR-13 FR-38 NFR-11 侧栏菜单与写操作按钮随本人在 rbac 应用中的授权显示，请求带当前菜单 +
 `frontend/tests/menu.test.cjs`：FR-13 FR-38 菜单根据后端授权动态显示 |浏览器（两条路线各跑一遍）、结构化 + DDD
 |FR-14 |真实请求鉴权 |`FirstReviewWorkflowTests.FR14_rolePermissionAndApiBindingAreAllNecessaryAndNewGrantsWorkWithoutRelogin`：FR-14 角色、权限、接口绑定缺一不可，新授权无需重新登录即生效 +
 `FirstReviewWorkflowTests.FR14_apiResourcesCannotBindAcrossApplicationsOrBypassMoreSpecificRoute`：FR-12 FR-14 接口不能跨应用绑定，鉴权按最具体的路径匹配且不能绕过 |结构化 + DDD
@@ -102,6 +108,7 @@ python3 scripts/build-test-traceability.py   # 按测试源码重新生成本文
 |FR-16 |演示页面 |`frontend/tests/hierarchy.test.cjs`：FR-16 FR-17 FR-18 FR-19 角色层级、循环继承与有效权限来源 +
 `frontend/tests/workspace.test.cjs`：FR-16 FR-21 FR-22 NFR-10 前端资源管理、授权工作台、接口绑定、窄屏与退出 |浏览器（两条路线各跑一遍）
 |FR-17 |多级角色继承 |`PhaseTwoRbac1Tests.FR17_transitiveInheritanceAndRevocation`：FR-17 多级继承与撤回在同一Token下生效 +
+`frontend-access-registry/tests/effective.test.cjs`：FR-10 FR-17 FR-19 用户授权盖印后，按人员查看有效权限的来源与继承路径 +
 `frontend/tests/hierarchy.test.cjs`：FR-16 FR-17 FR-18 FR-19 角色层级、循环继承与有效权限来源 |浏览器（两条路线各跑一遍）、结构化 + DDD
 |FR-18 |继承图一致性 |`ErrorCodeContractTests.FR18_hierarchyCodes`：FR-18 角色继承：自继承 ROLE_SELF_INHERITANCE，成环 ROLE_INHERITANCE_CYCLE，端点停用 ROLE_DISABLED +
 `PhaseTwoRbac1Tests.FR18_rejectCyclesAndKeepIdempotency`：FR-18 自继承、环路、重复边及缺失对象 +
@@ -110,21 +117,25 @@ python3 scripts/build-test-traceability.py   # 按测试源码重新生成本文
 `frontend/tests/hierarchy.test.cjs`：FR-16 FR-17 FR-18 FR-19 角色层级、循环继承与有效权限来源 |浏览器（两条路线各跑一遍）、结构化 + DDD
 |FR-19 |有效来源解释 |`PhaseTwoRbac1Tests.FR19_diamondAndDisabledBranches`：FR-19 菱形继承去重、停用隔离和直接授权 +
 `PhaseTwoRbac1Tests.FR19_independentSourcesSurviveDirectRevocation`：FR-19 多来源去重且撤回直接授权后继承授权仍有效 +
+`frontend-access-registry/tests/effective.test.cjs`：FR-10 FR-17 FR-19 用户授权盖印后，按人员查看有效权限的来源与继承路径 +
 `frontend/tests/hierarchy.test.cjs`：FR-16 FR-17 FR-18 FR-19 角色层级、循环继承与有效权限来源 |浏览器（两条路线各跑一遍）、结构化 + DDD
 |FR-20 |继承访问边界 |`PhaseTwoRbac1Tests.FR20_authorizationBoundaryAndPreview`：FR-20 继承管理权限边界与角色有效权限预览 |结构化 + DDD
 |FR-21 |前端任务闭环 |`frontend/tests/workspace.test.cjs`：FR-16 FR-21 FR-22 NFR-10 前端资源管理、授权工作台、接口绑定、窄屏与退出 |浏览器（两条路线各跑一遍）
-|FR-22 |交互可用性 |`frontend/tests/navigation.test.cjs`：FR-22 浏览器后退和前进恢复正确页面 +
+|FR-22 |交互可用性 |`frontend-access-registry/tests/records.test.cjs`：FR-03 FR-04 FR-22 登记外部人员须填有效期，部门显示完整路径；注销前二次确认，取消不写入 +
+`frontend/tests/navigation.test.cjs`：FR-22 浏览器后退和前进恢复正确页面 +
 `frontend/tests/workspace.test.cjs`：FR-16 FR-21 FR-22 NFR-10 前端资源管理、授权工作台、接口绑定、窄屏与退出 |浏览器（两条路线各跑一遍）
 |FR-23 |RBAC1 核心双实现 |`DddRbac1Tests.FR23_reportsSelectedImplementation`：FR-23 DDD 模式下角色继承模块报告 ddd 实现 |DDD
 |FR-24 |员工信息同步预览 |`DirectorySyncTests.FR24_previewCountsChangesAndWritesNothing`：FR-24 预览只计算变化：两级部门、新人员、按分公司补授角色，不写数据库 +
 `DirectorySyncTests.FR24_invalidSheetsAreRejectedWithRowNumbers`：FR-24 员工表格式错误逐项拒绝，并指出 Excel 行号 +
 `DirectorySyncTests.FR24_firstWorksheetFollowsWorkbookRelationshipAndSharedStrings`：FR-24 按工作簿关系定位首张工作表并读取共享字符串（与课程系统提供的原表结构相同） +
+`frontend-access-registry/tests/sync-audit.test.cjs`：FR-24 FR-25 员工同步：预览变动、确认写入，同一张表再预览没有变化 +
 `frontend/tests/sync.test.cjs`：FR-24 FR-25 同步员工信息：预览、确认、重复执行无变化，更换文件或规则须重新预览 |浏览器（两条路线各跑一遍）、结构化 + DDD
 |FR-25 |员工信息同步确认 |`DirectorySyncTests.FR25_commitBuildsTwoLevelTreeAndUnprovisionedUsers`：FR-25 确认后建成“分公司 / 部门”两级树，同名部门分属不同分公司；新人员停用且无法登录；按分公司授予教师或学生 +
 `DirectorySyncTests.FR25_rerunIsIdempotent`：FR-25 重复执行同一份表没有任何变化 +
 `DirectorySyncTests.FR25_changesUpdateSourceFieldsAndKeepCredentialsAndGrants`：FR-25 变化的人员只更新姓名、部门、岗位与电话，保留密码、启用状态与已有角色；不在表中的人员不受影响；角色只增不减 +
 `DirectorySyncTests.FR25_digestMustMatchFileAndRule`：FR-25 确认时文件或规则与预览不一致须重新预览，且不写入 +
 `DirectorySyncTests.FR25_administratorConflictRollsBackEverything`：FR-25 表中出现管理员账号时整批拒绝，已经建好的部门也回滚 +
+`frontend-access-registry/tests/sync-audit.test.cjs`：FR-24 FR-25 员工同步：预览变动、确认写入，同一张表再预览没有变化 +
 `frontend/tests/sync.test.cjs`：FR-24 FR-25 同步员工信息：预览、确认、重复执行无变化，更换文件或规则须重新预览 |浏览器（两条路线各跑一遍）、结构化 + DDD
 |FR-26 |全业务双设计 |`DddErrorCodeContractTests.FR26_domainObjectsGuardFormats`：FR-26 领域对象拒绝不合法的资源路径、权限码、operationId 与部门编码 +
 `DddFullWorkflowTests.FR26_reportsEverySelectedBusinessImplementation`：FR-26 DDD 模式下每个业务模块都报告 ddd 实现 +
@@ -143,7 +154,8 @@ python3 scripts/build-test-traceability.py   # 按测试源码重新生成本文
 |FR-29 |接入应用审计 |`ApplicationIdentityTests.FR29_auditWriteIsIdempotentAndScoped`：FR-29 审计写入按 requestId 幂等，查询按应用隔离并保留操作人快照 +
 `ApplicationIdentityTests.FR29_auditQueryRequiresPermissionInApplication`：FR-29 应用内没有任何有效权限的用户不能查询审计；请求体校验 400 +
 `ErrorCodeContractTests.FR29_auditSnapshotTooLarge`：FR-29 写入审计记录时 before 内容过长返回 AUDIT_SNAPSHOT_TOO_LARGE |结构化 + DDD
-|FR-30 |继承变更审计 |`ApplicationIdentityTests.FR30_hierarchyChangesAreAudited`：FR-30 角色继承建立与解除写入审计记录，操作人为当前管理员 |结构化 + DDD
+|FR-30 |继承变更审计 |`ApplicationIdentityTests.FR30_hierarchyChangesAreAudited`：FR-30 角色继承建立与解除写入审计记录，操作人为当前管理员 +
+`frontend-access-registry/tests/sync-audit.test.cjs`：FR-30 审计日志默认看权限系统自己的记录，类型与对象写中文 |浏览器（两条路线各跑一遍）、结构化 + DDD
 |FR-31 |接入应用登录 |`ApplicationIdentityTests.FR31_loginReturnsTokenContract`：FR-31 登录不需要令牌，响应只有 accessToken、tokenType、expiresIn +
 `ApplicationIdentityTests.FR31_loginRejectsBadCredentialsAndSystems`：FR-31 密码错误 401 UNAUTHORIZED；systems 缺当前应用、含未登记应用、为空或请求多出字段都 400 +
 `ApplicationIdentityTests.FR31_tokenAudienceIsEnforced`：FR-31 令牌只能用于 aud 中的系统：课程令牌不能调控制台，控制台令牌不能调课程身份接口 +
@@ -165,6 +177,8 @@ python3 scripts/build-test-traceability.py   # 按测试源码重新生成本文
 `ConsoleRbacTests.FR38_personalEndpointsAndFailClosed`：FR-38 个人接口只要求登录；没有登记访问规则的接口一律拒绝；控制台管理员也不能绕过 +
 `DirectorySyncTests.FR38_syncRequiresDirectorySyncGrant`：FR-38 员工信息同步须拥有“同步员工信息”按钮的授权 +
 `ErrorCodeContractTests.FR38_builtInConsoleObjectsCannotBeDisabledOrDeleted`：FR-38 停用或删除内置应用、内置管理员角色、内置菜单按钮与管理接口都返回 CONSOLE_BUILT_IN，重新启用仍然允许 +
+`frontend-access-registry/tests/console.test.cjs`：FR-13 FR-38 NFR-11 侧栏菜单与写操作按钮随本人在 rbac 应用中的授权显示，请求带当前菜单 +
+`frontend-access-registry/tests/console.test.cjs`：FR-38 内置应用、内置管理员角色、内置菜单按钮与管理接口只显示“内置”，不提供停用和注销 +
 `frontend/tests/menu.test.cjs`：FR-13 FR-38 菜单根据后端授权动态显示 |浏览器（两条路线各跑一遍）、结构化 + DDD
 |NFR-01 |认证与身份边界 |`ErrorCodeContractTests.NFR01_authenticationAndAuthorizationCodes`：NFR-01 未登录或凭证错误返回 UNAUTHORIZED，普通用户调用管理接口返回 FORBIDDEN +
 `FirstReviewWorkflowTests.NFR01_badCredentialsMissingMalformedExpiredAndForgedTokensReturn401`：NFR-01 错误凭证、缺少或畸形令牌、过期或伪造令牌一律返回 401 +
@@ -191,7 +205,8 @@ python3 scripts/build-test-traceability.py   # 按测试源码重新生成本文
 `LayerLoggingTests.NFR11_sensitiveParameterNamesAreMasked`：NFR-11 方法名不敏感时，参数名含 password、secret、token、credential 的参数单独打码 +
 `LayerLoggingTests.NFR11_controlCharactersCannotForgeLogLines`：NFR-11 参数中的换行等控制字符被替换，不能伪造日志行 +
 `LayerLoggingTests.NFR11_menuHeaderIsSanitized`：NFR-11 X-Client-Menu 只接受简单菜单标识 +
-`LayerLoggingTests.NFR11_layersFollowPackages`：NFR-11 按包名区分 Controller / Service / DDD-Application / Infrastructure 层 |结构化 + DDD、通用
+`LayerLoggingTests.NFR11_layersFollowPackages`：NFR-11 按包名区分 Controller / Service / DDD-Application / Infrastructure 层 +
+`frontend-access-registry/tests/console.test.cjs`：FR-13 FR-38 NFR-11 侧栏菜单与写操作按钮随本人在 rbac 应用中的授权显示，请求带当前菜单 |浏览器（两条路线各跑一遍）、结构化 + DDD、通用
 |NFR-12 |容器化部署 |部署后核对，见第 4 节与 link:05-deployment.adoc[部署说明] |—
 |===
 
@@ -268,8 +283,9 @@ python3 scripts/build-test-traceability.py   # 按测试源码重新生成本文
 |检查项 |结果
 |`register-course-app.py` 登记课程应用的菜单、按钮、API 资源与角色，用员工信息表同步 10000 名人员、120 个部门、10000 条角色授权，并把一万名员工启用为测试账号；重复执行无变化 |通过（结构化、DDD）
 |`verify-course-integration.py`：统一身份登录与 `/auth/me`、总公司员工与分公司员工分别从教师和学生入口登录、停用后不能登录、部门与人员目录、课程系统按权限码放行或拒绝、撤回授权后同一令牌下一次请求 403、审计写入与查询 |45/45 通过（结构化、DDD）
-|`frontend/tests/course-walkthrough.cjs`：课程管理员、教师登录课程前端，菜单随权限系统授权变化；权限系统审计页能看到课程应用写入的记录（13 张截图，见 link:evidence/course-integration/[evidence/course-integration]） |通过（结构化、DDD）
-|权限系统前端 5 组浏览器测试（`npm run test:e2e`）：角色继承与权限来源、菜单随授权显示、浏览器前进后退、员工信息同步、资源管理与授权工作台 |5/5 通过（结构化、DDD；2026-11-21）
+|`frontend/tests/course-walkthrough.cjs`：课程管理员、教师登录课程前端，菜单随权限系统授权变化；权限台账按人员查到继承路径，审计页能看到课程应用写入的记录（13 张截图，见 link:evidence/course-integration/[evidence/course-integration]） |通过（结构化、DDD）
+|权限台账 8 个浏览器测试（`frontend-access-registry`，`npm run test:e2e`）：控制台菜单与写操作按钮随授权显示、内置对象、外部人员与部门完整路径、部门编码、API 资源 operationId、用户授权与按人员查来源、员工同步、审计来源与中文类型 |8/8 通过（结构化、DDD）
+|原管理控制台 5 组浏览器测试（`frontend`，`npm run test:e2e`）：角色继承与权限来源、菜单随授权显示、浏览器前进后退、员工信息同步、资源管理与授权工作台 |5/5 通过（结构化、DDD）
 |日志检查：后端、课程系统、脚本输出中没有令牌和密码（课程后端的登录服务调到 INFO 后不再打印登录结果） |通过
 |===
 

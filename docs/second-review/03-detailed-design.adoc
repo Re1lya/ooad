@@ -259,5 +259,6 @@ image::sequence-ddd-identity.png[DDD 顺序图 API B,900]
 |MySQL Connector/J / H2 |测试与部署库 / 本地演示库 |`application-test.properties`、`application-prod.properties`、`application.properties`
 |JUnit 5、MockMvc、OutputCapture、JaCoCo |HTTP 级验收（真实 MySQL、事务回滚、请求级保存点）、错误码契约、日志断言、覆盖率 |`src/test/**`、`support/RequestTransactionBoundary`、`pom.xml`
 |Docker / Docker Swarm / Nginx |容器化、服务发现、滚动更新、反向代理 |`deploy/stack.yml`、`deploy/permission/**`
-|Vue 3 + TypeScript + Vite |管理前端 |`frontend/**`
+|Vue 3 + TypeScript + Vite + Vue Router |管理前端：权限台账（主入口，侧栏菜单与写操作按钮按本人在 rbac 应用中的授权显示）；原管理控制台保留作对照 |`frontend-access-registry/**`（`stores/session.ts` 读取 `/api/me/menu?system=rbac`）、`frontend/**`
+|Playwright（playwright-core）+ node:test |两个前端的浏览器验收 |`frontend-access-registry/tests/*.test.cjs`、`frontend/tests/*.test.cjs`
 |===
