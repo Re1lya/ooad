@@ -38,8 +38,11 @@
         </div>
         <div class="panel__body">
           <template v-if="current">
-            <p class="notice notice--tip" style="margin: 0 0 14px">
+            <p v-if="writable" class="notice notice--tip" style="margin: 0 0 14px">
               朱砂印为已授予；点击即改，立即生效。继承而来的权限到「权限来源」页核对。
+            </p>
+            <p v-else class="notice notice--tip" style="margin: 0 0 14px">
+              朱砂印为已授予。给人加减角色需要「维护用户」权限，这里只能查看。
             </p>
             <div class="role-grid">
               <button
@@ -47,7 +50,7 @@
                 :key="r.id"
                 class="role-seal"
                 :class="{ 'role-seal--on': grantedIds.has(r.id), 'role-seal--off': !r.enabled }"
-                :disabled="busy"
+                :disabled="busy || !writable"
                 @click="flip(r)"
               >
                 <span class="role-seal__mark">{{ grantedIds.has(r.id) ? '授' : '候' }}</span>
@@ -73,6 +76,7 @@ import PageHead from '@/components/PageHead.vue';
 import Pager from '@/components/Pager.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import { toast } from '@/stores/toast';
+import { can } from '@/stores/session';
 
 const route = useRoute();
 const page = ref<UserPage>({ page: 1, pageSize: 12, total: 0, items: [] });
@@ -83,6 +87,8 @@ const granted = ref<RoleView[]>([]);
 const busy = ref(false);
 
 const grantedIds = computed(() => new Set(granted.value.map((r) => r.id)));
+/** 给人分配、取消角色的接口由“维护用户”按钮授权。 */
+const writable = computed(() => can('rbac.users.write'));
 
 async function loadUsers(toPage = 1): Promise<void> {
   try {
@@ -106,7 +112,7 @@ async function pick(u: UserView): Promise<void> {
 }
 
 async function flip(r: RoleView): Promise<void> {
-  if (!current.value || busy.value) return;
+  if (!current.value || busy.value || !writable.value) return;
   busy.value = true;
   try {
     if (grantedIds.value.has(r.id)) {

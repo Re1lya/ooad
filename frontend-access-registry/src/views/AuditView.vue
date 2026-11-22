@@ -1,10 +1,9 @@
 <template>
   <div>
-    <PageHead title="审计日志" subtitle="各接入应用报上来的操作记录" seal="察">
+    <PageHead title="审计日志" subtitle="权限系统自己的继承变更，以及各接入应用报上来的操作记录" seal="察">
       <template #actions>
         <select v-model="system" class="select" style="width: 190px" @change="reload(1)">
-          <option value="">全部来源</option>
-          <option v-for="s in systems" :key="s.code" :value="s.code">{{ s.name }}</option>
+          <option v-for="s in sources" :key="s.code" :value="s.code">{{ s.name }}</option>
         </select>
         <input v-model.trim="target" class="input" style="width: 200px" placeholder="搜操作目标…" @keyup.enter="reload(1)" />
         <button class="btn" @click="reload(1)">查</button>
@@ -33,8 +32,8 @@
               <span v-if="a.actor.deleted" class="faint small">（已注销）</span>
               <div class="faint small">{{ a.actor.roles.join('、') || '—' }}</div>
             </td>
-            <td><span class="chip">{{ a.type }}</span></td>
-            <td class="muted small">{{ a.objectType }} #{{ a.objectId }}</td>
+            <td><span class="chip" :title="a.type">{{ auditTypeText(a.type) }}</span></td>
+            <td class="muted small">{{ objectTypeText(a.objectType) }} <span class="mono faint">{{ a.objectId }}</span></td>
             <td class="small">{{ a.target }}</td>
             <td style="text-align: right">
               <button class="btn btn--ghost btn--sm" @click="detail = a">看</button>
@@ -50,7 +49,7 @@
       <template v-if="detail">
         <div class="detail-meta small muted mb16">
           <span class="chip mono">{{ detail.systemCode }}</span>
-          {{ fmtTime(detail.at) }} · {{ detail.actor.name }} · {{ detail.type }}
+          {{ fmtTime(detail.at) }} · {{ detail.actor.name }} · {{ auditTypeText(detail.type) }} · {{ detail.target }}
         </div>
         <div class="diff-grid">
           <div>
@@ -71,7 +70,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { auditApi, systemsApi } from '@/api';
 import type { AuditEntry, AuditPage, SystemView } from '@/api/types';
 import PageHead from '@/components/PageHead.vue';
@@ -79,10 +78,16 @@ import Modal from '@/components/Modal.vue';
 import Pager from '@/components/Pager.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import { toast } from '@/stores/toast';
+import { SELF_SYSTEM } from '@/stores/session';
+import { auditTypeText, objectTypeText } from '@/utils/labels';
 
 const page = ref<AuditPage>({ page: 1, pageSize: 20, total: 0, items: [] });
 const systems = ref<SystemView[]>([]);
-const system = ref('');
+/** 每次只看一个应用的记录：权限系统自己的，或某个接入应用报上来的。 */
+const system = ref(SELF_SYSTEM);
+const sources = computed(() =>
+  systems.value.length ? systems.value : [{ id: 0, code: SELF_SYSTEM, name: '权限管理系统', baseUrl: null, enabled: true }],
+);
 const target = ref('');
 const detail = ref<AuditEntry | null>(null);
 
@@ -97,7 +102,7 @@ function pretty(obj: Record<string, unknown> | null): string {
 async function reload(toPage = page.value.page): Promise<void> {
   try {
     page.value = await auditApi.page({
-      system: system.value || undefined,
+      system: system.value,
       target: target.value || undefined,
       page: toPage,
       pageSize: page.value.pageSize,

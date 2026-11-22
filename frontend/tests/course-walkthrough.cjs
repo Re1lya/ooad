@@ -1,13 +1,14 @@
 'use strict';
 
 /**
- * 课程项目管理系统接入后的浏览器走查：用真实浏览器操作老师的课程前端和本系统控制台，逐步截图。
+ * 课程项目管理系统接入后的浏览器走查：用真实浏览器操作老师的课程前端和本系统的权限台账，逐步截图。
  *
  * 前提：两个系统已按 scripts/register-course-app.py 登记、同步员工信息表并启用测试账号。
  * 走查会添加再删除一名教师，并临时撤销再恢复“课程督导”的“课程管理”菜单。
  *
  *   COURSE_WEB=http://<课程前端> RBAC_URL=http://<权限系统> RBAC_ADMIN=... RBAC_ADMIN_PASSWORD=... \
  *   DEMO_PASSWORD=... CHROME_PATH=<Chrome 或 Edge 可执行文件> OUTPUT=<截图目录> node tests/course-walkthrough.cjs
+ * 权限台账默认在 <RBAC_URL>/access-registry/index.html；用 Vite 开发服务器时设 REGISTRY_URL。
  *
  * 账号密码只从环境变量读取，不写入截图、日志或仓库。
  */
@@ -19,6 +20,8 @@ const { chromium } = require('playwright-core');
 const APP = 'course-project-management';
 const web = (process.env.COURSE_WEB || 'http://127.0.0.1:4173').replace(/\/$/, '');
 const rbac = (process.env.RBAC_URL || 'http://127.0.0.1:18081').replace(/\/$/, '');
+// 权限台账页面；本机用 Vite 开发服务器时用 REGISTRY_URL 指过去
+const registry = process.env.REGISTRY_URL || rbac + '/access-registry/index.html';
 const out = path.resolve(process.env.OUTPUT || 'course-walkthrough');
 const demoPassword = required('DEMO_PASSWORD');
 const admin = { username: required('RBAC_ADMIN'), password: required('RBAC_ADMIN_PASSWORD') };
@@ -207,33 +210,33 @@ async function main() {
     await dialog.getByRole('button', { name: '删除', exact: true }).click();
     await page.getByRole('heading', { level: 2, name: '删除教师' }).waitFor({ state: 'detached' });
 
-    // 7. 权限系统控制台：薛峰的有效权限及来源（课程管理员 → 课程督导 → 教师）
+    // 7. 权限台账：按人员查看薛峰的有效权限及来源（课程管理员 → 课程督导 → 教师）
     const consolePage = await context.newPage();
-    await consolePage.goto(rbac + '/ui/index.html');
-    await consolePage.getByRole('heading', { name: '登录工作区' }).waitFor();
-    await consolePage.getByLabel('登录名', { exact: true }).fill(admin.username);
-    await consolePage.getByLabel('密码', { exact: true }).fill(admin.password);
-    await consolePage.getByRole('button', { name: '登录', exact: true }).click();
-    await consolePage
-      .getByRole('navigation', { name: '主导航' })
-      .getByRole('link', { name: '有效权限' })
-      .click();
-    await consolePage.getByLabel('搜索当前列表').fill('SG000001');
-    await consolePage.getByRole('list', { name: '查找结果' }).getByRole('button').first().click();
-    await consolePage.getByText('课程管理员 → 课程督导').first().waitFor();
-    await shot(consolePage, '11-rbac-effective-permissions', true);
+    // 关掉页面切换的入场动画，截图不会拍到半透明的过渡帧
+    await consolePage.emulateMedia({ reducedMotion: 'reduce' });
+    await consolePage.goto(registry + '#/login');
+    await consolePage.locator('#username').fill(admin.username);
+    await consolePage.locator('#password').fill(admin.password);
+    await consolePage.getByRole('button', { name: '盖章进入' }).click();
+    await consolePage.locator('.rail').waitFor();
+    const rail = (label) => consolePage.locator('.rail__item', { hasText: new RegExp(`^\\s*${label}\\s*$`) });
+    await rail('权限来源').click();
+    await consolePage.getByPlaceholder('搜账号或姓名…').fill('SG000001');
+    await consolePage.getByPlaceholder('搜账号或姓名…').press('Enter');
+    await consolePage.locator('.user-item', { hasText: 'SG000001' }).click();
+    await consolePage.locator('.trace__path', { hasText: '课程管理员 → 课程督导' }).first().waitFor();
+    // 授权链较长：临时拉高窗口，一张图里放下所选人员与全部授权链
+    const viewport = consolePage.viewportSize();
+    await consolePage.setViewportSize({ width: viewport.width, height: 1700 });
+    await shot(consolePage, '11-rbac-effective-permissions');
+    await consolePage.setViewportSize(viewport);
 
     // 8. 审计日志：权限系统自己的继承变更，以及课程系统写入的记录（按应用分开查看）
-    await consolePage
-      .getByRole('navigation', { name: '主导航' })
-      .getByRole('link', { name: '审计日志' })
-      .click();
-    await consolePage.getByText(/共 [1-9]\d* 条/).waitFor();
+    await rail('审计日志').click();
+    await consolePage.locator('.topbar__crumb', { hasText: '审计日志' }).waitFor();
+    await consolePage.locator('.ledger tbody tr').first().waitFor();
     await shot(consolePage, '12-rbac-audit-log');
-    await consolePage
-      .getByRole('group', { name: '应用' })
-      .getByRole('button', { name: '课程项目管理系统' })
-      .click();
+    await consolePage.locator('select').first().selectOption({ label: '课程项目管理系统' });
     await consolePage
       .getByText(/联调审计-/)
       .first()

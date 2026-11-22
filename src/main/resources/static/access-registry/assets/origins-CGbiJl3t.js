@@ -1,0 +1,1 @@
+function r(n,t=[]){const e=new Map;for(const o of t)e.set(o.id,o.name);for(const o of n)for(const s of o.sources)e.set(s.assignedRoleId,s.assignedRoleName),e.set(s.permissionRoleId,s.permissionRoleName);return e}function a(n,t){return n.map(e=>t.get(e)??`#${e}`).join(" → ")}export{a as p,r};

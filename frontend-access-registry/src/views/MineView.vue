@@ -15,7 +15,10 @@
             </div>
           </div>
           <div class="me-rows small">
-            <div class="me-row"><span class="muted">身份</span><span>{{ me?.administrator ? '管理员' : '普通用户' }}</span></div>
+            <div class="me-row">
+              <span class="muted">身份</span>
+              <span>{{ me?.administrator ? '管理员 · ' : '' }}{{ personTypeText(me?.personType ?? null) }}</span>
+            </div>
             <div class="me-row"><span class="muted">单位</span><span>{{ me?.companyName ?? '—' }}</span></div>
             <div class="me-row"><span class="muted">部门</span><span>{{ me?.sourceDepartment ?? '—' }}</span></div>
             <div class="me-row"><span class="muted">岗位</span><span>{{ me?.jobTitle ?? '—' }}</span></div>
@@ -76,7 +79,7 @@
                   <span class="small muted">
                     角色「{{ s.assignedRoleName }}」{{ s.inherited ? `经「${s.permissionRoleName}」继承得来` : '直接持有' }}
                   </span>
-                  <span v-if="s.path.length" class="path mono">{{ s.path.join(' → ') }}</span>
+                  <span v-if="s.path.length > 1" class="path">{{ pathText(s.path, names) }}</span>
                 </div>
               </div>
             </div>
@@ -93,11 +96,17 @@ import { meApi } from '@/api';
 import type { PermissionOrigin } from '@/api/types';
 import PageHead from '@/components/PageHead.vue';
 import EmptyState from '@/components/EmptyState.vue';
+import { useRouter } from 'vue-router';
 import { session } from '@/stores/session';
 import { toast } from '@/stores/toast';
+import { personTypeText } from '@/utils/labels';
+import { pathText, roleNames } from '@/utils/origins';
+
+const router = useRouter();
 
 const me = computed(() => session.state.user);
 const origins = ref<PermissionOrigin[]>([]);
+const names = computed(() => roleNames(origins.value));
 const busy = ref(false);
 const pwd = reactive({ current: '', next: '', confirm: '' });
 
@@ -110,8 +119,11 @@ async function changePassword(): Promise<void> {
   busy.value = true;
   try {
     await meApi.changePassword(pwd.current, pwd.next);
-    toast.ok('密码已改，下次登录用新密码');
+    // 改密后旧令牌随即失效：退出到登录页，用新密码重新登录
     pwd.current = pwd.next = pwd.confirm = '';
+    session.logout();
+    await router.replace('/login');
+    toast.ok('密码已改，请用新密码重新登录');
   } catch (e) {
     toast.fail(e);
   } finally {

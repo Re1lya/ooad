@@ -31,6 +31,8 @@ export interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
   body?: unknown;
   query?: Query;
+  /** 401 不代表会话失效（例如改密时原密码错误），不要退出登录。 */
+  keepSession?: boolean;
 }
 
 function withQuery(path: string, query?: Query): string {
@@ -64,7 +66,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     });
     const data = response.status === 204 ? null : await response.json().catch(() => null);
     if (!response.ok) {
-      if (response.status === 401 && owner) hooks.unauthorized();
+      if (response.status === 401 && owner && !options.keepSession) hooks.unauthorized();
       throw new ApiError(
         (data && data.message) || `请求失败（${response.status}）`,
         response.status,

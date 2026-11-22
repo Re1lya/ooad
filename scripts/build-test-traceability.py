@@ -58,11 +58,12 @@ def test_methods():
 
 
 def browser_tests():
-    """前端浏览器测试：返回 [(文件名, 测试名)]。"""
+    """两个前端的浏览器测试（权限台账、原管理控制台）：返回 [(相对路径, 测试名)]。"""
     found = []
-    for path in sorted((ROOT / "frontend/tests").glob("*.test.cjs")):
-        for match in re.finditer(r"\btest\('([^']+)'", path.read_text(encoding="utf-8")):
-            found.append((path.name, match.group(1)))
+    for folder in ("frontend-access-registry/tests", "frontend/tests"):
+        for path in sorted((ROOT / folder).glob("*.test.cjs")):
+            for match in re.finditer(r"\btest\('([^']+)'", path.read_text(encoding="utf-8")):
+                found.append((f"{folder}/{path.name}", match.group(1)))
     return found
 
 
@@ -136,7 +137,7 @@ def build():
             lines.append(f"|{requirement} |{names.get(requirement, '')} |部署后核对，见第 4 节与 link:05-deployment.adoc[部署说明] |—")
             continue
         cell = " +\n".join(
-            f"`{owner}.{method}`：{display}" if method else f"`frontend/tests/{owner}`：{display}"
+            f"`{owner}.{method}`：{display}" if method else f"`{owner}`：{display}"
             for owner, method, display in tests)
         modes = sorted({routes(owner) for owner, _, _ in tests})
         lines.append(f"|{requirement} |{names.get(requirement, '')} |{cell} |{'、'.join(modes)}")

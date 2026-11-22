@@ -2,7 +2,7 @@
   <div>
     <PageHead title="部门" subtitle="组织层级：公司之下逐级建部门" seal="部">
       <template #actions>
-        <button class="btn btn--seal" @click="openCreate(null)">建一级部门</button>
+        <button v-if="writable" class="btn btn--seal" @click="openCreate(null)">建一级部门</button>
       </template>
     </PageHead>
 
@@ -14,6 +14,7 @@
           :key="node.data.id"
           :node="node"
           :depth="0"
+          :writable="writable"
           @add="openCreate"
           @edit="openEdit"
           @remove="remove"
@@ -22,16 +23,26 @@
     </div>
 
     <Modal :open="editor.open" :title="editor.id ? '修改部门' : '新建部门'" @close="editor.open = false">
-      <div class="field">
-        <label>部门名 <b>*</b></label>
-        <input v-model.trim="editor.name" class="input" placeholder="部门名称" />
+      <div class="grid2">
+        <div class="field">
+          <label>部门名 <b>*</b></label>
+          <input v-model.trim="editor.name" class="input" placeholder="同一上级下不能重名" />
+        </div>
+        <div class="field">
+          <label>部门编码</label>
+          <input
+            v-model.trim="editor.code"
+            class="input mono"
+            :placeholder="editor.id ? '留空则保留原编码' : '留空按编号生成，如 D0012'"
+          />
+        </div>
       </div>
       <div class="field">
         <label>上级部门</label>
         <select v-model="editor.parentId" class="select">
           <option :value="null">无（一级部门）</option>
           <option v-for="d in flat" :key="d.data.id" :value="d.data.id" :disabled="d.data.id === editor.id">
-            {{ '　'.repeat(d.depth) }}{{ d.data.name }}
+            {{ '　'.repeat(d.depth) }}{{ d.data.name }}{{ d.data.code ? `（${d.data.code}）` : '' }}
           </option>
         </select>
       </div>
@@ -50,7 +61,9 @@ import type { DepartmentView } from '@/api/types';
 import PageHead from '@/components/PageHead.vue';
 import Modal from '@/components/Modal.vue';
 import EmptyState from '@/components/EmptyState.vue';
+import { confirmDanger } from '@/stores/confirm';
 import { toast } from '@/stores/toast';
+import { can } from '@/stores/session';
 
 interface DeptNodeData {
   data: DepartmentView;
@@ -61,6 +74,7 @@ interface DeptNodeData {
 const DeptNode = (props: {
   node: DeptNodeData;
   depth: number;
+  writable: boolean;
   onAdd: (d: DepartmentView) => void;
   onEdit: (d: DepartmentView) => void;
   onRemove: (d: DepartmentView) => void;
@@ -69,11 +83,16 @@ const DeptNode = (props: {
     h('div', { class: 'dept-row', style: { paddingLeft: `${props.depth * 26 + 12}px` } }, [
       h('span', { class: 'dept-corner' }, props.depth ? '└' : '▣'),
       h('b', { class: 'dept-name' }, props.node.data.name),
-      props.node.data.managerName ? h('span', { class: 'chip' }, `管 ${props.node.data.managerName}`) : null,
+      props.node.data.code ? h('span', { class: 'chip mono' }, props.node.data.code) : null,
+      props.node.children.length ? h('span', { class: 'faint small' }, `下级 ${props.node.children.length}`) : null,
       h('span', { class: 'grow' }),
-      h('button', { class: 'btn btn--ghost btn--sm', onClick: () => props.onAdd(props.node.data) }, '下设'),
-      h('button', { class: 'btn btn--ghost btn--sm', onClick: () => props.onEdit(props.node.data) }, '改'),
-      h('button', { class: 'btn btn--danger-ghost btn--sm', onClick: () => props.onRemove(props.node.data) }, '撤'),
+      ...(props.writable
+        ? [
+            h('button', { class: 'btn btn--ghost btn--sm', onClick: () => props.onAdd(props.node.data) }, '下设'),
+            h('button', { class: 'btn btn--ghost btn--sm', onClick: () => props.onEdit(props.node.data) }, '改'),
+            h('button', { class: 'btn btn--danger-ghost btn--sm', onClick: () => props.onRemove(props.node.data) }, '撤'),
+          ]
+        : []),
     ]),
     props.node.children.length
       ? h(
@@ -84,6 +103,7 @@ const DeptNode = (props: {
               key: c.data.id,
               node: c,
               depth: props.depth + 1,
+              writable: props.writable,
               onAdd: props.onAdd,
               onEdit: props.onEdit,
               onRemove: props.onRemove,
@@ -95,13 +115,16 @@ const DeptNode = (props: {
 DeptNode.props = {
   node: { type: Object as PropType<DeptNodeData>, required: true },
   depth: { type: Number, required: true },
+  writable: { type: Boolean, required: true },
   onAdd: { type: Function as PropType<(d: DepartmentView) => void>, required: true },
   onEdit: { type: Function as PropType<(d: DepartmentView) => void>, required: true },
   onRemove: { type: Function as PropType<(d: DepartmentView) => void>, required: true },
 };
 
 const list = ref<DepartmentView[]>([]);
-const editor = reactive({ open: false, id: 0, name: '', parentId: null as number | null });
+const editor = reactive({ open: false, id: 0, name: '', code: '', parentId: null as number | null });
+/** 新建、修改、撤销部门都要“维护部门”按钮。 */
+const writable = computed(() => can('rbac.departments.write'));
 
 const tree = computed<DeptNodeData[]>(() => {
   const map = new Map<number, DeptNodeData>();
@@ -138,6 +161,7 @@ async function reload(): Promise<void> {
 function openCreate(parent: DepartmentView | null): void {
   editor.id = 0;
   editor.name = '';
+  editor.code = '';
   editor.parentId = parent ? parent.id : null;
   editor.open = true;
 }
@@ -145,6 +169,7 @@ function openCreate(parent: DepartmentView | null): void {
 function openEdit(d: DepartmentView): void {
   editor.id = d.id;
   editor.name = d.name;
+  editor.code = d.code ?? '';
   editor.parentId = d.parentId;
   editor.open = true;
 }
@@ -152,10 +177,10 @@ function openEdit(d: DepartmentView): void {
 async function save(): Promise<void> {
   try {
     if (editor.id) {
-      await departmentsApi.update(editor.id, { name: editor.name, parentId: editor.parentId });
+      await departmentsApi.update(editor.id, { name: editor.name, parentId: editor.parentId, code: editor.code || null });
       toast.ok('部门已更新');
     } else {
-      await departmentsApi.create({ name: editor.name, parentId: editor.parentId });
+      await departmentsApi.create({ name: editor.name, parentId: editor.parentId, code: editor.code || null });
       toast.ok('部门已落账');
     }
     editor.open = false;
@@ -166,7 +191,7 @@ async function save(): Promise<void> {
 }
 
 async function remove(d: DepartmentView): Promise<void> {
-  if (!window.confirm(`确认撤销部门「${d.name}」？下设部门与成员需先另行安置。`)) return;
+  if (!(await confirmDanger('撤销部门', `撤销「${d.name}」？还有下设部门或成员时不能撤销，需先另行安置。`, '撤销'))) return;
   try {
     await departmentsApi.remove(d.id);
     toast.ok('部门已撤销');

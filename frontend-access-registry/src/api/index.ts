@@ -9,6 +9,7 @@ import type {
   PermissionOrigin,
   PermissionTree,
   PermissionView,
+  ResourceCreate,
   ResourceView,
   RoleView,
   SyncSummary,
@@ -27,11 +28,13 @@ export const authApi = {
 
 export const meApi = {
   profile: () => request<UserView>('/api/me'),
-  menu: () => request<PermissionTree[]>('/api/me/menu'),
+  /** 当前用户在某个应用下的菜单树；granted 表示本人直接或经继承持有。 */
+  menu: (system?: string) => request<PermissionTree[]>('/api/me/menu', { query: { system } }),
   permissions: () => request<PermissionView[]>('/api/me/permissions'),
   origins: () => request<PermissionOrigin[]>('/api/me/permission-origins'),
   changePassword: (currentPassword: string, newPassword: string) =>
-    request<void>('/api/me/password', { method: 'PUT', body: { currentPassword, newPassword } }),
+    // 原密码错误时后端返回 401，这时会话仍然有效
+    request<void>('/api/me/password', { method: 'PUT', body: { currentPassword, newPassword }, keepSession: true }),
 };
 
 export const usersApi = {
@@ -127,8 +130,7 @@ export const permissionsApi = {
 
 export const resourcesApi = {
   list: () => request<ResourceView[]>('/api/resources'),
-  create: (body: { systemId: number; name: string; method: string; path: string; code: string }) =>
-    request<ResourceView>('/api/resources', { method: 'POST', body }),
+  create: (body: ResourceCreate) => request<ResourceView>('/api/resources', { method: 'POST', body }),
   update: (id: number, name: string) =>
     request<ResourceView>(`/api/resources/${id}`, { method: 'PUT', body: { name } }),
   status: (id: number, active: boolean) =>

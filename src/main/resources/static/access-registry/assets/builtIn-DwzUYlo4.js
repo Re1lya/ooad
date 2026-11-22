@@ -1,0 +1,1 @@
+import{S as t}from"./index-ByoM1C2-.js";const n="rbac-admin",a="权限系统的内置对象，不能停用或注销，否则所有人都会进不了控制台",c=s=>s===t,I=s=>s===n,r=(s,i)=>s===t&&i.startsWith(`${t}.`),e=s=>s===t;export{a as B,I as a,r as b,e as c,c as i};

@@ -2,7 +2,7 @@
   <div>
     <PageHead title="接入应用" subtitle="登记纳入统一身份的应用系统" seal="用">
       <template #actions>
-        <button class="btn btn--seal" @click="openCreate">登记应用</button>
+        <button v-if="writable" class="btn btn--seal" @click="openCreate">登记应用</button>
       </template>
     </PageHead>
 
@@ -24,10 +24,14 @@
             <td><span class="chip mono">{{ s.code }}</span></td>
             <td><b>{{ s.name }}</b></td>
             <td class="mono muted small">{{ s.baseUrl ?? '—' }}</td>
-            <td><Toggle :model-value="s.enabled" @change="(v) => toggle(s, v)" /></td>
-            <td style="text-align: right">
-              <button class="btn btn--ghost btn--sm" @click="openEdit(s)">改</button>
-              <button class="btn btn--danger-ghost btn--sm" @click="remove(s)">销</button>
+            <td>
+              <Toggle v-if="writable && !isBuiltInSystem(s.code)" :model-value="s.enabled" @change="(v) => toggle(s, v)" />
+              <span v-else class="stamp" :class="s.enabled ? 'stamp--on' : ''">{{ s.enabled ? '启用' : '停用' }}</span>
+            </td>
+            <td style="text-align: right; white-space: nowrap">
+              <button v-if="writable" class="btn btn--ghost btn--sm" @click="openEdit(s)">改</button>
+              <button v-if="writable && !isBuiltInSystem(s.code)" class="btn btn--danger-ghost btn--sm" @click="remove(s)">销</button>
+              <span v-else-if="isBuiltInSystem(s.code)" class="stamp stamp--hot" :title="BUILT_IN_HINT">内置</span>
             </td>
           </tr>
         </tbody>
@@ -57,16 +61,21 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { systemsApi } from '@/api';
 import type { SystemView } from '@/api/types';
 import PageHead from '@/components/PageHead.vue';
 import Modal from '@/components/Modal.vue';
 import Toggle from '@/components/Toggle.vue';
 import EmptyState from '@/components/EmptyState.vue';
+import { confirmDanger } from '@/stores/confirm';
 import { toast } from '@/stores/toast';
+import { can } from '@/stores/session';
+import { BUILT_IN_HINT, isBuiltInSystem } from '@/utils/builtIn';
 
 const list = ref<SystemView[]>([]);
+/** 登记、修改、启停、注销应用都要“维护应用”按钮。 */
+const writable = computed(() => can('rbac.systems.write'));
 const editor = reactive({ open: false, id: 0, code: '', name: '', baseUrl: '' });
 
 async function reload(): Promise<void> {
@@ -120,7 +129,7 @@ async function toggle(s: SystemView, enabled: boolean): Promise<void> {
 }
 
 async function remove(s: SystemView): Promise<void> {
-  if (!window.confirm(`确认注销应用「${s.name}」？其下的权限与授权关系会一并清理。`)) return;
+  if (!(await confirmDanger('注销应用', `注销「${s.name}」？还有菜单、按钮或 API 资源时不能注销，需先清理。`, '注销'))) return;
   try {
     await systemsApi.remove(s.id);
     toast.ok('应用已注销');

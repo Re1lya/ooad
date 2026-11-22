@@ -5,7 +5,7 @@
         <select v-model="systemId" class="select" style="width: 220px" @change="reload">
           <option v-for="s in systems" :key="s.id" :value="s.id">{{ s.name }}（{{ s.code }}）</option>
         </select>
-        <button class="btn btn--seal" :disabled="!systemId" @click="openCreate(null)">登记权限</button>
+        <button v-if="writable" class="btn btn--seal" :disabled="!systemId" @click="openCreate(null)">登记权限</button>
       </template>
     </PageHead>
 
@@ -16,6 +16,9 @@
           <PermRow
             :node="node"
             :depth="0"
+            :system-code="systemCode"
+            :writable="writable"
+            :bindable="bindableByMe"
             @add="openCreate"
             @edit="openEdit"
             @flip="flip"
@@ -48,7 +51,7 @@
           <label>父级权限</label>
           <select v-model="editor.parentId" class="select">
             <option :value="null">无（顶层）</option>
-            <option v-for="p in flatPerms.filter((x) => x.id !== editor.id)" :key="p.id" :value="p.id">
+            <option v-for="p in flatPerms.filter((x) => x.id !== editor.id && x.type === 'MENU')" :key="p.id" :value="p.id">
               {{ '　'.repeat(p.depth) }}{{ p.name }}
             </option>
           </select>
@@ -66,7 +69,7 @@
 
     <!-- 绑定 API 资源 -->
     <Modal :open="binder.open" :title="`「${binder.perm?.name ?? ''}」绑定的 API`" wide @close="binder.open = false">
-      <div class="field">
+      <div v-if="bindableByMe" class="field">
         <label>绑定新资源</label>
         <div class="row">
           <select v-model="binder.pick" class="select grow">
@@ -88,7 +91,7 @@
             <td class="mono small">{{ r.path }}</td>
             <td>{{ r.name }}</td>
             <td style="text-align: right">
-              <button class="btn btn--danger-ghost btn--sm" @click="unbind(r)">解绑</button>
+              <button v-if="bindableByMe" class="btn btn--danger-ghost btn--sm" @click="unbind(r)">解绑</button>
             </td>
           </tr>
         </tbody>
@@ -109,9 +112,16 @@ import PageHead from '@/components/PageHead.vue';
 import Modal from '@/components/Modal.vue';
 import Toggle from '@/components/Toggle.vue';
 import EmptyState from '@/components/EmptyState.vue';
+import { confirmDanger } from '@/stores/confirm';
 import { toast } from '@/stores/toast';
+import { can } from '@/stores/session';
+import { BUILT_IN_HINT, isBuiltInPermission } from '@/utils/builtIn';
 
 const systems = ref<SystemView[]>([]);
+/** 登记、修改、启停、注销菜单与按钮要“维护菜单与按钮”；给它们绑定接口要“维护 API 资源”。 */
+const writable = computed(() => can('rbac.permissions.write'));
+const bindableByMe = computed(() => can('rbac.resources.write'));
+const systemCode = computed(() => systems.value.find((x) => x.id === systemId.value)?.code ?? '');
 const systemId = ref(0);
 const tree = ref<PermissionTree[]>([]);
 const allResources = ref<ResourceView[]>([]);
@@ -134,10 +144,10 @@ const binder = reactive({
 });
 
 const flatPerms = computed(() => {
-  const out: { id: number; name: string; depth: number }[] = [];
+  const out: { id: number; name: string; depth: number; type: string }[] = [];
   const walk = (nodes: PermissionTree[], depth: number): void => {
     for (const n of nodes) {
-      out.push({ id: n.permission.id, name: n.permission.name, depth });
+      out.push({ id: n.permission.id, name: n.permission.name, depth, type: n.permission.type });
       walk(n.children, depth + 1);
     }
   };
@@ -153,6 +163,9 @@ const bindable = computed(() => {
 const PermRow = (props: {
   node: PermissionTree;
   depth: number;
+  systemCode: string;
+  writable: boolean;
+  bindable: boolean;
   onAdd: (p: PermissionView) => void;
   onEdit: (p: PermissionView) => void;
   onFlip: (p: PermissionView) => void;
@@ -160,6 +173,7 @@ const PermRow = (props: {
   onBind: (p: PermissionView) => void;
 }) => {
   const p = props.node.permission;
+  const builtIn = isBuiltInPermission(props.systemCode, p.code);
   return h('div', [
     h('div', { class: 'perm-row', style: { paddingLeft: `${props.depth * 28 + 12}px` } }, [
       h('span', { class: 'faint mono', style: { flex: 'none' } }, props.depth ? '└' : '▣'),
@@ -169,11 +183,19 @@ const PermRow = (props: {
         ' ',
         h('span', { class: 'faint small' }, p.type === 'MENU' ? `菜单 ${p.menuPath ?? ''}` : '按钮'),
       ]),
-      h(Toggle, { modelValue: p.active, 'onUpdate:modelValue': () => props.onFlip(p) }),
-      h('button', { class: 'btn btn--ghost btn--sm', onClick: () => props.onAdd(p) }, '下设'),
-      h('button', { class: 'btn btn--ghost btn--sm', onClick: () => props.onBind(p) }, '绑 API'),
-      h('button', { class: 'btn btn--ghost btn--sm', onClick: () => props.onEdit(p) }, '改'),
-      h('button', { class: 'btn btn--danger-ghost btn--sm', onClick: () => props.onRemove(p) }, '销'),
+      props.writable && !builtIn
+        ? h(Toggle, { modelValue: p.active, 'onUpdate:modelValue': () => props.onFlip(p) })
+        : h('span', { class: ['stamp', p.active ? 'stamp--on' : ''] }, p.active ? '启用' : '停用'),
+      props.writable && p.type === 'MENU'
+        ? h('button', { class: 'btn btn--ghost btn--sm', onClick: () => props.onAdd(p) }, '下设')
+        : null,
+      h('button', { class: 'btn btn--ghost btn--sm', onClick: () => props.onBind(p) }, props.bindable ? '绑 API' : '看 API'),
+      props.writable ? h('button', { class: 'btn btn--ghost btn--sm', onClick: () => props.onEdit(p) }, '改') : null,
+      props.writable && !builtIn
+        ? h('button', { class: 'btn btn--danger-ghost btn--sm', onClick: () => props.onRemove(p) }, '销')
+        : builtIn
+          ? h('span', { class: 'stamp stamp--hot', title: BUILT_IN_HINT }, '内置')
+          : null,
     ]),
     props.node.children.length
       ? h(
@@ -183,6 +205,9 @@ const PermRow = (props: {
               key: c.permission.id,
               node: c,
               depth: props.depth + 1,
+              systemCode: props.systemCode,
+              writable: props.writable,
+              bindable: props.bindable,
               onAdd: props.onAdd,
               onEdit: props.onEdit,
               onFlip: props.onFlip,
@@ -197,6 +222,9 @@ const PermRow = (props: {
 PermRow.props = {
   node: { type: Object as PropType<PermissionTree>, required: true },
   depth: { type: Number, required: true },
+  systemCode: { type: String, required: true },
+  writable: { type: Boolean, required: true },
+  bindable: { type: Boolean, required: true },
   onAdd: { type: Function as PropType<(p: PermissionView) => void>, required: true },
   onEdit: { type: Function as PropType<(p: PermissionView) => void>, required: true },
   onFlip: { type: Function as PropType<(p: PermissionView) => void>, required: true },
@@ -275,7 +303,7 @@ async function flip(p: PermissionView): Promise<void> {
 }
 
 async function remove(p: PermissionView): Promise<void> {
-  if (!window.confirm(`确认注销权限「${p.name}（${p.code}）」？挂在它下面的子权限需先处理。`)) return;
+  if (!(await confirmDanger('注销权限', `注销「${p.name}（${p.code}）」？还有下级权限、角色授权或 API 绑定时不能注销，需先解除。`, '注销'))) return;
   try {
     await permissionsApi.remove(p.id);
     toast.ok('权限已注销');

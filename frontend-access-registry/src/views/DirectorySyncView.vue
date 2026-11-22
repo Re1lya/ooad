@@ -1,17 +1,19 @@
 <template>
   <div>
-    <PageHead title="员工同步" subtitle="三张 Excel 入册：先预览变动，凭摘要一次性确认写入" seal="册" />
+    <PageHead title="员工同步" subtitle="按员工信息表入册：先预览变动，凭摘要一次性确认写入" seal="册" />
 
     <div class="panel mb16">
       <div class="panel__body">
         <div class="sync-grid">
           <!-- 选表 -->
           <label class="drop" :class="{ 'drop--on': !!file }">
-            <input type="file" accept=".xlsx,.xls" hidden @change="onFile" />
+            <input type="file" accept=".xlsx" hidden @change="onFile" />
             <span class="drop__glyph t-title">{{ file ? '已' : '选' }}</span>
             <span class="grow">
               <b>{{ file ? file.name : '选择员工信息表' }}</b>
-              <span class="faint small" style="display: block">{{ file ? '换一张直接重选' : '公司三张表合订的 Excel' }}</span>
+              <span class="faint small" style="display: block">
+                {{ file ? '换一张直接重选' : '.xlsx，表头为姓名、用户名、分公司、部门、岗位、电话号码' }}
+              </span>
             </span>
           </label>
 
@@ -40,6 +42,10 @@
           </div>
         </div>
 
+        <p class="notice notice--tip" style="margin: 0 0 14px">
+          按用户名（工号）入册，建立“分公司 / 部门”两级部门，总公司员工与分公司员工分别补授所选角色。新人员默认停用、不设密码；
+          已在册的人只更新姓名、部门、岗位与电话，密码、启停状态和已有角色都不动。同一张表重复同步不会有变化。
+        </p>
         <div class="row" style="justify-content: flex-end">
           <button class="btn btn--seal" :disabled="!file || !rule.headOffice || busy" @click="preview">
             {{ busy ? '清点中…' : '预览变动' }}
@@ -148,8 +154,8 @@ async function commit(): Promise<void> {
 onMounted(async () => {
   try {
     roles.value = await rolesApi.list();
-  } catch (e) {
-    toast.fail(e);
+  } catch {
+    /* 没有角色列表权限时只能“不补授” */
   }
 });
 </script>

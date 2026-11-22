@@ -2,7 +2,7 @@
   <div>
     <PageHead title="继承图谱" subtitle="RBAC1 角色继承：高级角色居上，朱砂箭头指向被继承者" seal="承">
       <template #actions>
-        <button class="btn btn--seal" @click="linker.open = true">立继承</button>
+        <button v-if="writable" class="btn btn--seal" @click="linker.open = true">立继承</button>
       </template>
     </PageHead>
 
@@ -18,7 +18,7 @@
         <!-- 继承边 -->
         <g v-for="e in laidEdges" :key="`${e.from.id}-${e.to.id}`">
           <path :d="e.d" class="edge" />
-          <g class="edge-hit" @click="askUnlink(e)">
+          <g v-if="writable" class="edge-hit" @click="askUnlink(e)">
             <path :d="e.d" class="edge-hit-line" />
             <circle :cx="e.mx" :cy="e.my" r="10" class="edge-knot" />
             <text :x="e.mx" :y="e.my + 3.5" class="edge-x">×</text>
@@ -71,7 +71,12 @@ import type { HierarchyEdge, RoleView } from '@/api/types';
 import PageHead from '@/components/PageHead.vue';
 import Modal from '@/components/Modal.vue';
 import EmptyState from '@/components/EmptyState.vue';
+import { confirmDanger } from '@/stores/confirm';
 import { toast } from '@/stores/toast';
+import { can } from '@/stores/session';
+
+/** 建立、解除继承都要“维护继承关系”按钮；没有的人只看图。 */
+const writable = computed(() => can('rbac.hierarchy.write'));
 
 const NW = 148; // 节点宽
 const NH = 56; // 节点高
@@ -198,7 +203,7 @@ async function link(): Promise<void> {
 }
 
 async function askUnlink(e: LaidEdge): Promise<void> {
-  if (!window.confirm(`解除继承「${e.from.name} → ${e.to.name}」？继承而来的权限随即失效。`)) return;
+  if (!(await confirmDanger('解除继承', `解除「${e.from.name} → ${e.to.name}」？经这条继承得到的权限随即失效。`, '解除'))) return;
   try {
     await hierarchyApi.unlink(e.from.id, e.to.id);
     toast.ok('继承已解除');

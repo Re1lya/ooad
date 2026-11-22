@@ -26,12 +26,12 @@
             </p>
             <div class="modules">
               <div v-for="(mode, name) in info.modules" :key="name" class="module">
-                <span class="module__name">{{ name }}</span>
-                <span class="chip mono">{{ mode }}</span>
+                <span class="module__name">{{ moduleText(String(name)) }}</span>
+                <span class="chip" :class="mode === 'ddd' ? 'chip--hot' : 'chip--pine'">{{ strategyText(mode) }}</span>
               </div>
             </div>
           </template>
-          <p v-else class="muted">模式信息未取到，后端可能未启动。</p>
+          <p v-else class="muted">暂时取不到运行模式，稍后刷新再看。</p>
         </div>
       </section>
 
@@ -39,7 +39,7 @@
       <section class="panel">
         <div class="panel__head">
           <span class="panel__title">接入应用</span>
-          <router-link to="/systems" class="btn btn--ghost btn--sm">管理 →</router-link>
+          <router-link v-if="canVisit('/systems')" to="/systems" class="btn btn--ghost btn--sm">管理 →</router-link>
         </div>
         <div class="panel__body" style="padding-top: 8px">
           <EmptyState v-if="!systems.length" glyph="未" text="还没有接入应用" hint="到「接入应用」页登记第一个系统" />
@@ -63,7 +63,8 @@ import { rolesApi, systemsApi, usersApi } from '@/api';
 import type { RoleView, SystemView } from '@/api/types';
 import PageHead from '@/components/PageHead.vue';
 import EmptyState from '@/components/EmptyState.vue';
-import { session } from '@/stores/session';
+import { canVisit, session } from '@/stores/session';
+import { moduleText, strategyText } from '@/utils/labels';
 
 const systems = ref<SystemView[]>([]);
 const roles = ref<RoleView[]>([]);

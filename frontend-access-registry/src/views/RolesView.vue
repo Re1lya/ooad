@@ -2,7 +2,7 @@
   <div>
     <PageHead title="角色" subtitle="权限的容器：建角色、配直接权限、查有效权限" seal="角">
       <template #actions>
-        <button class="btn btn--seal" @click="openCreate">建角色</button>
+        <button v-if="writable" class="btn btn--seal" @click="openCreate">建角色</button>
       </template>
     </PageHead>
 
@@ -24,11 +24,15 @@
             <td><span class="chip mono">{{ r.code }}</span></td>
             <td><b>{{ r.name }}</b></td>
             <td class="muted small">{{ r.description ?? '—' }}</td>
-            <td><Toggle :model-value="r.enabled" @change="(v) => toggle(r, v)" /></td>
+            <td>
+              <Toggle v-if="writable && !isBuiltInRole(r.code)" :model-value="r.enabled" @change="(v) => toggle(r, v)" />
+              <span v-else class="stamp" :class="r.enabled ? 'stamp--on' : ''">{{ r.enabled ? '启用' : '停用' }}</span>
+            </td>
             <td style="text-align: right; white-space: nowrap">
-              <button class="btn btn--ghost btn--sm" @click="openGrants(r)">配权限</button>
-              <button class="btn btn--ghost btn--sm" @click="openEdit(r)">改</button>
-              <button class="btn btn--danger-ghost btn--sm" @click="remove(r)">销</button>
+              <button v-if="grantable" class="btn btn--ghost btn--sm" @click="openGrants(r)">配权限</button>
+              <button v-if="writable" class="btn btn--ghost btn--sm" @click="openEdit(r)">改</button>
+              <button v-if="writable && !isBuiltInRole(r.code)" class="btn btn--danger-ghost btn--sm" @click="remove(r)">销</button>
+              <span v-else-if="isBuiltInRole(r.code)" class="stamp stamp--hot" :title="BUILT_IN_HINT">内置</span>
             </td>
           </tr>
         </tbody>
@@ -81,16 +85,22 @@
 </template>
 
 <script setup lang="ts">
-import { h, onMounted, reactive, ref, type PropType } from 'vue';
+import { computed, h, onMounted, reactive, ref, type PropType } from 'vue';
 import { permissionsApi, rolesApi, systemsApi } from '@/api';
 import type { PermissionTree, RoleView, SystemView } from '@/api/types';
 import PageHead from '@/components/PageHead.vue';
 import Modal from '@/components/Modal.vue';
 import Toggle from '@/components/Toggle.vue';
 import EmptyState from '@/components/EmptyState.vue';
+import { confirmDanger } from '@/stores/confirm';
 import { toast } from '@/stores/toast';
+import { can } from '@/stores/session';
+import { BUILT_IN_HINT, isBuiltInRole } from '@/utils/builtIn';
 
 const list = ref<RoleView[]>([]);
+/** 建角色、改、启停、注销要“维护角色”；给角色配直接权限要“授予与撤销权限”。 */
+const writable = computed(() => can('rbac.roles.write'));
+const grantable = computed(() => can('rbac.grants.write'));
 const systems = ref<SystemView[]>([]);
 const editor = reactive({ open: false, id: 0, code: '', name: '', description: '' });
 const grants = reactive({
@@ -186,7 +196,7 @@ async function toggle(r: RoleView, enabled: boolean): Promise<void> {
 }
 
 async function remove(r: RoleView): Promise<void> {
-  if (!window.confirm(`确认注销角色「${r.name}」？挂在它身上的授权会一并失效。`)) return;
+  if (!(await confirmDanger('注销角色', `注销「${r.name}」？还有用户、权限或继承关系时不能注销，需先解除。`, '注销'))) return;
   try {
     await rolesApi.remove(r.id);
     toast.ok('角色已注销');

@@ -11,7 +11,7 @@
       </div>
 
       <nav class="rail__nav">
-        <div v-for="group in nav" :key="group.label" class="rail__group">
+        <div v-for="group in visibleNav" :key="group.label" class="rail__group">
           <div class="rail__group-label">{{ group.label }}</div>
           <router-link
             v-for="item in group.items"
@@ -56,7 +56,7 @@
         </button>
         <span class="topbar__crumb mono">{{ crumb }}</span>
         <span class="grow" />
-        <span class="stamp stamp--on">已连接</span>
+        <span v-if="session.state.user?.administrator" class="stamp stamp--hot">管理员</span>
       </header>
       <main class="content">
         <router-view v-slot="{ Component }">
@@ -70,6 +70,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { allowed } from '@/router';
 import { session } from '@/stores/session';
 
 const route = useRoute();
@@ -77,6 +78,8 @@ const router = useRouter();
 const railOpen = ref(false);
 
 interface NavItem {
+  /** 路由名：按本人授权决定是否出现在侧栏。 */
+  name: string;
   to: string;
   label: string;
 }
@@ -87,34 +90,41 @@ interface NavGroup {
 }
 
 const nav: NavGroup[] = [
-  { label: '台', items: [{ to: '/overview', label: '总览' }] },
+  { label: '台', items: [{ name: 'overview', to: '/overview', label: '总览' }] },
   {
     label: '档案',
     items: [
-      { to: '/users', label: '用户' },
-      { to: '/departments', label: '部门' },
-      { to: '/systems', label: '接入应用' },
+      { name: 'users', to: '/users', label: '用户' },
+      { name: 'departments', to: '/departments', label: '部门' },
+      { name: 'systems', to: '/systems', label: '接入应用' },
     ],
   },
   {
     label: '授权',
     items: [
-      { to: '/roles', label: '角色' },
-      { to: '/hierarchy', label: '继承图谱' },
-      { to: '/permissions', label: '前端权限' },
-      { to: '/resources', label: 'API 资源' },
-      { to: '/grants', label: '用户授权' },
-      { to: '/effective', label: '权限来源' },
+      { name: 'roles', to: '/roles', label: '角色' },
+      { name: 'hierarchy', to: '/hierarchy', label: '继承图谱' },
+      { name: 'permissions', to: '/permissions', label: '前端权限' },
+      { name: 'resources', to: '/resources', label: 'API 资源' },
+      { name: 'grants', to: '/grants', label: '用户授权' },
+      { name: 'effective', to: '/effective', label: '权限来源' },
     ],
   },
   {
     label: '运维',
     items: [
-      { to: '/directory', label: '员工同步' },
-      { to: '/audit', label: '审计日志' },
+      { name: 'directory', to: '/directory', label: '员工同步' },
+      { name: 'audit', to: '/audit', label: '审计日志' },
     ],
   },
 ];
+
+/** 侧栏只列本人有权进入的页面；一组都没有就整组不显示。 */
+const visibleNav = computed(() =>
+  nav
+    .map((group) => ({ ...group, items: group.items.filter((item) => allowed(item.name)) }))
+    .filter((group) => group.items.length),
+);
 
 const info = computed(() => session.state.info);
 const crumb = computed(() => `/ ${(route.meta.menu as string) ?? ''}`);
