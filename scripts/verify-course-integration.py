@@ -2,11 +2,11 @@
 """端到端验收：课程项目管理系统的登录、菜单、按钮和接口权限都由统一权限管理系统决定。
 
 前提：已运行 scripts/register-course-app.py，并设置 EMPLOYEE_XLSX 和 DEMO_PASSWORD
-（同步员工信息表，启用四个演示工号）。
+（同步员工信息表，一万名员工都启用为测试账号，四个演示工号另有课程督导、课程管理员角色）。
 
-只调用两个系统的公开 HTTP 接口。运行中会临时撤销再恢复课程督导的“课程管理”菜单、
-临时解除再恢复“课程管理员 → 课程督导”的继承、添加再删除一名教师、新建再删除一个学期，
-并写入一条审计记录；最后让学生账号退出登录。
+只调用两个系统的公开 HTTP 接口。运行中会临时停用再启用一名员工（SG000004）、
+临时撤销再恢复课程督导的“课程管理”菜单、临时解除再恢复“课程管理员 → 课程督导”的继承、
+添加再删除一名教师、新建再删除一个学期，并写入一条审计记录；最后让学生账号退出登录。
 
 用法：
   RBAC_URL=<权限系统地址> COURSE_URL=<课程后端地址；经课程前端 nginx 时为 http://<课程前端>/api> \\
@@ -70,6 +70,15 @@ def allowed(token, code):
     return call(IDENTITY, "GET", f"/auth/permissions/{code}", token)[1] == {"allowed": True}
 
 
+def set_enabled(console, username, enabled):
+    """用权限系统控制台的人员管理接口启用或停用一名人员。"""
+    query = urllib.parse.urlencode({"keyword": username, "page": 1, "pageSize": 20})
+    status, page, _ = call(RBAC, "GET", f"/api/users?{query}", console)
+    user = next((u for u in page["items"] if u["username"] == username), None) if status == 200 else None
+    return user is not None and call(RBAC, "PUT", f"/api/users/{user['id']}/status", console,
+                                     {"enabled": enabled})[0] == 200
+
+
 def main():
     demo = os.environ["DEMO_PASSWORD"]
     status, body, _ = call(RBAC, "POST", "/api/auth/login", body={
@@ -93,7 +102,16 @@ def main():
     student = body.get("accessToken")
     check("学生从学生入口登录", status == 200 and "student" in body["user"]["roles"], f"HTTP {status}")
     check("密码错误时登录失败", course_login("teacher", "SG000003", demo + "x")[0] == 401)
-    check("同步后尚未启用的员工不能登录", course_login("teacher", "SG000004", demo)[0] == 401)
+
+    print("== 一万名员工都是测试账号：总公司员工是教师，分公司员工是学生")
+    check("总公司员工 SG000190 从教师入口登录", course_login("teacher", "SG000190", demo)[0] == 200)
+    check("分公司员工 SG010000 从学生入口登录", course_login("student", "SG010000", demo)[0] == 200)
+    try:
+        check("在权限系统停用 SG000004 后不能登录",
+              set_enabled(console, "SG000004", False) and course_login("teacher", "SG000004", demo)[0] == 401)
+    finally:
+        enabled = set_enabled(console, "SG000004", True)
+    check("重新启用后恢复登录", enabled and course_login("teacher", "SG000004", demo)[0] == 200)
 
     print("== 令牌只对目标系统有效")
     status, me, _ = call(IDENTITY, "GET", "/auth/me", admin)

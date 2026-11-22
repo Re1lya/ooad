@@ -14,12 +14,15 @@
   1. 应用、菜单与按钮、API 资源（含 operationId），把每个菜单或按钮绑定到它调用的接口；
   2. 角色 teacher、student、course-observer（继承 teacher）、course-admin（继承 course-observer）；
   3. 设置了 EMPLOYEE_XLSX 时，同步员工信息表：总公司员工补授 teacher，分公司员工补授 student；
-  4. 设置了 DEMO_PASSWORD 时，为四个演示工号设置密码、启用，并分配课程督导和课程管理员角色。
+  4. 设置了 DEMO_PASSWORD 时，按老师的约定把员工信息表的一万名员工都作为测试账号：为尚未启用的
+     员工设置这个测试密码并启用，已启用的账号不动，所以可以重复执行；四个演示工号另外分配
+     课程督导、课程管理员角色。TEST_ACCOUNTS=demo 时只处理四个演示工号。
 
 用法：
   RBAC_URL=http://<权限系统地址> RBAC_ADMIN=<管理员> \\
-  EMPLOYEE_XLSX=<市政公司员工信息表.xlsx> DEMO_PASSWORD=<演示密码> python3 scripts/register-course-app.py
+  EMPLOYEE_XLSX=<市政公司员工信息表.xlsx> DEMO_PASSWORD=<测试密码> python3 scripts/register-course-app.py
   管理员密码从环境变量 RBAC_ADMIN_PASSWORD 读取，未设置时交互输入，不回显。
+  每个账号的密码在权限系统中做一次 BCrypt，一万个账号在 2 核节点上约需 12 分钟；WORKERS 设置并发数（默认 4）。
 """
 
 import getpass
@@ -30,6 +33,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 
 APP = {"code": "course-project-management", "name": "课程项目管理系统"}
 
@@ -129,8 +133,16 @@ class Api:
     def __init__(self, base):
         self.base = base.rstrip("/")
         self.token = None
+        self.credentials = None
 
-    def call(self, method, path, body=None, form=None):
+    def login(self, username, password):
+        """管理员登录并记住凭据：令牌默认 30 分钟过期，启用一万个测试账号时会用到重新登录。"""
+        self.credentials = (username, password)
+        self.token = self.call(
+            "POST", "/api/auth/login", {"username": username, "password": password}, auth=False
+        )["accessToken"]
+
+    def call(self, method, path, body=None, form=None, auth=True, retry=True):
         headers = {"X-Client-Menu": "register-course-app"}
         data = None
         if form is not None:
@@ -140,7 +152,7 @@ class Api:
         elif body is not None:
             data = json.dumps(body).encode("utf-8")
             headers["Content-Type"] = "application/json"
-        if self.token:
+        if auth and self.token:
             headers["Authorization"] = "Bearer " + self.token
         request = urllib.request.Request(self.base + path, data=data, method=method, headers=headers)
         try:
@@ -148,6 +160,9 @@ class Api:
                 text = response.read().decode("utf-8")
                 return json.loads(text) if text else None
         except urllib.error.HTTPError as error:
+            if error.code == 401 and auth and retry and self.credentials:
+                self.login(*self.credentials)
+                return self.call(method, path, body, form, auth, retry=False)
             detail = error.read().decode("utf-8", "replace")
             raise SystemExit(f"{method} {path} 失败：HTTP {error.code} {detail}")
 
@@ -266,11 +281,38 @@ def prepare_demo(api, roles, password):
         print(f"演示账号 {username} {user['displayName']}：已启用" + (f"，分配 {role}" if role else ""))
 
 
+def enable_test_accounts(api, password):
+    """老师的约定：员工信息表的一万名员工都是测试账号，总公司员工是教师，分公司员工是学生。
+
+    只处理员工信息同步建立的人员（人员类型 EMPLOYEE、带公司名称、不是管理员）。同步时新人员是停用、
+    无密码的；这里为其中尚未启用的设置统一的测试密码并启用，已启用的账号不动。
+    """
+    employees, page = [], 1
+    while True:
+        result = api.call("GET", f"/api/users?page={page}&pageSize=100")
+        employees += [u for u in result["items"]
+                      if not u["administrator"] and u["personType"] == "EMPLOYEE" and u.get("companyName")]
+        if page * 100 >= result["total"]:
+            break
+        page += 1
+    pending = [u for u in employees if not u["enabled"]]
+
+    def provision(user):
+        api.call("PUT", f"/api/users/{user['id']}/password", {"password": password})
+        api.call("PUT", f"/api/users/{user['id']}/status", {"enabled": True})
+
+    with ThreadPoolExecutor(max_workers=int(os.environ.get("WORKERS", "4"))) as pool:
+        for done, _ in enumerate(pool.map(provision, pending), 1):
+            if done % 1000 == 0:
+                print(f"测试账号：已启用 {done}/{len(pending)}", flush=True)
+    print(f"测试账号：同步员工 {len(employees)} 人，本次启用 {len(pending)} 个，"
+          f"此前已启用的 {len(employees) - len(pending)} 个保持不变")
+
+
 def main():
     api = Api(os.environ.get("RBAC_URL", "http://127.0.0.1:18081"))
     admin = os.environ.get("RBAC_ADMIN", "admin")
-    password = os.environ.get("RBAC_ADMIN_PASSWORD") or getpass.getpass(f"{admin} 的密码：")
-    api.token = api.call("POST", "/api/auth/login", {"username": admin, "password": password})["accessToken"]
+    api.login(admin, os.environ.get("RBAC_ADMIN_PASSWORD") or getpass.getpass(f"{admin} 的密码："))
 
     roles = register(api)
     workbook = os.environ.get("EMPLOYEE_XLSX")
@@ -279,6 +321,8 @@ def main():
     demo_password = os.environ.get("DEMO_PASSWORD")
     if demo_password:
         prepare_demo(api, roles, demo_password)
+        if os.environ.get("TEST_ACCOUNTS", "all") != "demo":
+            enable_test_accounts(api, demo_password)
     print(f"完成。课程系统配置 IDENTITY_BASE_URL=<权限系统地址>/api/apps/{APP['code']}")
 
 

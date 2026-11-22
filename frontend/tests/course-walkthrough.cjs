@@ -3,7 +3,7 @@
 /**
  * 课程项目管理系统接入后的浏览器走查：用真实浏览器操作老师的课程前端和本系统控制台，逐步截图。
  *
- * 前提：两个系统已按 scripts/register-course-app.py 登记、同步员工信息表并启用演示工号。
+ * 前提：两个系统已按 scripts/register-course-app.py 登记、同步员工信息表并启用测试账号。
  * 走查会添加再删除一名教师，并临时撤销再恢复“课程督导”的“课程管理”菜单。
  *
  *   COURSE_WEB=http://<课程前端> RBAC_URL=http://<权限系统> RBAC_ADMIN=... RBAC_ADMIN_PASSWORD=... \
