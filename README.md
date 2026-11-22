@@ -1,16 +1,11 @@
-# Cdwy · 统一权限管理系统
+# Cdwy 统一权限管理系统
 
-**面向对象分析与设计课程项目｜RBAC1｜结构化与面向对象双实现**
+面向对象分析与设计课程项目，围绕企业统一权限治理实现一套可配置、可追溯的 RBAC1 权限管理系统。系统把用户、部门、应用、角色、菜单、按钮和 API 资源组织成完整授权链，并提供结构化设计与面向对象设计两种后端实现。
 
-围绕“谁通过什么角色获得哪些菜单、按钮和 API 访问权”，建立一条可配置、可解释、可撤回的授权链。当前版本提供统一管理前端、JWT 登录、十组业务用例的两种后端实现，以及公司三张 Excel 表的预览与确认导入。
+**小组：Cdwy**
+**成员：温家正、姚景云、杜奕含、陈浩贤**
 
-小组：**Cdwy**
-
-成员：温家正、姚景云、杜奕含、陈浩贤
-
-[快速运行](#快速运行) · [双设计对照](#结构化与面向对象双设计) · [设计图](docs/design/README.md) · [API](docs/first-review/api-design.md) · [数据库](docs/first-review/database-design.md) · [组员阅读指南](docs/team-guide.md)
-
-![管理工作台](docs/design/phase-two/overview.png)
+> GitHub 页面展示的是项目说明和静态截图，不会启动 Spring Boot，也不能直接操作系统。要使用真正的前端，请先按“启动系统”运行后端，再打开下面的访问地址。
 
 ## 第二次检查（2026-11-24 至 11-26）
 
@@ -28,207 +23,142 @@
 | 课程系统登记与联调 | [scripts/register-course-app.py](scripts/register-course-app.py) 用普通管理 API 登记 `course-project-management` 应用的菜单、按钮、API、角色，同步员工信息表，并把一万名员工启用为测试账号；[scripts/verify-course-integration.py](scripts/verify-course-integration.py) 跨系统验收（45 项；结构化、DDD 两种模式各 45/45 通过，公网部署后复核通过） |
 | 课程系统构建 | [deploy/course](deploy/course)：后端用老师发布的镜像 `course-mgt-backend:0.0.1`，前端按老师仓库 master（`990cea2`）编译，不打补丁 |
 
-## 组员先看什么
+## 你应该先看哪里
 
-| 想了解的内容 | 入口 |
+| 目标 | 入口 |
 |---|---|
-| 这一版完成了什么、如何检查 | [组员阅读指南](docs/team-guide.md) |
-| 两种设计如何对应，哪些能力共用 | [全业务双设计说明](docs/phase-two/full-dual-design.md) |
-| 下载后直接打开图文说明、展开关键源码 | [离线阅读说明](docs/review/README.md) |
-| 需求与业务边界 | [产品范围](PRODUCT.md)、[需求追踪](docs/first-review/requirements.md) |
-| 模块、层次、事务及 CloneFactory | [代码架构](docs/first-review/architecture.md) |
-| 所有图及可编辑、可生成的来源 | [设计图索引](docs/design/README.md)、[生成脚本](scripts/build-review-diagrams.py) |
-| 接口为什么设计、对应哪些资源 | [API 设计](docs/first-review/api-design.md)、[OpenAPI JSON](docs/first-review/openapi.json) |
-| 实体、关系、字段和约束 | [数据库设计](docs/first-review/database-design.md)、[MySQL DDL](docs/first-review/database-mysql.sql) |
-| 验收方法与覆盖率 | [验证记录](docs/first-review/testing.md)、[机器可读汇总](docs/first-review/verification.json) |
+| 直接进入权限台账前端 | `http://127.0.0.1:18081/access-registry/index.html` |
+| 查看原管理控制台 | `http://127.0.0.1:18081/ui/index.html` |
+| 了解 Vue 前端构建 | [`frontend-access-registry/README.md`](frontend-access-registry/README.md) |
+| 了解 API 设计 | [`docs/first-review/api-design.md`](docs/first-review/api-design.md) |
+| 了解数据库与 ER 图 | [`docs/first-review/database-design.md`](docs/first-review/database-design.md) |
+| 了解第二阶段交付物 | [`docs/second-review/README.adoc`](docs/second-review/README.adoc) |
+| 按角色阅读项目 | [`docs/team-guide.md`](docs/team-guide.md) |
 
-GitHub 可直接阅读 Markdown、Java 和 PNG/SVG。HTML 阅读页需要下载整个仓库后用浏览器打开；仓库中的 HTML 文件不是已经部署的在线应用。
+## 当前版本完成了什么
 
-## 当前版本
+- 账号登录、JWT 认证、当前用户信息和修改密码。
+- 用户、部门、接入应用、角色、菜单、按钮和 API 资源管理。
+- 用户分配角色，角色授予菜单、按钮和 API 权限，并支持撤回授权。
+- RBAC1 角色继承，支持多级继承和多继承，阻止自继承与循环继承。
+- 权限来源查询，可以说明一项有效权限来自哪个角色或继承链。
+- 员工信息同步的 Excel 预览、校验、变化摘要和确认导入流程。
+- 审计日志查询，记录登录、授权、撤权、导入和关键管理操作。
+- 同一套 HTTP API、数据库和 Vue 前端下的结构化与面向对象双后端实现。
 
-| 项目 | 当前范围 |
-|---|---|
-| 业务用例 | 登录与本人改密、用户、部门、应用、角色、菜单按钮、API 资源、授权鉴权、继承维护、员工信息同步、接入应用统一身份，共十一组 |
-| 权限模型 | RBAC1，多级和多继承；直接权限与继承权限取并集；显示权限来源及有效继承路径 |
-| 设计实现 | 十组业务用例和角色图算法均提供 `structured` / `ddd` 实现，启动时二选一 |
-| Service | 28 个 `@Service` 定义；每种模式实际装载 16 个（含接入应用身份模块、控制台登记与共享审计服务）；不将基础设施 Adapter 混入数量 |
-| 持久化 | 六类核心概念、11 个 JPA Entity、12 张表（11 张业务表 + 1 张审计日志技术表）、14 个外键 |
-| HTTP API | 66 个实际操作（含课程系统接入的统一身份与审计接口）；OpenAPI 与 MVC 路由逐项核对 |
-| 界面 | Vue 管理工作台、独立个人空间、桌面与窄屏导航 |
-| 运行方式 | 本地演示默认 H2 内存库；自动化测试与部署使用 MySQL（部署建表脚本 + `validate`） |
+## 前端入口
 
-## 主要功能
+仓库里有两个可访问的界面，它们由同一个 Spring Boot 服务提供：
 
-- **身份与账号**：JWT Bearer 登录、BCrypt 密码、本人改密、正式/外部/临时人员有效期、账号启停与独立密码设置。
-- **组织与资源**：部门树、应用、角色、菜单树、按钮，以及独立的 API 方法和路径资源。
-- **三组授权关系**：用户→角色、角色→前端权限、前端权限→API，分别配置、查询和撤回。
-- **RBAC1 继承**：高级角色继承低级角色权限，支持多级、多继承；拒绝自继承和循环继承，重复建立幂等。
-- **可解释授权**：展示直接和继承来源，并保留有效继承路径；导航祖先容器不自动取得接口权限。
-- **动态鉴权**：JWT 不存角色或权限快照；下次请求读取当前有效授权。撤掉一个来源后，其他有效来源仍可保留访问权。
-- **控制台自我保护**：权限系统自身的内置应用、内置管理员角色、内置菜单按钮与管理接口不能停用或删除，界面上也不提供这两个操作；已被停用的内置对象在下次启动时恢复启用，不会把所有人锁在控制台之外。
-- **员工信息同步**：按课程系统提供的员工信息表建立“分公司 / 部门”两级树和人员，按分公司补授角色；先预览变化摘要，确认时校验文件与规则未变，事务提交，重复执行无变化。
-- **交互反馈**：搜索与筛选、用户后端分页、加载/空状态/错误反馈、危险操作确认与个人权限验证。
-
-管理员负责系统配置，业务访问仍需满足授权规则。改密和账号状态变化通过凭证版本使旧 Token 失效；退出清除当前标签页 Token，当前版本没有单 Token 撤销表。
-
-### 界面预览
-
-| 角色继承 | 授权工作台 |
-|---|---|
-| ![角色继承](docs/design/phase-two/hierarchy.png) | ![授权工作台](docs/design/phase-two/grants.png) |
-
-界面截图和浏览器回归使用合成演示数据。更多页面见[图与截图](docs/design/README.md)。
-
-## 结构化与面向对象双设计
-
-两种模式使用同一套前端、Controller、用例接口、HTTP 契约和物理数据库。选择发生在 Spring 启动装配时，通过 `app.backend-strategy=structured|ddd` 指定；页面展示实际装配结果。
-
-| 对照项 | 结构化设计 `structured` | 面向对象设计 `ddd` |
+| 页面 | 地址 | 用途 |
 |---|---|---|
-| 主要组织方式 | 按功能分解，Service 用事务脚本组织业务步骤 | 应用服务协调，领域对象维护规则和状态 |
-| 用户管理入口 | `service/user/UserService` | `service/ddd/application/user/DddUserService` |
-| 数据访问 | Service 直接依赖 Spring Data Repository | 应用服务依赖领域仓储端口，由 JPA Adapter 实现 |
-| 核心规则 | 服务过程中的校验与更新 | `Account`、`DepartmentNode`、`FrontendPermission`、`RoleGraph` 等对象承担 |
-| 通用端口 | `service/port/**` | `service/port/**` |
-| 共用技术能力 | JWT、BCrypt、路径匹配、XLSX 格式解析、数据库与前端 | 同左 |
+| 权限台账 Vue 前端 | `http://127.0.0.1:18081/access-registry/index.html` | 当前整合的现代化管理台，覆盖工作台、用户、部门、应用、角色、继承、权限、API 资源、授权和审计 |
+| 原管理控制台 | `http://127.0.0.1:18081/ui/index.html` | 仓库原有的管理页面，用于兼容和对照 |
 
-结构化调用链：`Controller → UseCase → Structured Service → JPA Repository → 数据库`。
+下面的图片只用于说明视觉布局，不能替代运行中的页面：
 
-面向对象调用链：`Controller → UseCase → DDD Application Service → Domain / Repository Port → JPA Adapter → JPA Repository → 数据库`。
+![结构化实现下的权限台账前端静态预览](docs/design/phase-two/full-dual-structured/overview.png)
 
-![全业务结构化模块分解](docs/design/images/structure-full-system.png)
+如果你在 GitHub 上只看到这张图，说明你当前停留在 README 页面；这不是前端没有更新。启动服务后访问上面的 `127.0.0.1` 地址，才会进入可登录、可点击、会调用 API 的页面。
 
-![领域仓储与适配器类图](docs/design/images/class-domain-adapter.png)
+## 启动系统
 
-十组业务的端口和两种实现逐一对应，见[完整对照表](docs/phase-two/full-dual-design.md#3-十个业务模块逐项对照)。两种模式都执行同一组核心业务验收，架构测试检查 DDD 应用/领域不依赖 JPA 实体与持久化实现。
+### 环境要求
 
-设计组织参考了老师的[课程管理项目](https://gitee.com/mingqcn/course-project-mgt/)中用例端口、条件装配及仓储适配方式，并按统一权限管理的模型实现。
+- JDK 21
+- Maven 3.9，或仓库内的 `mvnw.cmd`
+- Node.js 20.19+ 或 22.12+（只有重新构建前端时需要）
+- Windows PowerShell
 
-## RBAC1 与数据模型
+### 构建后端和原管理控制台
 
-授权链为：**用户 → 分配角色 → 角色及其继承角色 → 菜单/按钮 → API 方法与路径**。
-
-角色继承是同一应用内的有向无环图。有效权限取并集并去重；来源与路径单独保留，便于回答“这个用户为什么能访问”。拒绝自己继承自己和间接成环；被停用或无效的角色、权限、应用和账号不会形成有效访问链。
-
-![六类核心概念 ER](docs/design/images/er-core.png)
-
-概念 ER 表示业务实体和联系；物理模型包含用户资料与账号凭证拆表、三组授权关联表和角色继承表。完整字段、唯一键和外键见[数据库设计](docs/first-review/database-design.md)与[十一表物理 ER](docs/design/images/er-physical.png)。
-
-## 技术栈
-
-| 层次 | 技术 |
-|---|---|
-| 后端 | Java 21、Spring Boot 4.0.8、Spring MVC、Bean Validation |
-| 认证 | Spring Security 密码编码、JJWT、BCrypt |
-| 持久化 | Spring Data JPA、Hibernate；MySQL Connector/J（测试与部署）、H2（本地演示） |
-| 对象映射 | Lombok（[lombok.config](lombok.config)）、CloneFactory 0.0.2 注解处理器；[依赖源码](third-party/clonefactory)随仓库提供 |
-| 前端 | Vue 3、TypeScript、Vite 7、Tailwind CSS 4 |
-| 验证 | Spring Boot HTTP 集成验收（真实 MySQL、事务回滚）、JUnit、JaCoCo、Chrome/Edge 浏览器验收 |
-| 文档与图 | Markdown、OpenAPI JSON、Python 生成 PNG + SVG |
-
-## 快速运行
-
-### 1. 获取代码并准备环境
+在 PowerShell 中执行：
 
 ```powershell
 git clone https://github.com/yyyjjjj949/ooad.git
 cd ooad
-```
-
-需要 **JDK 21**、**Maven 3.9** 和 **Node.js 20.19+ 或 22.12+**。前端依赖使用 `package-lock.json` 锁定。仓库带有 Maven Wrapper，未配置 Maven 命令时构建脚本使用 `mvnw.cmd`。
-
-```powershell
-# 替换成自己电脑上实际的 JDK 21 安装目录
-$env:JAVA_HOME = 'D:\Java\jdk-21'
-& "$env:JAVA_HOME\bin\java.exe" --version
-```
-
-### 2. 构建前后端并运行测试
-
-```powershell
 .\scripts\build-first-review.ps1
 ```
 
-脚本先安装仓库附带的 CloneFactory 依赖，再构建 Vue 前端，最后执行后端 `clean verify`。前端产物放入 `src/main/resources/static/ui`，由同一 Spring Boot 应用提供。
+构建脚本会安装仓库内的 CloneFactory 依赖、构建 `frontend/` 中的原管理控制台，并执行 Maven `clean verify`。权限台账 Vue 前端的开发与构建命令见下一节。JaCoCo 报告位于 `target/site/jacoco/index.html`。
 
-默认 Maven/npm 缓存在 `D:\CodexData\cache`。需要换位置时，可显式传 `-MavenCache` 和 `-NpmCache`；例如组员没有 D 盘时：
-
-```powershell
-.\scripts\build-first-review.ps1 `
-  -MavenCache (Join-Path $PWD '.cache\m2') `
-  -NpmCache (Join-Path $PWD '.cache\npm')
-```
-
-### 3. 启动并打开管理界面
+### 启动并打开权限台账
 
 ```powershell
 .\scripts\start-first-review.ps1 -AdminUsername admin -Port 18081
 ```
 
-按终端提示设置本次管理员密码，然后打开 **http://127.0.0.1:18081/ui/index.html**，使用 `admin` 与刚设置的密码登录。保持终端开启，按 `Ctrl+C` 停止。没有统一公共初始密码。
+启动脚本会在当前终端要求你输入本次演示的管理员密码。密码不会写进仓库，也没有固定的公共初始密码。启动成功后，在浏览器打开权限台账：
 
-默认是 H2 内存演示，应用停止后演示数据清空；每位组员启动自己的实例，`127.0.0.1` 指向各自电脑。
+```text
+http://127.0.0.1:18081/access-registry/index.html
+```
 
-### 4. 切换到面向对象模式
+也可以打开原管理控制台：
 
-停止当前演示实例，设置模式后重新启动：
+```text
+http://127.0.0.1:18081/ui/index.html
+```
+
+演示默认使用 H2 内存数据库，停止服务后数据会清空。运行期间请保持启动窗口打开，结束时在该窗口按 `Ctrl+C`。
+
+### 单独开发 Vue 前端
+
+先启动后端，再打开另一个 PowerShell 窗口：
+
+```powershell
+cd frontend-access-registry
+npm ci
+npm run dev
+```
+
+开发地址是 `http://127.0.0.1:5173`，前端的 `/api` 请求默认代理到 `http://127.0.0.1:18081`。完成修改后，使用下面的命令把生产资源写入 Spring Boot 静态目录：
+
+```powershell
+npm run build:backend
+```
+
+之后重新构建并启动后端即可。
+
+## 结构化与面向对象双设计
+
+启动时通过 `PERMISSION_BACKEND_STRATEGY` 选择后端实现，默认使用结构化实现。两种实现共用登录、HTTP API、数据库表和前端页面，业务结果保持一致。
+
+| 实现 | 组织方式 | 典型调用链 |
+|---|---|---|
+| 结构化 `structured` | Service 按事务脚本组织步骤，直接协调持久化操作 | Controller → UseCase → Structured Service → Repository → 数据库 |
+| 面向对象 `ddd` | 应用服务协调领域对象和仓储端口，持久化由适配器完成 | Controller → UseCase → DDD Application Service → Domain / Repository Port → JPA Adapter → 数据库 |
+
+切换到面向对象实现：
 
 ```powershell
 $env:PERMISSION_BACKEND_STRATEGY = 'ddd'
 .\scripts\start-first-review.ps1 -AdminUsername admin -Port 18081
 ```
 
-改为 `structured` 即使用结构化模式。管理员登录后查看页头模式，或携带 Token 请求 `GET /api/system-info`，核对 `backendStrategy`、`authorizationModel` 及十组业务的 `modules`。
+使用结构化实现时设置为 `structured`，或清除该环境变量后重新启动。可以通过 `GET /api/system-info` 查看当前装载的策略。
 
-### 5. 可选：保留演示数据
+## RBAC1 权限模型
 
-```powershell
-.\scripts\start-company-console.ps1 `
-  -Strategy ddd -Port 18083 -RuntimeDirectory .\work\company-runtime
+系统按下面的授权关系计算有效权限：
+
+```text
+用户 → 用户角色关系 → 角色 → 角色继承 → 菜单 / 按钮 / API 资源
 ```
 
-脚本首次创建 H2 文件库和随机管理员凭据，随后使用 `validate`，不会重建已有库。管理员凭据文件位置由脚本提示。切换到 `structured` 时复用同一个 `RuntimeDirectory`，先停止原实例；同一文件库不能并发由两个实例打开。
+角色继承只扩大可计算的权限来源，不直接复制权限记录。系统在写入继承关系时检查自继承和环，查询有效权限时沿继承链汇总并去重。这样既能表达“管理员继承普通管理员”的层次，也能保留每条授权的来源，便于审计和撤回。
 
-完整操作闭环、Postman 验证和浏览器回归环境变量见[运行与演示步骤](docs/first-review/demo.md)。
+## API、数据库与设计材料
 
-## 员工信息同步
-
-管理员在“用户”页点击“同步员工信息”，上传课程系统提供的员工信息表（姓名、工号、分公司、部门、岗位、电话号码），并选择总公司名称以及总公司、分公司人员分别补授的角色：**选择文件与规则 → 预览变化 → 确认同步**。
-
-- 预览逐行校验并指出 Excel 行号，只返回部门、人员、角色授权的变化数量，不写库；
-- 确认时文件或规则与预览不一致会要求重新预览；同步在一个事务中完成，表中出现管理员账号时整批拒绝；
-- 新人员默认停用，不发放公共初始密码；已有人员只更新姓名、部门、岗位与电话，保留密码、启用状态与已有角色；
-- 按工号幂等，重复执行同一份表没有任何变化。
-
-**员工信息表、已同步的人员数据、管理员凭据和 JWT 密钥不随仓库发布。**
-
-## 设计图与源码阅读
-
-当前 **18 张设计图**：7 张类图、7 张顺序图、2 张模块分解图、概念 ER 和物理 ER 各 1 张。每张同时提供 PNG 和 SVG，生成来源与验收记录也在仓库中。
-
-| 图 | 查看 |
-|---|---|
-| 全业务结构化模块分解 | [PNG](docs/design/images/structure-full-system.png) / [SVG](docs/design/images/structure-full-system.svg) |
-| 双实现核心类图 | [PNG](docs/design/images/class-dual-design.png) / [SVG](docs/design/images/class-dual-design.svg) |
-| 用户管理双实现与领域对象 | [PNG](docs/design/images/class-full-user.png) / [SVG](docs/design/images/class-full-user.svg) |
-| 领域仓储与 JPA 适配 | [PNG](docs/design/images/class-domain-adapter.png) / [SVG](docs/design/images/class-domain-adapter.svg) |
-| 账号停用与 Token 失效 | [PNG](docs/design/images/sequence-ddd-account.png) / [SVG](docs/design/images/sequence-ddd-account.svg) |
-| 导入预览与确认 | [PNG](docs/design/images/sequence-company-import.png) / [SVG](docs/design/images/sequence-company-import.svg) |
-| 概念 ER / 物理 ER | [概念图](docs/design/images/er-core.png) / [物理图](docs/design/images/er-physical.png) |
-| 全部图及页面截图 | [完整索引](docs/design/README.md) |
-
-图中的早期 `AuthService`、`PermissionService` 和 `RoleHierarchyService` 表示结构化支线。DDD 实现请结合 `Ddd*Service`、领域对象和仓储适配图阅读。
-
-图文讲义和关键源码阅读页位于 [docs/review](docs/review/README.md)。下载后双击 `全业务双设计说明.html`；源码页已内嵌 20 个关键生产类，可展开查看行号。
-
-重新生成：
-
-```powershell
-# 需要 Python、Pillow、Markdown 和可用中文字体；文档依赖 verify 生成的数据
-python scripts/build-review-diagrams.py
-python scripts/build-review-docs.py
-python scripts/build-full-dual-report.py --output docs/review
-```
+- [`docs/first-review/api-design.md`](docs/first-review/api-design.md)：接口用途、资源关系、请求参数和设计理由。
+- [`docs/first-review/openapi.json`](docs/first-review/openapi.json)：可导入 Apifox 的机器可读接口描述。
+- [`docs/first-review/database-design.md`](docs/first-review/database-design.md)：实体、属性、关系、约束和索引。
+- [物理 ER 图](docs/design/images/er-physical.png) · [概念 ER 图](docs/design/images/er-core.png)。
+- [`docs/design/README.md`](docs/design/README.md)：类图、顺序图、结构图、ER 图及可编辑来源。
+- [`docs/second-review/01-requirements.adoc`](docs/second-review/01-requirements.adoc)：需求规格与功能/非功能需求。
+- [`docs/second-review/03-detailed-design.adoc`](docs/second-review/03-detailed-design.adoc)：架构、模块、类图和实现说明。
+- [`docs/second-review/04-test-traceability.adoc`](docs/second-review/04-test-traceability.adoc)：需求与测试追踪关系。
+- [`docs/second-review/05-deployment.adoc`](docs/second-review/05-deployment.adoc)：部署与环境配置说明。
 
 ## 测试与验证
 
@@ -251,34 +181,36 @@ mvn -B clean verify
 
 需求与测试的对应见[需求—测试追踪](docs/second-review/04-test-traceability.adoc)。完整 JaCoCo 报告在构建后生成到 `target/site/jacoco/index.html`。
 
+## 技术栈
+
+| 层次 | 技术 |
+|---|---|
+| 后端 | Java 21、Spring Boot、Spring MVC、Spring Security、Bean Validation |
+| 持久化 | Spring Data JPA、Hibernate；演示使用 H2，部署使用 MySQL |
+| 认证 | JWT、BCrypt |
+| 对象映射 | CloneFactory、Lombok |
+| 前端 | Vue 3、TypeScript、Vite、Vue Router |
+| 测试 | JUnit、Maven Surefire、JaCoCo |
+
 ## 仓库结构
 
 ```text
-.
-├── frontend/                 Vue 前端源码、锁文件与浏览器验收
-├── src/main/java/com/cdwy/permission/
-│   ├── controller/           HTTP 入口与 DTO/Command、Result/VO 映射
-│   ├── service/port/         统一用例、数据与技术端口
-│   ├── service/              结构化业务服务及共享技术能力
-│   ├── service/structured/   结构化角色图算法
-│   ├── service/ddd/          面向对象应用服务、领域对象与仓储端口
-│   ├── infrastructure/       JPA 与安全技术适配器
-│   ├── entity/               JPA 持久化实体
-│   ├── repository/           Spring Data Repository
-│   ├── dto/                  HTTP 请求对象
-│   └── vo/                   HTTP 返回对象
-├── src/main/resources/       配置与随应用发布的静态前端
-├── src/test/                 HTTP、领域、并发与架构边界验收
-├── third-party/clonefactory/ 对象映射注解处理器源码
-├── docs/first-review/        需求、API、数据库、整改与验证
-├── docs/phase-two/           双设计、前端交互与增量 SQL
-├── docs/design/              设计图、截图、生成与检查记录
-├── docs/review/              可下载打开的图文与关键源码阅读页
-└── scripts/                  构建、启动、文档与图生成
+frontend/                                  原管理控制台前端
+frontend-access-registry/                  整合后的 Vue 权限台前端源码
+src/main/java/                             Spring Boot 后端源码
+src/main/resources/static/ui/              原管理控制台静态资源
+src/main/resources/static/access-registry/ 权限台前端生产构建资源
+src/test/                                  后端测试
+docs/                                      需求、设计、数据库和验收文档
+scripts/                                   构建、启动和验证脚本
+deploy/                                    Docker 部署配置
+third-party/clonefactory/                  CloneFactory 源码与构建文件
 ```
 
-## 交付边界
+## 数据与安全
 
-当前交付为上述 RBAC1、双设计、前端、员工信息同步，以及课程项目管理系统接入（统一身份、审计）、分层 logback 日志和 Docker Swarm 部署。权限系统与课程系统已部署在服务器上的 Docker Swarm，并完成公网联调核对；旧业务库迁移与大规模性能压测不在本轮范围；审批、四级复核、SSO 和完整 HR/OA 对接不在这一版范围。
+演示账号由启动脚本创建，密码由运行者输入。不要把密码、JWT、密钥或包含真实员工信息的 Excel 文件提交到仓库；员工数据应由授权管理员在运行中的系统里完成导入。部署环境的数据库连接、密钥和账号凭据应通过环境变量或 Docker Secret 提供。
 
-本仓库用于组员协作和课程检查。当前实现与统计以这里的源码、[需求追踪](docs/first-review/requirements.md)及[验证汇总](docs/first-review/verification.json)为准。
+## 许可证与课程用途
+
+本仓库用于 Cdwy 小组课程设计、检查和答辩演示。第三方依赖遵循各自许可证，CloneFactory 相关源码和构建文件保存在 `third-party/clonefactory/`。

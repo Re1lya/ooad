@@ -5,6 +5,7 @@ ARG NGINX_IMAGE=swr.cn-north-4.myhuaweicloud.com/oomall-javaee/nginx:stable-alpi
 FROM ${NGINX_IMAGE}
 
 COPY src/main/resources/static/ui /usr/share/nginx/html/ui
+COPY src/main/resources/static/access-registry /usr/share/nginx/html/access-registry
 COPY deploy/permission/nginx/default.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
