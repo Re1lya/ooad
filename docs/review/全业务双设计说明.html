@@ -1,4 +1,4 @@
-<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cdwy · 全业务双设计说明</title><style>*{box-sizing:border-box}body{margin:0;background:#f5f4ef;color:#223a33;font:16px/1.8 "Microsoft YaHei",sans-serif}header{background:#173c32;color:#fff;padding:45px max(24px,calc((100vw - 1180px)/2))}header p{opacity:.8}main{max-width:1240px;margin:auto;padding:30px}h1{font-size:32px}h2{margin-top:45px;border-bottom:1px solid #cdd9d2;padding-bottom:12px}h3{margin-top:30px}a{color:#1e6852;word-break:break-word}header a{color:#fff}table{border-collapse:collapse;width:100%;display:block;overflow:auto;background:white;font-size:14px}th,td{border:1px solid #d4ddd6;padding:12px;min-width:100px}th{background:#e4ede5}pre{padding:18px;overflow:auto;background:#e8eee9;border-radius:10px;font:14px/1.7 Consolas,monospace}code{font-family:Consolas,monospace}img{max-width:100%;background:white;margin:15px auto;display:block;border:1px solid #d4ddd6}section{margin-top:24px}.facts{display:flex;gap:18px;flex-wrap:wrap}.fact{border:1px solid #d4ddd6;padding:18px;background:white;border-radius:12px;flex:1;min-width:150px}.fact b{font-size:28px;display:block}.jump{display:flex;gap:12px;flex-wrap:wrap}.jump a{background:#e5eee6;padding:5px 12px;border-radius:8px}.line{display:block;white-space:pre}.line a{color:#6e8277;text-decoration:none}details{background:white;border:1px solid #d4ddd6;padding:12px;border-radius:8px}summary{cursor:pointer}.source{max-height:700px}@media print{body{background:#fff}header{padding:20px}pre{white-space:pre-wrap}main{padding:10px}h2{break-after:avoid}img{break-inside:avoid}}</style><header><h1>统一权限管理系统 · 全业务双设计</h1><p>Cdwy · 2026-11-18 · 教师检查版本</p><a href="双设计源码阅读.html">打开源码对照阅读页 →</a></header><main><div class="facts"><div class="fact"><b>10</b>业务模块双实现</div><div class="fact"><b>81</b>后端测试通过</div><div class="fact"><b>46</b>两模式浏览器检查</div><div class="fact"><b>18</b>可重复生成设计图</div></div><h1 id="_1">全业务双设计与实现说明</h1>
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cdwy · 全业务双设计说明</title><style>*{box-sizing:border-box}body{margin:0;background:#f5f4ef;color:#223a33;font:16px/1.8 "Microsoft YaHei",sans-serif}header{background:#173c32;color:#fff;padding:45px max(24px,calc((100vw - 1180px)/2))}header p{opacity:.8}main{max-width:1240px;margin:auto;padding:30px}h1{font-size:32px}h2{margin-top:45px;border-bottom:1px solid #cdd9d2;padding-bottom:12px}h3{margin-top:30px}a{color:#1e6852;word-break:break-word}header a{color:#fff}table{border-collapse:collapse;width:100%;display:block;overflow:auto;background:white;font-size:14px}th,td{border:1px solid #d4ddd6;padding:12px;min-width:100px}th{background:#e4ede5}pre{padding:18px;overflow:auto;background:#e8eee9;border-radius:10px;font:14px/1.7 Consolas,monospace}code{font-family:Consolas,monospace}img{max-width:100%;background:white;margin:15px auto;display:block;border:1px solid #d4ddd6}section{margin-top:24px}.facts{display:flex;gap:18px;flex-wrap:wrap}.fact{border:1px solid #d4ddd6;padding:18px;background:white;border-radius:12px;flex:1;min-width:150px}.fact b{font-size:28px;display:block}.jump{display:flex;gap:12px;flex-wrap:wrap}.jump a{background:#e5eee6;padding:5px 12px;border-radius:8px}.line{display:block;white-space:pre}.line a{color:#6e8277;text-decoration:none}details{background:white;border:1px solid #d4ddd6;padding:12px;border-radius:8px}summary{cursor:pointer}.source{max-height:700px}@media print{body{background:#fff}header{padding:20px}pre{white-space:pre-wrap}main{padding:10px}h2{break-after:avoid}img{break-inside:avoid}}</style><header><h1>统一权限管理系统 · 全业务双设计</h1><p>Cdwy · 2026-11-18 · 教师检查版本</p><a href="双设计源码阅读.html">打开源码对照阅读页 →</a></header><main><div class="facts"><div class="fact"><b>10</b>业务模块双实现</div><div class="fact"><b>186</b>后端测试通过</div><div class="fact"><b>46</b>两模式浏览器检查</div><div class="fact"><b>18</b>可重复生成设计图</div></div><h1 id="_1">全业务双设计与实现说明</h1>
 <p>小组：Cdwy。更新日期：2026-11-18。适用版本：本次检查版本，基于第一次检查整改的六类核心概念、11 张表与 56 个 HTTP 操作。</p>
 <h2 id="1">1. 本次补齐的范围</h2>
 <p>原版本只有 RBAC1 角色图核心提供两种算法实现，其他 CRUD、鉴权及导入共用事务脚本。本次已将当前产品的 <strong>10 组业务用例</strong> 全部接入统一端口，分别提供结构化与面向对象实现；角色图算法另有一组双实现。前端、HTTP 契约、物理数据库、文件格式解析与加密技术能力共用。</p>
@@ -129,11 +129,11 @@
 <td>RoleGraph 防环；事务图锁；显式边幂等</td>
 </tr>
 <tr>
-<td>公司三表确认导入</td>
-<td>CompanyImportUseCase</td>
-<td><a href="../../src/main/java/com/cdwy/permission/service/importing/CompanyImportService.java">CompanyImportService</a></td>
-<td>service/ddd/application/importing/DddCompanyImportService</td>
-<td>CompanyImportBatch 摘要、来源身份及最小授权；Account 来源同步</td>
+<td>员工信息同步</td>
+<td>DirectorySyncUseCase</td>
+<td><a href="../../src/main/java/com/cdwy/permission/service/directory/DirectorySyncService.java">DirectorySyncService</a></td>
+<td>service/ddd/application/directory/DddDirectorySyncService</td>
+<td>EmployeeDirectory 建立“分公司 / 部门”两级树、按工号幂等合并人员并补授角色；Account 拒绝覆盖管理员</td>
 </tr>
 </tbody>
 </table>
@@ -151,12 +151,12 @@
 <p><img alt="停用账号顺序图" src="full-dual-diagrams/sequence-ddd-account.png" /></p>
 <p><strong>例：菜单与 API 绑定。</strong> <code>DddPermissionService.bind</code> 加载 FrontendPermission 与 ProtectedResource，调用权限对象的 assertBindable 拒绝跨应用绑定，随后 AssignmentRepository 保存关联。菜单导航为补全祖先显示为容器，不自动授予祖先对应 API 的访问权限。</p>
 <p><img alt="权限类图" src="full-dual-diagrams/class-ddd-permission.png" /></p>
-<p><strong>例：三表导入。</strong> CompanyWorkbookParser 共用文件格式解析与预检查，输出无 JPA/XML 依赖的 CompanyImportPlan。DDD 应用服务在一个事务中加载领域目录，使用 CompanyImportBatch 校验确认摘要、稳定来源编码及动作授权；Account.importSource 保留已有凭证与身份、拒绝覆盖管理员。部门父级由 DepartmentNode.relocate 防环。模板收缩通过仓储撤回旧授权。发生中途冲突，之前写入全部回滚。</p>
+<p><strong>例：员工信息同步。</strong> <code>EmployeeSheetReader</code> 共用文件格式解析与逐行校验，输出与持久化无关的数据行和文件摘要值。DDD 应用服务在一个事务中加载领域目录，由 <code>EmployeeDirectory</code> 计算部门、人员与角色授权的变化；确认时先核对文件与规则的摘要和预览一致，<code>Account</code> 只更新资料、保留密码与启用状态，并拒绝覆盖管理员。发生中途冲突，之前写入全部回滚。</p>
 <h2 id="6">6. 数据库与映射边界</h2>
 <p>业务模型没有新增表。两种模式仍使用六类核心概念、10 个 JPA Entity、11 张表、14 个外键。UserAccount 的资料/账号二级表仍分别是 sys_user/sys_account。</p>
 <p>七个领域仓储端口分别为 AccountRepository、DepartmentDirectory、SystemCatalog、RoleCatalog、PermissionCatalog、ResourceCatalog、AssignmentRepository。对应 JPA 适配器将关联转换为业务 ID，显式转换人员类型和权限类型；DDD 应用/领域不得导入 JPA Entity、JpaRepository、Spring Data Repository 或基础设施实现。</p>
 <p>同名同类型的可变对象映射使用 CloneFactory；枚举、关系、派生字段显式转换；不可变 record 使用构造函数。已检查编译生成的映射与 HTTP 返回，来源公司、部门、岗位、电话、经理、功能说明与原矩阵字段保持往返。布尔访问器使用本项目 CloneFactory 所需的 get 约定。</p>
-<p>唯一约束需在适配器事务内转译时使用 saveAndFlush；其余事务原子性由应用服务控制。H2 验收不能代替真实 MySQL；本次没有执行服务器迁移或部署。全量授权快照及批量导入尚未作大规模性能压测，不承诺生产 SLA。</p>
+<p>唯一约束需在适配器事务内转译时使用 saveAndFlush；其余事务原子性由应用服务控制。测试与部署都在 MySQL 上以 validate 运行。全量授权快照及批量导入尚未作大规模性能压测，不承诺生产 SLA。</p>
 <h2 id="7">7. 运行与切换</h2>
 <p>先配置 JDK21，运行 <code>scripts/build-first-review.ps1</code>（首次环境会安装仓库附带 CloneFactory），或在依赖已经可用时运行 Maven verify。</p>
 <pre><code class="language-powershell"># 使用同一个运行目录切换模式：只变实现，不重建已有数据库
@@ -167,70 +167,17 @@
 <p>管理员调用 <code>GET /api/system-info</code>，返回 backendStrategy、authorizationModel 和 modules。modules 十个条目的值来自实际注入的业务端口，不是前端硬编码。前端页头显示配置选中的实际模式。</p>
 <p>24 个 <code>@Service</code> 定义中，11 对按条件二选一，再加 JWT 和首次管理员初始化两个共享技术服务，每个模式实际装载 13 个。Adapter 使用 <code>@Repository</code>/<code>@Component</code>，不混入 Service 数量。Spring 条件装配在启动时选择，页面没有热切换数据库行为。</p>
 <h2 id="8">8. 可复核验收</h2>
-<table>
-<thead>
-<tr>
-<th>测试组</th>
-<th style="text-align: right;">数量</th>
-<th>核验重点</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>FirstReviewWorkflowTests</td>
-<td style="text-align: right;">22</td>
-<td>structured 全业务、JWT、身份期限、三组关系、API 与 DDL 结构</td>
-</tr>
-<tr>
-<td>DddFullWorkflowTests</td>
-<td style="text-align: right;">23</td>
-<td>相同业务用例在 ddd 重跑，加实际模块模式检查</td>
-</tr>
-<tr>
-<td>PhaseTwoRbac1Tests</td>
-<td style="text-align: right;">7</td>
-<td>structured 继承、菱形、多来源、撤权、防环及 H2 并发</td>
-</tr>
-<tr>
-<td>DddRbac1Tests</td>
-<td style="text-align: right;">8</td>
-<td>相同继承用例在 ddd 重跑，加模式端点</td>
-</tr>
-<tr>
-<td>CompanyImportTests</td>
-<td style="text-align: right;">8</td>
-<td>structured 文件格式、来源字段、幂等、冲突回滚与撤权</td>
-</tr>
-<tr>
-<td>DddCompanyImportTests</td>
-<td style="text-align: right;">8</td>
-<td>同一组导入行为在 ddd 重跑</td>
-</tr>
-<tr>
-<td>DualDesignBoundaryTests</td>
-<td style="text-align: right;">5</td>
-<td>领域/应用无持久化依赖，Controller 用端口，日期及凭证边界</td>
-</tr>
-<tr>
-<td>合计</td>
-<td style="text-align: right;">81</td>
-<td>0 失败、0 错误、0 跳过</td>
-</tr>
-</tbody>
-</table>
-<p>初始新增模块选择测试已实际失败：旧实现的 <code>/api/system-info</code> 缺少 modules。随后实现并回归通过；复用旧业务或补充已有规则的回归直接通过时如实记录，没有为制造 RED 破坏原实现。编译调试失败不算 RED。</p>
-<p>两种模式分别完成 3 组 Edge 真浏览器场景，每模式 23 项检查，共 46 项。全部使用隔离 H2 和合成数据；未把真实公司员工用于写入型测试。前端 TypeScript 和 Vite 生产构建通过。</p>
-<p>JaCoCo：行 89.13%、分支 75.63%、指令 87.88%、方法 86.03%、类 96.79%。包含 CloneFactory 生成代码，不能将行覆盖率等同于全部业务正确或真实数据库验证。最新原始报告见 <code>target/site/jacoco/index.html</code>，汇总见 <a href="../first-review/verification.json">verification.json</a>。</p>
-<p><a href="../design/phase-two/full-dual-structured/browser-verification.json">结构化浏览器记录</a> · <a href="../design/phase-two/full-dual-ddd/browser-verification.json">面向对象浏览器记录</a> · <a href="../first-review/testing.md">测试说明</a>。</p>
+<p>全部后端测试连接真实 MySQL，每个测试在事务内执行并回滚；<code>Ddd*</code> 测试类继承结构化测试类，同一组测试方法在两条设计路线上各跑一遍。按需求编号整理的测试清单、错误码契约与运行方法见<a href="../second-review/04-test-traceability.adoc">需求—测试追踪</a>。</p>
+<p>2026-11-21：186 个后端测试，失败 0、错误 0、跳过 0；53 个业务错误码全部有契约测试；JaCoCo 指令 93.6%、分支 84.0%、行 94.0%、方法 92.0%（含 CloneFactory 生成代码）。前端 5 组浏览器测试与课程系统跨系统联调在两种模式下各自通过。汇总见 <a href="../first-review/verification.json">verification.json</a>。</p>
 <h2 id="9">9. 教师检查建议路径</h2>
 <ol>
 <li>读本页第 3 节，按模块找到同一端口的两种实现。</li>
-<li>以 UserController 为入口，确认请求校验、HttpMapping、UserUseCase 调用边界。</li>
+<li>以 UserController 为入口，确认 <code>UserCreateDTO</code> 的格式校验、<code>UserVoMapper</code> 的 DTO → Command 与 Result → VO 映射，以及 UserUseCase 调用边界。</li>
 <li>比较 UserService.status 与 DddUserService.status，再打开 Account.changeStatus。</li>
 <li>打开 AccountRepository 与 JpaAccountRepositoryAdapter，追踪到 UserAccountRepository 和 11 表物理 ER。</li>
 <li>比较 PermissionService.bind 与 DddPermissionService.bind，观察对象如何维护跨应用约束。</li>
 <li>查看 AuthorizationSnapshot、RoleGraph，解释多级/菱形继承、停用阻断、来源及实时撤权。</li>
-<li>查看 DddCompanyImportTests 的继承测试，说明中途冲突为何全回滚；公司三表来源数据与运行凭据不属于公开仓库交付内容。</li>
+<li>查看 DddDirectorySyncTests 的继承测试，说明表中出现管理员账号时为何整批回滚；员工信息表与运行凭据不属于公开仓库交付内容。</li>
 </ol>
-<p>本次是可切换的单体双设计实现，不是两个独立部署系统；API、数据库及技术适配器的复用是设计选择。生产部署、真实 MySQL、旧库实际迁移、完整公司数据规模性能测试仍需另行验收。</p>
+<p>本次是可切换的单体双设计实现，不是两个独立部署系统；API、数据库及技术适配器的复用是设计选择。两种模式都已在服务器的 Docker Swarm 上以 MySQL 部署运行；旧库迁移与生产规模性能测试不在本轮范围。</p>
 <p>公司数据工作区已以 ddd、validate 启动，只读核对原有 10,001 个账号仍在，十个业务模块均报告 ddd；未重新导入或批量修改来源数据。见<a href="../design/phase-two/full-dual-company-readonly.json">只读复核</a>。</p></main></html>

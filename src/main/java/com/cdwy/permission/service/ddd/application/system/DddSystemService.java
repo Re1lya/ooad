@@ -1,5 +1,6 @@
 package com.cdwy.permission.service.ddd.application.system;
 
+import com.cdwy.permission.service.auth.ConsoleCatalog;
 import com.cdwy.permission.service.ddd.domain.model.*;
 import com.cdwy.permission.service.ddd.domain.repository.*;
 import com.cdwy.permission.service.port.data.*;
@@ -29,7 +30,7 @@ public class DddSystemService implements SystemUseCase {
 
   /** 读取应用。 */
   private ManagedSystem require(Long id) {
-    return systems.find(id).orElseThrow(() -> new ResourceNotFoundException("对象不存在"));
+    return systems.find(id).orElseThrow(() -> new ResourceNotFoundException("SYSTEM_NOT_FOUND", "应用不存在"));
   }
 
   /** 明确构造不可变结果。 */
@@ -46,7 +47,7 @@ public class DddSystemService implements SystemUseCase {
   @Transactional
   public SystemData.View create(SystemData.Create input) {
     if (systems.all().stream().anyMatch(n -> n.getCode().equals(input.code())))
-      throw new ConflictException("编码已存在");
+      throw new ConflictException("SYSTEM_CODE_EXISTS", "编码已存在");
     ManagedSystem n = new ManagedSystem();
     n.setCode(input.code());
     n.rename(input.name(), input.baseUrl());
@@ -65,7 +66,7 @@ public class DddSystemService implements SystemUseCase {
   @Transactional
   public SystemData.View status(Long id, boolean enabled) {
     ManagedSystem n = require(id);
-    n.changeStatus(enabled);
+    n.changeStatus(enabled, ConsoleCatalog.isSystem(n.getCode()));
     return view(systems.save(n));
   }
 
@@ -73,7 +74,8 @@ public class DddSystemService implements SystemUseCase {
   @Transactional
   public void delete(Long id) {
     ManagedSystem n = require(id);
-    n.assertDeletable(permissions.inSystem(id) || resources.inSystem(id));
+    n.assertDeletable(
+        ConsoleCatalog.isSystem(n.getCode()), permissions.inSystem(id) || resources.inSystem(id));
     systems.delete(id);
   }
 }

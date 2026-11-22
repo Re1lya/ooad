@@ -1,0 +1,40 @@
+2026-11-18 21:46:30.494  INFO [3f959e65] [menu=hierarchy] [user=-] c.c.p.i.logging.RequestLoggingFilter     : 请求开始 GET /api/departments 菜单=hierarchy
+2026-11-18 21:46:30.494  INFO [b64be4fe] [menu=hierarchy] [user=-] c.c.p.i.logging.RequestLoggingFilter     : 请求开始 GET /api/resources 菜单=hierarchy
+2026-11-18 21:46:30.495  INFO [d6d4b8ae] [menu=hierarchy] [user=-] c.c.p.i.logging.RequestLoggingFilter     : 请求开始 GET /api/roles 菜单=hierarchy
+2026-11-18 21:46:30.495  INFO [7970f14d] [menu=hierarchy] [user=-] c.c.p.i.logging.RequestLoggingFilter     : 请求开始 GET /api/permissions 菜单=hierarchy
+2026-11-18 21:46:30.495  INFO [9b436c56] [menu=hierarchy] [user=-] c.c.p.i.logging.RequestLoggingFilter     : 请求开始 GET /api/systems 菜单=hierarchy
+2026-11-18 21:46:30.499  INFO [a9c3d7d6] [menu=hierarchy] [user=-] c.c.p.i.logging.RequestLoggingFilter     : 请求开始 GET /api/role-hierarchy 菜单=hierarchy
+2026-11-18 21:46:30.509  INFO [d6d4b8ae] [menu=hierarchy] [user=1] c.c.permission.service.role.RoleService  : [Service] list() 完成，耗时 6 ms
+2026-11-18 21:46:30.509  INFO [3f959e65] [menu=hierarchy] [user=1] c.c.p.s.organization.DepartmentService   : [Service] list() 完成，耗时 6 ms
+2026-11-18 21:46:30.509  INFO [d6d4b8ae] [menu=hierarchy] [user=1] c.c.p.controller.role.RoleController     : [Controller] list() 完成，耗时 6 ms
+2026-11-18 21:46:30.509  INFO [9b436c56] [menu=hierarchy] [user=1] c.c.p.service.system.SystemService       : [Service] list() 完成，耗时 6 ms
+2026-11-18 21:46:30.509  INFO [9b436c56] [menu=hierarchy] [user=1] c.c.p.controller.system.SystemController : [Controller] list() 完成，耗时 6 ms
+2026-11-18 21:46:30.509  INFO [3f959e65] [menu=hierarchy] [user=1] c.c.p.c.o.DepartmentController           : [Controller] list() 完成，耗时 6 ms
+2026-11-18 21:46:30.510  INFO [9b436c56] [menu=hierarchy] [user=1] c.c.p.i.logging.RequestLoggingFilter     : 请求结束 GET /api/systems 状态=200 耗时=14 ms
+2026-11-18 21:46:30.510  INFO [d6d4b8ae] [menu=hierarchy] [user=1] c.c.p.i.logging.RequestLoggingFilter     : 请求结束 GET /api/roles 状态=200 耗时=15 ms
+2026-11-18 21:46:30.510  INFO [3f959e65] [menu=hierarchy] [user=1] c.c.p.i.logging.RequestLoggingFilter     : 请求结束 GET /api/departments 状态=200 耗时=16 ms
+2026-11-18 21:46:30.511  INFO [b64be4fe] [menu=hierarchy] [user=1] c.c.p.s.resource.ApiResourceService      : [Service] list() 完成，耗时 8 ms
+2026-11-18 21:46:30.512  INFO [7970f14d] [menu=hierarchy] [user=1] c.c.p.s.permission.PermissionService     : [Service] list(null) 完成，耗时 8 ms
+2026-11-18 21:46:30.512  INFO [b64be4fe] [menu=hierarchy] [user=1] c.c.p.c.resource.ApiResourceController   : [Controller] list() 完成，耗时 8 ms
+2026-11-18 21:46:30.512  INFO [7970f14d] [menu=hierarchy] [user=1] c.c.p.c.permission.PermissionController  : [Controller] list(null) 完成，耗时 8 ms
+2026-11-18 21:46:30.512  INFO [b3252d10] [menu=hierarchy] [user=-] c.c.p.i.logging.RequestLoggingFilter     : 请求开始 GET /api/system-info 菜单=hierarchy
+2026-11-18 21:46:30.512  INFO [f8c853e4] [menu=hierarchy] [user=-] c.c.p.i.logging.RequestLoggingFilter     : 请求开始 GET /api/roles/1/effective-permissions 菜单=hierarchy
+2026-11-18 21:46:30.512  INFO [b64be4fe] [menu=hierarchy] [user=1] c.c.p.i.logging.RequestLoggingFilter     : 请求结束 GET /api/resources 状态=200 耗时=18 ms
+2026-11-18 21:46:30.513  INFO [7970f14d] [menu=hierarchy] [user=1] c.c.p.i.logging.RequestLoggingFilter     : 请求结束 GET /api/permissions 状态=200 耗时=18 ms
+2026-11-18 21:46:30.519  INFO [a9c3d7d6] [menu=hierarchy] [user=1] c.c.p.service.rbac.RoleHierarchyService  : [Service] edges() 完成，耗时 10 ms
+2026-11-18 21:46:30.519  INFO [a9c3d7d6] [menu=hierarchy] [user=1] c.c.p.c.rbac.RoleHierarchyController     : [Controller] edges() 完成，耗时 10 ms
+2026-11-18 21:46:30.519  INFO [a9c3d7d6] [menu=hierarchy] [user=1] c.c.p.i.logging.RequestLoggingFilter     : 请求结束 GET /api/role-hierarchy 状态=200 耗时=20 ms
+2026-11-18 21:46:30.519  INFO [b3252d10] [menu=hierarchy] [user=1] c.c.p.s.s.r.StructuredRoleGraphService   : [Service] strategy() 完成，耗时 0 ms
+2026-11-18 21:46:30.523  INFO [f8c853e4] [menu=hierarchy] [user=1] c.c.p.service.rbac.RoleHierarchyService  : [Service] require(1) 完成，耗时 1 ms
+2026-11-18 21:46:30.523  INFO [b3252d10] [menu=hierarchy] [user=1] c.c.permission.service.user.UserService  : [Service] strategy() 完成，耗时 3 ms
+2026-11-18 21:46:30.525  INFO [f8c853e4] [menu=hierarchy] [user=1] c.c.p.service.rbac.RoleHierarchyService  : [Service] graph() 完成，耗时 1 ms
+2026-11-18 21:46:30.526  INFO [f8c853e4] [menu=hierarchy] [user=1] c.c.p.s.s.r.StructuredRoleGraphService   : [Service] resolve(***) 完成，耗时 0 ms
+2026-11-18 21:46:30.526  INFO [f8c853e4] [menu=hierarchy] [user=1] c.c.p.service.rbac.RoleHierarchyService  : [Service] resolve(***) 完成，耗时 0 ms
+2026-11-18 21:46:30.526  INFO [b3252d10] [menu=hierarchy] [user=1] c.c.p.s.organization.DepartmentService   : [Service] strategy() 完成，耗时 2 ms
+2026-11-18 21:46:30.530  INFO [b3252d10] [menu=hierarchy] [user=1] c.c.p.service.system.SystemService       : [Service] strategy() 完成，耗时 3 ms
+2026-11-18 21:46:30.533  INFO [b3252d10] [menu=hierarchy] [user=1] c.c.permission.service.role.RoleService  : [Service] strategy() 完成，耗时 2 ms
+2026-11-18 21:46:30.534  INFO [f8c853e4] [menu=hierarchy] [user=1] c.c.p.service.rbac.AuthorizationService  : [Service] roleOrigins(1) 完成，耗时 14 ms
+2026-11-18 21:46:30.534  INFO [f8c853e4] [menu=hierarchy] [user=1] c.c.p.c.rbac.RoleHierarchyController     : [Controller] role(1) 完成，耗时 14 ms
+2026-11-18 21:46:30.535  INFO [b3252d10] [menu=hierarchy] [user=1] c.c.p.s.resource.ApiResourceService      : [Service] strategy() 完成，耗时 2 ms
+2026-11-18 21:46:30.538  INFO [f8c853e4] [menu=hierarchy] [user=1] c.c.p.i.logging.RequestLoggingFilter     : 请求结束 GET /api/roles/1/effective-permissions 状态=200 耗时=25 ms
+2026-11-18 21:46:30.538  INFO [b3252d10] [menu=hierarchy] [user=1] c.c.p.s.permission.PermissionService     : [Service] strategy() 完成，耗时 2 ms

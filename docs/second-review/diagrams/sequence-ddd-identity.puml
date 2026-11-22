@@ -1,0 +1,35 @@
+@startuml sequence-ddd-identity
+!include common.iuml
+title DDD 顺序图：GET /api/apps/{code}/auth/me
+autonumber
+participant "课程后端" as CB
+participant "ApplicationIdentityController" as C
+participant "DddApplicationIdentityService\n(应用服务)" as S
+participant "SystemCatalog /\nAccountRepository" as P
+participant "AuthorizationSnapshot\n(领域)" as AS
+participant "RoleGraph\n(领域)" as RG
+participant "ResourceCatalog" as RC
+participant "ProtectedResource\n(领域)" as R
+CB -> C : GET /api/apps/cpm/auth/me
+C -> S : current(userId, "cpm")
+activate S
+S -> P : 读取 ManagedSystem、Account
+alt 应用停用或账号失效
+  S --> C : 空角色、空权限
+end
+S -> AS ** : new AuthorizationSnapshot(角色, 权限, 应用, 继承边, 角色授权)
+AS -> RG ** : new RoleGraph(edges)
+S -> AS : effectiveRoles(assigned)
+AS -> RG : effectivePaths(root)
+AS --> S : List<AccessRole>
+S -> AS : grantedIn(app.id, assigned)
+AS --> S : 本应用有效菜单、按钮
+S -> RC : all()
+loop 与有效权限绑定的资源
+  S -> R : authorityCode()
+  R --> S : Optional("CV")
+end
+S --> C : IdentityData.Current
+deactivate S
+C --> CB : {subject, roles, permissions}
+@enduml

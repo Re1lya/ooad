@@ -1,7 +1,12 @@
 package com.cdwy.permission.entity.rbac;
 
+import com.cdwy.permission.entity.role.Role;
+import com.cdwy.permission.entity.user.UserAccount;
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
+/** 用户直接拥有的角色（表 {@code sys_user_role}）；经继承得到的角色不在此表，计算有效权限时再沿继承边展开。 */
 @Entity
 @Table(
     name = "sys_user_role",
@@ -9,6 +14,8 @@ import jakarta.persistence.*;
         @UniqueConstraint(
             name = "uk_sys_user_role",
             columnNames = {"user_id", "role_id"}))
+@Getter
+@NoArgsConstructor
 public class UserRole {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -16,29 +23,15 @@ public class UserRole {
 
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "user_id", nullable = false)
-  private com.cdwy.permission.entity.user.UserAccount user;
+  private UserAccount user;
 
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "role_id", nullable = false)
-  private com.cdwy.permission.entity.role.Role role;
+  private Role role;
 
-  public UserRole() {}
-
-  public UserRole(
-      com.cdwy.permission.entity.user.UserAccount user, com.cdwy.permission.entity.role.Role role) {
+  /** 为用户直接授予角色；同一用户与角色只能有一条记录。 */
+  public UserRole(UserAccount user, Role role) {
     this.user = user;
     this.role = role;
-  }
-
-  public Long getId() {
-    return id;
-  }
-
-  public com.cdwy.permission.entity.user.UserAccount getUser() {
-    return user;
-  }
-
-  public com.cdwy.permission.entity.role.Role getRole() {
-    return role;
   }
 }

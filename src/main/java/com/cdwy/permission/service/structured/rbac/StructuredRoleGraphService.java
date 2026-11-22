@@ -4,6 +4,7 @@ import com.cdwy.permission.service.port.rbac.RoleGraphUseCase;
 import java.util.*;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
+import com.cdwy.permission.service.port.error.InvalidDataException;
 
 /** 结构化事务脚本中的图算法：数据与过程分离，步骤集中在服务方法。 */
 @Service
@@ -14,13 +15,13 @@ import org.springframework.stereotype.Service;
 public class StructuredRoleGraphService implements RoleGraphUseCase {
   /** 先校验自身，再从目标沿全图检查是否回到源。 */
   public void validate(Long seniorId, Long inheritedId, Map<Long, List<Node>> graph) {
-    if (seniorId.equals(inheritedId)) throw new IllegalArgumentException("角色不能继承自身");
+    if (seniorId.equals(inheritedId)) throw new InvalidDataException("ROLE_SELF_INHERITANCE", "角色不能继承自身");
     Deque<Long> queue = new ArrayDeque<>();
     Set<Long> visited = new HashSet<>();
     queue.add(inheritedId);
     while (!queue.isEmpty()) {
       Long current = queue.removeFirst();
-      if (current.equals(seniorId)) throw new IllegalArgumentException("该关系会形成循环继承");
+      if (current.equals(seniorId)) throw new InvalidDataException("ROLE_INHERITANCE_CYCLE", "该关系会形成循环继承");
       if (visited.add(current))
         for (Node child : graph.getOrDefault(current, List.of())) queue.addLast(child.id());
     }

@@ -1,0 +1,211 @@
+= Docker Swarm 部署说明（第二次检查版）
+Cdwy 小组
+:revdate: 2026-11-21
+:toc: left
+:sectnums:
+:table-caption: 表
+:imagesdir: images
+
+== 部署结果
+
+2026-11-21 部署在小组的 5 节点 Swarm 集群上，取代 CDWY3 上的旧版权限系统。同日按课程代码规范整改后滚动更新到 `5c58665`，随后为防止停用内置对象锁死控制台又更新到 `b56e81c`（两次都只改 `.env` 中的镜像标签，数据库结构不变）；每次更新后公网接口验收 42/42、浏览器走查 13 步都重新通过。
+
+[cols="2,3,2,3",options="header"]
+|===
+|系统 |访问地址 |stack |位置与镜像
+|统一权限管理系统 |http://120.46.213.158/ui/index.html |`cdwy` |CDWY3（`hcss-ecs-a955`）；`cdwy/rbac-backend:b56e81c`、`cdwy/rbac-frontend:b56e81c`；结构化路线
+|课程项目管理系统 |http://124.70.102.248/ |`course-project` |CDWY4（`hcss-ecs-1488`）；老师仓库 master `e9a6dff` 的 `course-mgt-backend`、`course-mgt-frontend`，未改老师代码；DDD 路线
+|数据库 |集群内 `mysql:3306` |`lab`（已有） |CDWY2 的 `lab_mysql`（MySQL 9.2），新建库 `cdwy_rbac`、`course_project`
+|===
+
+从外部地址运行接口验收脚本，42 项全部通过；浏览器走查与 Swarm 状态见 link:evidence/deployment/README.md[部署证据]。
+
+== 部署拓扑
+
+image::deployment-swarm.png[Swarm 部署图,800]
+
+[cols="2,3,2,4",options="header"]
+|===
+|服务 |镜像来源 |端口 |说明
+|`rbac-frontend` |`deploy/permission/Dockerfile.frontend` |host 模式发布 80 |Nginx 托管 `/ui/`，`/api/` 转发到 `rbac-backend:18081`
+|`rbac-backend` |`deploy/permission/Dockerfile.backend` |18081 业务、18082 健康（只在网络内） |`SPRING_PROFILES_ACTIVE=swarm`；logback 写控制台和 `/app/logs`；CORS 只放行课程前端的源地址
+|`course-mgt-frontend` |老师仓库 `web/Dockerfile` |host 模式发布 80 |老师的 Nginx 配置：`/api/` 转发到 `course-mgt-backend:8080`
+|`course-mgt-backend` |老师仓库 `backend/Dockerfile` |8080 业务、8081 健康（只在网络内） |`APP_IDENTITY_BASE_URL=http://rbac-backend:18081/api/apps/course-project-management`
+|===
+
+几点说明：
+
+* 两个 stack 都接入集群已有的外部 overlay 网络 `javaee-proxy`，与 `lab`、`lab4` 共用。Swarm 给每个服务加上与服务名相同的网络别名，所以课程后端用 `rbac-backend` 访问权限系统，两个后端都用 `mysql` 访问 `lab_mysql`。
+* 课程前端在浏览器里直接调用统一身份的 `/auth/permissions`、`/auth/departments` 等接口。地址在构建课程前端时写入 `VITE_IDENTITY_BASE_URL=http://120.46.213.158/api/apps/course-project-management`，所以权限系统的公网地址变了，要重新构建课程前端。
+* 两个前端都用 host 模式发布 80 端口，原因有两个：
+** 华为云安全组只放行 80、443、8080；
+** ingress 的 8080 已被 `lab_productdemoaop` 占用，而 ingress 模式会让所有节点的同一端口都被占用。
++
+host 模式只占用服务所在节点的端口，两个系统因此各用一台节点的 80 端口。
+* 老师 stack 里的 Prometheus 没有部署：集群已有 `lab_prometheus`（网络别名同为 `prometheus`），节点内存也不够。
+* 每台节点只有约 1.8 GB 内存，所以两个后端放在不同节点，都设了内存上限，更新顺序为先停后启。部署后 CDWY3、CDWY4 各剩约 900 MB 可用内存。
+
+== 准备
+
+* 集群节点为 x86_64。两套 Dockerfile 的基础镜像（SWR `oomall-javaee` 的 `openjdk:21-alpine`、`nginx:stable-alpine`）只有 amd64 版本，所以镜像直接在服务所在节点上构建，不需要镜像仓库。
+* 构建机需要 JDK 21、Maven、Node 22.22.2 或 24.15+。课程后端依赖 CloneFactory 0.0.2，先从 gitee `mingqcn/spring-fundamentals` 的 `clonefactory` 目录执行 `mvn install`。
+* 节点标签（只需执行一次）：
++
+[source,bash]
+----
+docker node update --label-add cdwy.rbac=true hcss-ecs-a955     # CDWY3
+docker node update --label-add cdwy.course=true hcss-ecs-1488   # CDWY4
+mkdir -p /root/logs/nginx                                       # 在 CDWY4 上：老师 Nginx 配置的文件日志目录
+----
+
+== 数据库
+
+在本机经 ssh 发到 MySQL 所在的 CDWY2 执行，借用 `lab_mysql` 容器自带的 root 环境变量，命令里不出现 root 密码；SQL 从标准输入传入：
+
+[source,bash]
+----
+MYSQL='docker exec -i $(docker ps -q --filter name=lab_mysql | head -1) sh -c "MYSQL_PWD=\"\$MYSQL_ROOT_PASSWORD\" mysql -uroot'
+echo "CREATE DATABASE cdwy_rbac CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+CREATE DATABASE course_project CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;" | ssh root@<CDWY2> "$MYSQL\""
+ssh root@<CDWY2> "$MYSQL cdwy_rbac\"" < docs/first-review/database-mysql.sql
+ssh root@<CDWY2> "$MYSQL course_project\"" < ../course-project-mgt/deploy/coursemgt-2026_11_19_08_54_02-dump.sql
+----
+
+* 权限系统的表由 link:../first-review/database-mysql.sql[database-mysql.sql] 创建，应用以 `ddl-auto=validate` 启动。
+* 课程库导入老师仓库 `deploy/` 下的 dump，其中已含 Flyway 迁移记录。
+
+两个应用账号各自只能访问本库：
+
+[cols="2,4",options="header"]
+|===
+|账号 |权限
+|`cdwy_rbac`@`%` |`cdwy_rbac` 库的 SELECT、INSERT、UPDATE、DELETE
+|`course_project`@`%` |`course_project` 库的全部权限（Flyway 迁移需要）
+|===
+
+`lab_mysql` 由多个实验共用（上限 300 个连接），两个应用的连接池都限制为 5。
+
+== Docker secret
+
+账号密码、JWT 密钥和管理员初始密码都在本机随机生成，经标准输入同时写入 MySQL 与 docker secret，不写文件、不进命令行参数：
+
+[source,bash]
+----
+pw=$(openssl rand -base64 24 | tr -d '\n=/+')
+printf '%s' "$pw" | ssh root@<管理节点> 'docker secret create cdwy_rbac_db_password_v1 -'
+printf "CREATE USER 'cdwy_rbac'@'%%' IDENTIFIED BY '%s';\nGRANT SELECT, INSERT, UPDATE, DELETE ON cdwy_rbac.* TO 'cdwy_rbac'@'%%';\n" "$pw" \
+  | ssh root@<CDWY2> "$MYSQL\""
+unset pw
+----
+
+课程系统账号同理（`course_project`，授予本库全部权限）。JWT 密钥只写入 secret；管理员初始密码写入 secret，同时交给管理员本人保管。
+
+[cols="3,3,4",options="header"]
+|===
+|secret |挂载为 |说明
+|`cdwy_rbac_db_password_v1` |`spring.datasource.password` |权限系统数据库账号密码
+|`cdwy_rbac_jwt_secret_v1` |`permission.jwt.secret` |JWT 签名密钥（64 个字符）
+|`cdwy_rbac_bootstrap_password_v1` |`permission.bootstrap.password` |首次启动创建的管理员 `admin` 的密码；之后重复启动不会改动
+|`course_project_db_password_v1` |`spring.datasource.password` |课程系统数据库账号密码
+|===
+
+* secret 以文件挂载到容器的 `/run/secrets/<属性名>`，两个后端都通过 Spring `configtree` 读取，不出现在环境变量和 `docker inspect` 里。
+* 老师原来的 stack 用 `DB_PASSWORD` 环境变量传密码，这里改成了 secret。
+* secret 的内容不能修改。要换密码时，新建 `_v2`，再用 stack 的 `*_SECRET` 变量指向它。
+
+== 构建镜像
+
+在本机打包（编译 JAR 与前端，连同 Dockerfile 打成 tar.gz）：
+
+[source,bash]
+----
+deploy/permission/package-images.sh                      # build/rbac-images-<提交号>.tar.gz
+deploy/course/package-images.sh ../course-project-mgt http://120.46.213.158   # build/course-images-<提交号>.tar.gz
+----
+
+* 权限系统的打包默认先运行 `mvn clean verify`，测试连接真实 MySQL，须先设置 `TEST_DB_HOST`、`TEST_DB_PORT`、`TEST_DB_NAME`、`TEST_DB_USERNAME`、`TEST_DB_PASSWORD`（见 link:04-test-traceability.adoc[需求—测试追踪]）；已经在同一提交上跑过测试时，可设 `SKIP_TESTS=1` 只打包。
+
+* 课程系统的打包按老师部署文档执行，并做两项检查：前端产物里没有开发地址和 Mock 凭据，并且已写入统一身份地址。
+* 把包传到对应节点后，解包并在节点上构建：
++
+[source,bash]
+----
+cd /root/ooad-deploy && tar xzf rbac-images-b56e81c.tar.gz && rbac-images-b56e81c/build-images.sh        # CDWY3
+cd /root/ooad-deploy && tar xzf course-images-e9a6dff.tar.gz && course-images-e9a6dff/build-images.sh    # CDWY4
+----
+
+== 部署
+
+在管理节点 CDWY1 上，把 link:../../deploy/stack.yml[deploy/stack.yml] 和 link:../../deploy/course/stack.yml[deploy/course/stack.yml] 分别放到 `/root/ooad-deploy/rbac`、`/root/ooad-deploy/course`。再按 link:../../deploy/.env.example[.env.example]、link:../../deploy/course/env.example[env.example] 写好各自的 `.env`：只有镜像名、端口和地址，没有密码。先部署权限系统：
+
+[source,bash]
+----
+cd /root/ooad-deploy/rbac   && (set -a; . ./.env; set +a; docker stack deploy --resolve-image never -c stack.yml cdwy)
+cd /root/ooad-deploy/course && (set -a; . ./.env; set +a; docker stack deploy --resolve-image never -c stack.yml course-project)
+docker stack services cdwy; docker stack services course-project
+----
+
+* 镜像只存在于构建它的节点上，`--resolve-image never` 让 Swarm 直接使用节点上的本地镜像。
+* 切换设计路线：改 `RBAC_BACKEND_STRATEGY` 或 `BACKEND_STRATEGY`（`structured` / `ddd`）后，重新执行同一条 `docker stack deploy`。
+* 回滚：`docker service rollback <服务名>`。
+
+== 登记课程系统权限
+
+从任意能访问公网地址的机器运行 link:../../scripts/register-course-app.py[register-course-app.py]，管理员密码与演示密码只从环境变量读取：
+
+[source,bash]
+----
+RBAC_URL=http://120.46.213.158 RBAC_ADMIN=admin RBAC_ADMIN_PASSWORD=... \
+EMPLOYEE_XLSX=市政公司员工信息表.xlsx DEMO_PASSWORD=... python3 scripts/register-course-app.py
+----
+
+脚本只调用普通管理 API，可以重复执行，依次完成：
+
+. 登记应用、菜单与按钮、API 资源和角色；角色继承为“课程管理员 → 课程督导 → 教师”。
+. 同步老师的员工信息表。一万名员工都建立了账号（总公司员工补授 `teacher`，分公司员工补授 `student`），在服务器上约 20 秒完成。
+. 启用四个演示工号：SG000001 课程管理员、SG000002 课程督导、SG000003 教师、SG000191 学生。
+
+== 验收
+
+[source,bash]
+----
+RBAC_URL=http://120.46.213.158 COURSE_URL=http://124.70.102.248/api COURSE_ORIGIN=http://124.70.102.248 \
+RBAC_ADMIN=admin RBAC_ADMIN_PASSWORD=... DEMO_PASSWORD=... python3 scripts/verify-course-integration.py
+----
+
+现场核对：
+
+[cols="1,4,4",options="header"]
+|===
+|序号 |操作 |预期
+|1 |`docker stack services cdwy`、`docker stack services course-project` |4 个服务都是 `1/1`，`docker ps` 显示 healthy
+|2 |打开 http://120.46.213.158/ui/index.html，用 `admin` 登录 |权限系统工作台
+|3 |依次切换“用户管理”“角色继承”“API 资源”等菜单，同时执行 `docker service logs -f cdwy_rbac-backend` |每次切换都出现 `[menu=users]`、`[menu=hierarchy]` 等请求开始与结束日志（日志时间为 UTC）
+|4 |权限系统“应用管理”“API 资源”“角色继承” |`course-project-management` 应用、20 个带 operationId 的 API、“课程管理员 → 课程督导 → 教师”继承
+|5 |打开 http://124.70.102.248/ ，从教师入口用 SG000001 登录 |侧栏“管理”下有课程、学期、教师、日志
+|6 |用 SG000003 从教师入口登录；用 SG000191 从学生入口登录 |教师没有“管理”组；学生进入学生工作台
+|7 |在权限系统撤销“课程督导”的“课程管理”，刷新课程系统 |课程管理员的“课程”菜单变灰；恢复后重新可用，无需重新登录
+|8 |“添加教师”中选公司、选部门、选人 |姓名、工号来自权限系统，保存后出现在教师列表
+|9 |运行验收脚本 |42/42 通过
+|===
+
+== 旧版权限系统的清理
+
+2026-11-21 新系统上线时，CDWY3 上的旧版权限系统（`nified-permission-system`）已下线：
+
+* 删除了 Swarm 服务 `rbac_backend`（原本已暂停为 0 副本）；
+* 停用并禁用了主机 Nginx（原占用 80 端口）和演示客户端 `unified-permission-clients`。
+
+配置文件仍保留，需要时可用 `systemctl enable --now nginx` 恢复。以下内容没有删除：
+
+* 旧镜像 `cdwy/rbac-backend:7906a9e11426-swarm1`、secret `rbac_environment_20261028-101040`；
+* `/opt/unified-permission`、`/var/lib/unified-permission`；
+* 两个旧库 `unified_permission`、`rbac_migration_20261022`，以及备份 `/root/rbac-backup-20261117.sql.gz`。
+
+== 常见问题
+
+* 课程前端返回 502：查看 `docker service ps course-project_course-mgt-backend` 和 `docker service logs course-project_course-mgt-backend`，检查 MySQL 连接与 Flyway。
+* 课程系统提示“统一身份认证暂时不可用”：课程后端访问不到 `rbac-backend:18081`。检查两个服务是否都在 `javaee-proxy` 网络上，`IDENTITY_BASE_URL` 是否以 `/api/apps/course-project-management` 结尾。
+* 课程系统进入管理页面时提示无权限或权限校验不可用：多半是浏览器跨域被拒。确认 `RBAC_CORS_ALLOWED_ORIGINS` 与课程前端的地址完全一致（协议、主机、端口）；确认构建课程前端时的 `VITE_IDENTITY_BASE_URL` 正确。
+* 课程系统删除教师是软删除，删过的工号不能再添加，会提示“这位教师已经存在”。这是老师系统的既有行为。
+* 日志时间是 UTC，比北京时间晚 8 小时。

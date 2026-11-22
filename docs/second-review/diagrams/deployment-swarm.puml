@@ -1,0 +1,25 @@
+@startuml deployment-swarm
+!include common.iuml
+!pragma layout smetana
+title Docker Swarm 部署图（stack cdwy 与 course-project，共用外部 overlay 网络 javaee-proxy）
+actor 浏览器
+node "CDWY3 hcss-ecs-a955（标签 cdwy.rbac=true）" {
+  node "rbac-frontend\nNginx :80（host 模式发布 80）\nhttp://120.46.213.158/ui/" as RF
+  node "rbac-backend\nSpring Boot :18081 / 健康 :18082\nlogback → 控制台 + /app/logs" as RB
+}
+node "CDWY4 hcss-ecs-1488（标签 cdwy.course=true）" {
+  node "course-mgt-frontend\n老师镜像 Nginx :80（host 模式发布 80）\nhttp://124.70.102.248/" as CF
+  node "course-mgt-backend\n老师镜像 Spring Boot :8080 / 健康 :8081" as CBK
+}
+node "CDWY2 hcss-ecs-8c4a" {
+  database "lab_mysql（MySQL 9.2，网络别名 mysql）\ncdwy_rbac / course_project" as DB
+}
+浏览器 --> RF : /ui/ 管理控制台、/api/*\n（X-Client-Menu）
+浏览器 --> CF : 课程系统页面与 /api/*
+浏览器 ..> RF : 跨域直连 /api/apps/course-project-management\n/auth/permissions、/auth/departments
+RF --> RB : /api/*
+CF --> CBK : /api/* → /*
+CBK --> RB : /api/apps/course-project-management\n/auth/login、/auth/me、/auth/users、/auth/audit-logs
+RB --> DB : cdwy_rbac
+CBK --> DB : course_project
+@enduml

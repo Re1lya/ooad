@@ -1,0 +1,91 @@
+@startuml class-structured
+!include common.iuml
+!pragma layout smetana
+title 结构化设计类图：角色继承 PUT /api/roles/{seniorId}/inherits/{inheritedId} 与接入应用身份 GET /api/apps/{code}/auth/me
+hide empty members
+
+package controller {
+  class RoleHierarchyController {
+    +inherit(seniorId, inheritedId)
+    +remove(seniorId, inheritedId)
+  }
+  class ApplicationIdentityController {
+    +me(systemCode, request)
+    +user(systemCode, userId)
+    +logs(...) / write(...)
+  }
+}
+package "service.port" {
+  interface HierarchyUseCase
+  interface ApplicationIdentityUseCase
+  interface RoleGraphUseCase
+  interface AuditTrailUseCase
+}
+package "service（结构化事务脚本）" {
+  class RoleHierarchyService <<Service>> {
+    +inherit(seniorId, inheritedId)
+    +remove(seniorId, inheritedId)
+    +graph() : Map<Long, List<Role>>
+    +resolve(role, graph) : List<ResolvedRole>
+  }
+  class ApplicationIdentityService <<Service>> {
+    +current(userId, systemCode) : IdentityData.Current
+    +lookup(systemCode, userId) : IdentityData.User
+  }
+  class AuthorizationService <<Service>> {
+    +effective(userId) : List<Permission>
+  }
+  class StructuredRoleGraphService <<Service>> {
+    +validate(senior, inherited, graph)
+    +resolve(node, graph) : List<Path>
+  }
+  class AuditTrailService <<Service>> {
+    +record(type, objectType, objectId, target, before, after)
+  }
+}
+package "repository（Spring Data JPA）" {
+  interface RoleRepository
+  interface RoleHierarchyRepository
+  interface UserRoleRepository
+  interface BusinessSystemRepository
+  interface UserAccountRepository
+  interface PermissionApiRepository
+}
+package "entity（数据）" {
+  class Role
+  class RoleHierarchy
+  class UserAccount
+  class BusinessSystem
+  class Permission
+  class ApiResource
+}
+
+RoleHierarchyController --> HierarchyUseCase
+ApplicationIdentityController --> ApplicationIdentityUseCase
+ApplicationIdentityController --> AuditTrailUseCase
+RoleHierarchyService ..|> HierarchyUseCase
+ApplicationIdentityService ..|> ApplicationIdentityUseCase
+StructuredRoleGraphService ..|> RoleGraphUseCase
+AuditTrailService ..|> AuditTrailUseCase
+RoleHierarchyService --> RoleGraphUseCase : 防环、遍历
+RoleHierarchyService --> RoleRepository : 悲观锁、读角色
+RoleHierarchyService --> RoleHierarchyRepository : 读写继承边
+RoleHierarchyService --> AuditTrailUseCase : 留痕
+ApplicationIdentityService --> BusinessSystemRepository
+ApplicationIdentityService --> UserAccountRepository
+ApplicationIdentityService --> UserRoleRepository
+ApplicationIdentityService --> PermissionApiRepository
+ApplicationIdentityService --> RoleHierarchyService : 展开继承
+ApplicationIdentityService --> AuthorizationService : 有效权限
+RoleHierarchyRepository ..> RoleHierarchy
+UserAccountRepository ..> UserAccount
+BusinessSystemRepository ..> BusinessSystem
+PermissionApiRepository ..> ApiResource
+RoleRepository ..> Role
+AuthorizationService ..> Permission
+note bottom of RoleHierarchyService
+  数据（实体）与过程（服务方法）分离：
+  服务按“锁 → 读 → 校验 → 写 → 留痕”步骤
+  直接操作 JPA Repository 与实体。
+end note
+@enduml

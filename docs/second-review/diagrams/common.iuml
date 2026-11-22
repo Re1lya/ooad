@@ -1,0 +1,14 @@
+skinparam defaultFontName "PingFang SC"
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam roundCorner 8
+skinparam ArrowColor #3b4a3f
+skinparam packageBorderColor #567a5d
+skinparam packageBackgroundColor #f6f9f4
+skinparam classBackgroundColor #ffffff
+skinparam classBorderColor #567a5d
+skinparam sequenceParticipantBackgroundColor #f3f7f1
+skinparam sequenceParticipantBorderColor #567a5d
+skinparam sequenceLifeLineBorderColor #9fb3a4
+skinparam noteBackgroundColor #fffbe6
+skinparam noteBorderColor #d9c27a

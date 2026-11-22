@@ -1,0 +1,32 @@
+@startuml sequence-structured-inherit
+!include common.iuml
+title 结构化顺序图：PUT /api/roles/{seniorId}/inherits/{inheritedId}
+autonumber
+actor 管理员
+participant "RoleHierarchyController" as C
+participant "RoleHierarchyService\n(事务脚本)" as S
+participant "RoleRepository" as RR
+participant "RoleHierarchyRepository" as HR
+participant "StructuredRoleGraphService" as G
+participant "AuditTrailService" as A
+管理员 -> C : PUT（Bearer JWT，X-Client-Menu: hierarchy）
+note over C : ApiAccessConfig 已校验 JWT 与管理员身份
+C -> S : inherit(seniorId, inheritedId)
+activate S
+S -> RR : lockHierarchyRoles()  // 悲观锁串行化图写入
+S -> RR : findById(senior), findById(inherited)
+alt 自继承 / 已存在 / 两端未启用
+  S --> C : 400 或幂等返回
+end
+S -> HR : findAll()  // 读全图
+S -> G : validate(senior, inherited, 邻接快照)
+alt 新边会成环
+  G --> S : IllegalArgumentException("该关系会形成循环继承")
+  S --> C : 400
+end
+S -> HR : save(new RoleHierarchy(senior, inherited))
+S -> A : record("ROLE_INHERITANCE_ADDED", ...)
+S --> C : 完成（提交事务）
+deactivate S
+C --> 管理员 : 204 No Content
+@enduml

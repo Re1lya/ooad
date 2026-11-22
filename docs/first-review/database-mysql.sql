@@ -6,10 +6,11 @@
 CREATE TABLE sys_department (
     id BIGINT NOT NULL AUTO_INCREMENT,
     name VARCHAR(128) NOT NULL,
+    code VARCHAR(64) NULL,
     parent_id BIGINT NULL,
-    manager_name VARCHAR(128) NULL,
     PRIMARY KEY (id),
-    CONSTRAINT uk_department_name UNIQUE (name),
+    CONSTRAINT uk_department_sibling UNIQUE (parent_id,name),
+    CONSTRAINT uk_department_code UNIQUE (code),
     CONSTRAINT fk_department_parent FOREIGN KEY (parent_id) REFERENCES sys_department(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_as_cs;
 
@@ -66,8 +67,6 @@ CREATE TABLE sys_permission (
     name VARCHAR(128) NOT NULL,
     type ENUM('BUTTON','MENU') NOT NULL,
     menu_path VARCHAR(255) NULL,
-    source_description VARCHAR(2000) NULL,
-    source_grants VARCHAR(2000) NULL,
     parent_id BIGINT NULL,
     active BIT(1) NOT NULL DEFAULT 1,
     PRIMARY KEY (id),
@@ -80,11 +79,14 @@ CREATE TABLE api_resource (
     id BIGINT NOT NULL AUTO_INCREMENT,
     system_id BIGINT NOT NULL,
     name VARCHAR(128) NOT NULL,
+    code VARCHAR(64) NULL,
+    operation_id VARCHAR(128) NULL,
     method VARCHAR(8) NOT NULL,
     path VARCHAR(255) NOT NULL,
     active BIT(1) NOT NULL DEFAULT 1,
     PRIMARY KEY (id),
     CONSTRAINT uk_api_route UNIQUE (system_id,method,path),
+    CONSTRAINT uk_api_operation UNIQUE (system_id,operation_id),
     CONSTRAINT fk_resource_system FOREIGN KEY (system_id) REFERENCES biz_system(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_as_cs;
 
@@ -128,4 +130,27 @@ CREATE TABLE sys_role_hierarchy (
   CONSTRAINT fk_hierarchy_senior FOREIGN KEY (senior_role_id) REFERENCES sys_role(id),
   CONSTRAINT fk_hierarchy_inherited FOREIGN KEY (inherited_role_id) REFERENCES sys_role(id),
   CONSTRAINT ck_hierarchy_distinct CHECK (senior_role_id <> inherited_role_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_as_cs;
+
+-- 审计日志（技术记录，不属于核心业务 ER）：接入应用写入的关键操作与本系统的角色继承变更。
+-- 不设外键，操作人与应用以快照保存，删除账号或应用后仍可追溯。
+CREATE TABLE sys_audit_log (
+  id BIGINT NOT NULL AUTO_INCREMENT,
+  system_code VARCHAR(64) NOT NULL,
+  request_id VARCHAR(64) NULL,
+  occurred_at DATETIME(6) NOT NULL,
+  actor_id BIGINT NULL,
+  actor_name VARCHAR(128) NULL,
+  actor_roles VARCHAR(255) NULL,
+  type VARCHAR(64) NOT NULL,
+  object_type VARCHAR(64) NULL,
+  object_id VARCHAR(128) NULL,
+  target VARCHAR(255) NULL,
+  before_json VARCHAR(4000) NULL,
+  after_json VARCHAR(4000) NULL,
+  term_id VARCHAR(128) NULL,
+  course_id VARCHAR(128) NULL,
+  class_id VARCHAR(128) NULL,
+  PRIMARY KEY (id),
+  CONSTRAINT uk_audit_request UNIQUE (system_code,request_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_as_cs;

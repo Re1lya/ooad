@@ -31,6 +31,11 @@ public class JpaAssignmentAdapter implements AssignmentRepository {
         .toList();
   }
 
+  /** 单个用户的直接角色，按用户索引查询。 */
+  public List<Long> rolesOf(Long userId) {
+    return users.findAllByUser_Id(userId).stream().map(e -> e.getRole().getId()).toList();
+  }
+
   /** 全部角色到权限关系快照。 */
   public List<Link> rolePermissions() {
     return roles.findAll(org.springframework.data.domain.Sort.by("id")).stream()
@@ -57,7 +62,7 @@ public class JpaAssignmentAdapter implements AssignmentRepository {
     try {
       action.run();
     } catch (org.springframework.dao.DataIntegrityViolationException ex) {
-      throw new com.cdwy.permission.service.port.error.ConflictException("数据重复或关联约束冲突，请刷新后重试");
+      throw new com.cdwy.permission.service.port.error.ConflictException("DATA_CONFLICT", "数据重复或关联约束冲突，请刷新后重试");
     }
   }
 
@@ -68,6 +73,21 @@ public class JpaAssignmentAdapter implements AssignmentRepository {
           () ->
               users.saveAndFlush(
                   new UserRole(accounts.getReferenceById(user), roleData.getReferenceById(role))));
+  }
+
+  /** 一次保存并刷新一批用户角色。 */
+  public void addUserRoles(java.util.Collection<Link> links) {
+    if (links.isEmpty()) return;
+    write(
+        () ->
+            users.saveAllAndFlush(
+                links.stream()
+                    .map(
+                        l ->
+                            new UserRole(
+                                accounts.getReferenceById(l.left()),
+                                roleData.getReferenceById(l.right())))
+                    .toList()));
   }
 
   /** 幂等撤销用户角色。 */

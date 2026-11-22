@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*;
 
 /** 实际装载模式与业务覆盖清单。 */
 @RestController
+@com.cdwy.permission.config.BusinessAccess(com.cdwy.permission.config.BusinessAccess.CONSOLE)
 @RequiredArgsConstructor
 public class SystemInfoController {
   private final RoleGraphUseCase graph;
@@ -19,7 +20,8 @@ public class SystemInfoController {
   private final com.cdwy.permission.service.port.rbac.AuthorizationUseCase authorization;
   private final com.cdwy.permission.service.port.rbac.HierarchyUseCase hierarchy;
   private final com.cdwy.permission.service.port.auth.AuthenticationUseCase authentication;
-  private final com.cdwy.permission.service.port.importing.CompanyImportUseCase companyImport;
+  private final com.cdwy.permission.service.port.directory.DirectorySyncUseCase directorySync;
+  private final com.cdwy.permission.service.port.identity.ApplicationIdentityUseCase identity;
 
   /** 来源为当前实际注入的端口实现。 */
   @GetMapping("/api/system-info")
@@ -37,6 +39,7 @@ public class SystemInfoController {
             java.util.Map.entry("authorization", authorization.strategy()),
             java.util.Map.entry("hierarchy", hierarchy.strategy()),
             java.util.Map.entry("authentication", authentication.strategy()),
-            java.util.Map.entry("companyImport", companyImport.strategy())));
+            java.util.Map.entry("directorySync", directorySync.strategy()),
+            java.util.Map.entry("identity", identity.strategy())));
   }
 }

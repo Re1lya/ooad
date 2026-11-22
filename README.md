@@ -12,6 +12,28 @@
 
 ![管理工作台](docs/design/phase-two/overview.png)
 
+## 第二次检查（2026-11-24 至 11-26）
+
+本版在同组初版的基础上补齐第二次检查要求，材料入口：[docs/second-review](docs/second-review/README.adoc)（adoc）。
+
+| 检查要求 | 本版落实 |
+|---|---|
+| 两个系统的权限都由权限系统管理 | 实现 Apifox「统一身份鉴权」的 8 个接口（`/api/apps/{应用编码}/auth/login`、`logout`、`me`、`permissions/{permission}`、`api-permissions/{operationId}`、`departments`、`departments/{departmentId}/users`、`users/{userId}`）及审计接口 `/auth/audit-logs`，与老师课程项目管理系统的统一身份契约一致；课程系统只需配置 `IDENTITY_BASE_URL=http://rbac-backend:18081/api/apps/course-project-management`。API 资源新增后端权限码（`TC`、`CV` 等），随角色及继承下发 |
+| 前后端部署到 Docker Swarm | 已部署：权限系统 http://120.46.213.158/ui/index.html （stack `cdwy`，[deploy/stack.yml](deploy/stack.yml)），课程系统 http://124.70.102.248/ （stack `course-project`，[deploy/course/stack.yml](deploy/course/stack.yml)，老师 master 未改代码）；镜像在服务器上构建，密码用 docker secret，健康检查用 Actuator；[部署说明](docs/second-review/05-deployment.adoc)、[部署证据](docs/second-review/evidence/deployment/README.md) |
+| 菜单切换产生 logback 日志 | 前端每个请求带 `X-Client-Menu`；`logback-spring.xml` + `RequestLoggingFilter`（请求号、菜单、操作人）+ `LayerLoggingAspect`（Controller / Service / DDD 应用服务 / 基础设施分层日志，令牌与密码打码） |
+| 需求与测试对应 | [需求规格](docs/second-review/01-requirements.adoc) FR-01~FR-38、NFR-01~NFR-12；[需求—测试追踪](docs/second-review/04-test-traceability.adoc)（由 `scripts/build-test-traceability.py` 按测试源码生成） |
+| 按课程代码规范整改 | DTO/VO 分包并以 `DTO`/`VO` 结尾，Controller 负责 DTO → Command、Result → VO 映射；优先 CloneFactory 0.0.2 拷贝；Lombok 去样板代码，禁用 `var`；全部类与公开方法写中文 Javadoc；列表分页统一 `page`/`pageSize`/`total`；格式校验在 API 层，业务异常带稳定错误码；测试连接真实 MySQL 并回滚、带需求编号、每个错误码与不存在的 id 都有契约测试。见[详细设计](docs/second-review/03-detailed-design.adoc)“代码规范”一节 |
+| 包图、类图、顺序图、GRASP、结构化与 DDD 区别、JavaEE 技术 | [详细设计](docs/second-review/03-detailed-design.adoc)：包图、DFD、模块结构图、两个答辩 API 的两种类图与顺序图 |
+| 数据库设计（adoc） | [数据库设计](docs/second-review/02-database-design.adoc)、[增量迁移](docs/second-review/migrate-second-review.sql) |
+| 课程系统登记与联调 | [scripts/register-course-app.py](scripts/register-course-app.py) 用普通管理 API 登记 `course-project-management` 应用的菜单、按钮、API、角色，并同步员工信息表；[scripts/verify-course-integration.py](scripts/verify-course-integration.py) 跨系统验收（结构化、DDD 两种模式各 42/42 通过，公网部署后复核通过） |
+| 课程系统构建 | [deploy/course](deploy/course)：按老师仓库 master（`e9a6dff`）原样构建，不打补丁 |
+
+## 权限台账前端
+
+启动项目的 Spring Boot 后，打开 **http://127.0.0.1:18081/access-registry/index.html**。登录使用后端已有账号。本地演示时使用启动脚本设置的管理员账号和密码。
+
+[Vue 源码及开发说明](frontend-access-registry/README.md)包含本地代理和构建命令。仓库附带可直接随 Spring Boot 打包的台账页面。原管理控制台仍可通过 `/ui/index.html` 打开。
+
 ## 组员先看什么
 
 | 想了解的内容 | 入口 |
@@ -32,14 +54,14 @@ GitHub 可直接阅读 Markdown、Java 和 PNG/SVG。HTML 阅读页需要下载�
 
 | 项目 | 当前范围 |
 |---|---|
-| 业务用例 | 登录与本人改密、用户、部门、应用、角色、菜单按钮、API 资源、授权鉴权、继承维护、公司导入，共十组 |
+| 业务用例 | 登录与本人改密、用户、部门、应用、角色、菜单按钮、API 资源、授权鉴权、继承维护、员工信息同步、接入应用统一身份，共十一组 |
 | 权限模型 | RBAC1，多级和多继承；直接权限与继承权限取并集；显示权限来源及有效继承路径 |
 | 设计实现 | 十组业务用例和角色图算法均提供 `structured` / `ddd` 实现，启动时二选一 |
-| Service | 24 个 `@Service` 定义；每种模式实际装载 13 个；不将基础设施 Adapter 混入数量 |
-| 持久化 | 六类核心概念、10 个 JPA Entity、11 张表、14 个外键 |
-| HTTP API | 56 个实际操作；OpenAPI 与 MVC 路由逐项核对 |
+| Service | 28 个 `@Service` 定义；每种模式实际装载 16 个（含接入应用身份模块、控制台登记与共享审计服务）；不将基础设施 Adapter 混入数量 |
+| 持久化 | 六类核心概念、11 个 JPA Entity、12 张表（11 张业务表 + 1 张审计日志技术表）、14 个外键 |
+| HTTP API | 66 个实际操作（含课程系统接入的统一身份与审计接口）；OpenAPI 与 MVC 路由逐项核对 |
 | 界面 | Vue 管理工作台、独立个人空间、桌面与窄屏导航 |
-| 运行方式 | 默认 H2 内存演示；另提供 H2 文件库方式；MySQL DDL 与 `validate` 配置 |
+| 运行方式 | 本地演示默认 H2 内存库；自动化测试与部署使用 MySQL（部署建表脚本 + `validate`） |
 
 ## 主要功能
 
@@ -49,7 +71,8 @@ GitHub 可直接阅读 Markdown、Java 和 PNG/SVG。HTML 阅读页需要下载�
 - **RBAC1 继承**：高级角色继承低级角色权限，支持多级、多继承；拒绝自继承和循环继承，重复建立幂等。
 - **可解释授权**：展示直接和继承来源，并保留有效继承路径；导航祖先容器不自动取得接口权限。
 - **动态鉴权**：JWT 不存角色或权限快照；下次请求读取当前有效授权。撤掉一个来源后，其他有效来源仍可保留访问权。
-- **三表导入**：预览与摘要确认、事务提交、来源字段保留、重复导入幂等、模板缩减时撤回对应授权。
+- **控制台自我保护**：权限系统自身的内置应用、内置管理员角色、内置菜单按钮与管理接口不能停用或删除，界面上也不提供这两个操作；已被停用的内置对象在下次启动时恢复启用，不会把所有人锁在控制台之外。
+- **员工信息同步**：按课程系统提供的员工信息表建立“分公司 / 部门”两级树和人员，按分公司补授角色；先预览变化摘要，确认时校验文件与规则未变，事务提交，重复执行无变化。
 - **交互反馈**：搜索与筛选、用户后端分页、加载/空状态/错误反馈、危险操作确认与个人权限验证。
 
 管理员负责系统配置，业务访问仍需满足授权规则。改密和账号状态变化通过凭证版本使旧 Token 失效；退出清除当前标签页 Token，当前版本没有单 Token 撤销表。
@@ -103,10 +126,10 @@ GitHub 可直接阅读 Markdown、Java 和 PNG/SVG。HTML 阅读页需要下载�
 |---|---|
 | 后端 | Java 21、Spring Boot 4.0.8、Spring MVC、Bean Validation |
 | 认证 | Spring Security 密码编码、JJWT、BCrypt |
-| 持久化 | Spring Data JPA、Hibernate、H2；MySQL Connector/J |
-| 对象映射 | Lombok、CloneFactory 注解处理器；[依赖源码](third-party/clonefactory)随仓库提供 |
+| 持久化 | Spring Data JPA、Hibernate；MySQL Connector/J（测试与部署）、H2（本地演示） |
+| 对象映射 | Lombok（[lombok.config](lombok.config)）、CloneFactory 0.0.2 注解处理器；[依赖源码](third-party/clonefactory)随仓库提供 |
 | 前端 | Vue 3、TypeScript、Vite 7、Tailwind CSS 4 |
-| 验证 | Spring Boot HTTP 集成验收、JUnit、JaCoCo、Edge / Playwright |
+| 验证 | Spring Boot HTTP 集成验收（真实 MySQL、事务回滚）、JUnit、JaCoCo、Chrome/Edge 浏览器验收 |
 | 文档与图 | Markdown、OpenAPI JSON、Python 生成 PNG + SVG |
 
 ## 快速运行
@@ -174,13 +197,16 @@ $env:PERMISSION_BACKEND_STRATEGY = 'ddd'
 
 完整操作闭环、Postman 验证和浏览器回归环境变量见[运行与演示步骤](docs/first-review/demo.md)。
 
-## 公司 Excel 导入
+## 员工信息同步
 
-管理员在“数据导入”中选择员工、部门、应用软件功能权限三张表：**选择文件 → 预览与校验 → 核对摘要 → 确认导入**。确认导入在一个事务中完成，冲突时回滚；相同来源重复导入不会创建重复账号和目录。
+管理员在“用户”页点击“同步员工信息”，上传课程系统提供的员工信息表（姓名、工号、分公司、部门、岗位、电话号码），并选择总公司名称以及总公司、分公司人员分别补授的角色：**选择文件与规则 → 预览变化 → 确认同步**。
 
-已完成三表数据一致性核对，说明与汇总记录见[双实现与导入说明](docs/phase-two/dual-design-and-import.md)。员工、部门、应用、菜单按钮和角色模板可导入；新员工默认停用，不发放公共初始密码，不按岗位或同名经理自动分配个人角色。
+- 预览逐行校验并指出 Excel 行号，只返回部门、人员、角色授权的变化数量，不写库；
+- 确认时文件或规则与预览不一致会要求重新预览；同步在一个事务中完成，表中出现管理员账号时整批拒绝；
+- 新人员默认停用，不发放公共初始密码；已有人员只更新姓名、部门、岗位与电话，保留密码、启用状态与已有角色；
+- 按工号幂等，重复执行同一份表没有任何变化。
 
-**原始公司 Excel、已导入的员工数据库、管理员凭据和 JWT 密钥不随仓库发布。** 组员初次运行得到空演示库；目录导入不等于已经对接对应的外部业务系统，实际 API 路径和授权仍需另行配置。
+**员工信息表、已同步的人员数据、管理员凭据和 JWT 密钥不随仓库发布。**
 
 ## 设计图与源码阅读
 
@@ -212,19 +238,24 @@ python scripts/build-full-dual-report.py --output docs/review
 
 ## 测试与验证
 
-本版业务实现已完成的验收结果如下；对应记录、来源和验证范围见[测试文档](docs/first-review/testing.md)。
+后端测试连接真实 MySQL：每个 Spring 上下文启动时用部署建表脚本重建测试库，Hibernate 以 `validate` 启动；每个测试在事务内执行并回滚。运行前准备一个空库和有建表、删表权限的账号：
 
-| 验证项 | 结果 |
+```bash
+export TEST_DB_HOST=127.0.0.1 TEST_DB_PORT=3306 TEST_DB_NAME=rbac_test TEST_DB_USERNAME=rbac_test
+export TEST_DB_PASSWORD=<测试账号密码>
+mvn -B -f third-party/clonefactory/pom.xml install -Dmaven.test.skip=true
+mvn -B clean verify
+```
+
+| 验证项 | 结果（2026-11-21） |
 |---|---|
-| 后端验收与领域/架构测试 | 81 个，0 失败、0 错误、0 跳过 |
-| 前端 | TypeScript 检查与 Vite 生产构建通过 |
-| 浏览器 | 两模式各 3 组真实 Edge 场景，每模式 23 项，共 46 项通过 |
-| JaCoCo 行覆盖率 | 89.13% |
-| JaCoCo 分支覆盖率 | 75.63% |
-| 设计图 | 18 张，自动几何检查与 PNG 目视复核 |
-| API 与数据模型 | 56 个操作、11 张表、14 个外键，文档与导出结构核对 |
+| 后端测试（真实 MySQL 8.4） | 186 个，0 失败、0 错误、0 跳过；两种设计路线运行同一组测试 |
+| 错误码与不存在的 id | 53 个业务错误码全部有契约测试；40 个按 id 操作的请求组合覆盖不存在的 id |
+| JaCoCo | 指令 93.6%、分支 84.0%、行 94.0%、方法 92.0%（含 CloneFactory 生成代码） |
+| 前端 | TypeScript 检查、ESLint、Prettier 与 Vite 生产构建通过；5 组浏览器测试两种模式各自通过 |
+| 跨系统联调 | 与老师课程系统（master `e9a6dff`）联调，两种模式各 42/42 项通过，13 张走查截图 |
 
-覆盖率包含 CloneFactory 生成代码。浏览器和后端业务验收采用隔离 H2 与合成数据；这些结果不能代替真实 MySQL、生产性能或外部系统联调验收。完整 JaCoCo 报告在构建后生成到 `target/site/jacoco/index.html`。
+需求与测试的对应见[需求—测试追踪](docs/second-review/04-test-traceability.adoc)。完整 JaCoCo 报告在构建后生成到 `target/site/jacoco/index.html`。
 
 ## 仓库结构
 
@@ -254,6 +285,6 @@ python scripts/build-full-dual-report.py --output docs/review
 
 ## 交付边界
 
-当前交付为上述 RBAC1、双设计、前端与三表导入功能。真实 MySQL 验证、旧业务库迁移、服务器部署、大规模性能压测及外部应用联调尚待完成；审批、四级复核、SSO 和完整 HR/OA 对接不在这一版范围。
+当前交付为上述 RBAC1、双设计、前端、员工信息同步，以及课程项目管理系统接入（统一身份、审计）、分层 logback 日志和 Docker Swarm 部署。权限系统与课程系统已部署在服务器上的 Docker Swarm，并完成公网联调核对；旧业务库迁移与大规模性能压测不在本轮范围；审批、四级复核、SSO 和完整 HR/OA 对接不在这一版范围。
 
 本仓库用于组员协作和课程检查。当前实现与统计以这里的源码、[需求追踪](docs/first-review/requirements.md)及[验证汇总](docs/first-review/verification.json)为准。

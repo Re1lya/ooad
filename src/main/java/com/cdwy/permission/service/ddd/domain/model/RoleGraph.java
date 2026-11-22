@@ -3,6 +3,7 @@ package com.cdwy.permission.service.ddd.domain.model;
 import com.cdwy.permission.service.port.rbac.RoleGraphUseCase.Node;
 import com.cdwy.permission.service.port.rbac.RoleGraphUseCase.Path;
 import java.util.*;
+import com.cdwy.permission.service.port.error.InvalidDataException;
 
 /** 面向对象的角色图：封装邻接关系、无环不变量及有效路径行为；无 Spring/JPA 依赖。 */
 public final class RoleGraph {
@@ -17,13 +18,13 @@ public final class RoleGraph {
 
   /** 新增边的无环不变量由图对象自身维护。 */
   public void assertCanInherit(Long senior, Long inherited) {
-    if (senior.equals(inherited)) throw new IllegalArgumentException("角色不能继承自身");
+    if (senior.equals(inherited)) throw new InvalidDataException("ROLE_SELF_INHERITANCE", "角色不能继承自身");
     Set<Long> seen = new HashSet<>();
     Deque<Long> pending = new ArrayDeque<>();
     pending.add(inherited);
     while (!pending.isEmpty()) {
       Long id = pending.removeFirst();
-      if (id.equals(senior)) throw new IllegalArgumentException("该关系会形成循环继承");
+      if (id.equals(senior)) throw new InvalidDataException("ROLE_INHERITANCE_CYCLE", "该关系会形成循环继承");
       if (seen.add(id)) edges.getOrDefault(id, List.of()).forEach(n -> pending.addLast(n.id()));
     }
   }

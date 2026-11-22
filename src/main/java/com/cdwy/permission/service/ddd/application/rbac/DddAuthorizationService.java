@@ -35,17 +35,17 @@ public class DddAuthorizationService implements AuthorizationUseCase {
 
   /** 当前账号。 */
   private Account user(Long id) {
-    return accounts.find(id).orElseThrow(() -> new ResourceNotFoundException("用户不存在"));
+    return accounts.find(id).orElseThrow(() -> new ResourceNotFoundException("USER_NOT_FOUND", "用户不存在"));
   }
 
   /** 当前角色。 */
   private AccessRole role(Long id) {
-    return roles.find(id).orElseThrow(() -> new ResourceNotFoundException("对象不存在"));
+    return roles.find(id).orElseThrow(() -> new ResourceNotFoundException("ROLE_NOT_FOUND", "角色不存在"));
   }
 
   /** 当前权限。 */
   private FrontendPermission permission(Long id) {
-    return permissions.find(id).orElseThrow(() -> new ResourceNotFoundException("前端权限不存在"));
+    return permissions.find(id).orElseThrow(() -> new ResourceNotFoundException("PERMISSION_NOT_FOUND", "前端权限不存在"));
   }
 
   /** 当前领域快照，角色权限不会写进 JWT。 */
@@ -58,12 +58,9 @@ public class DddAuthorizationService implements AuthorizationUseCase {
         assignments.rolePermissions());
   }
 
-  /** 用户显式分配角色。 */
+  /** 用户显式分配角色；按用户查询，一万名用户时不加载全部分配关系。 */
   private List<Long> assigned(Long id) {
-    return assignments.userRoles().stream()
-        .filter(e -> e.left().equals(id))
-        .map(Link::right)
-        .toList();
+    return assignments.rolesOf(id);
   }
 
   /** 失效主体不新增授权。 */
@@ -72,7 +69,7 @@ public class DddAuthorizationService implements AuthorizationUseCase {
     Account a = user(userId);
     AccessRole r = role(roleId);
     if (!a.usable(credentials.now()) || !r.getEnabled())
-      throw new IllegalArgumentException("不能给失效账号或停用角色新增授权");
+      throw new InvalidDataException("GRANT_TARGET_INACTIVE", "不能给失效账号或停用角色新增授权");
     assignments.addUserRole(userId, roleId);
   }
 
@@ -90,7 +87,7 @@ public class DddAuthorizationService implements AuthorizationUseCase {
     AccessRole r = role(roleId);
     permission(permissionId);
     if (!r.getEnabled() || !snapshot().directory().usable(permissionId))
-      throw new IllegalArgumentException("不能新增失效角色或权限的授权");
+      throw new InvalidDataException("GRANT_TARGET_INACTIVE", "不能新增失效角色或权限的授权");
     assignments.addRolePermission(roleId, permissionId);
   }
 
@@ -146,6 +143,22 @@ public class DddAuthorizationService implements AuthorizationUseCase {
     return snapshot()
         .directory()
         .tree(effectiveViews(id).stream().map(PermissionData.View::id).toList());
+  }
+
+  /** 只取该应用的有效权限组成导航树；应用由编码定位。 */
+  public List<PermissionData.Tree> menu(Long id, String systemCode) {
+    ManagedSystem app =
+        systems.all().stream()
+            .filter(a -> a.getCode().equals(systemCode))
+            .findFirst()
+            .orElseThrow(() -> new ResourceNotFoundException("SYSTEM_NOT_FOUND", "接入应用不存在"));
+    return snapshot()
+        .directory()
+        .tree(
+            effectiveViews(id).stream()
+                .filter(view -> view.systemId().equals(app.getId()))
+                .map(PermissionData.View::id)
+                .toList());
   }
 
   /** 先选最具体的资源，再检查启用与独立 API 绑定；不把管理员自动视为业务角色。 */

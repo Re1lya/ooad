@@ -28,12 +28,13 @@ public class DddDepartmentService implements DepartmentUseCase {
 
   /** 读取部门。 */
   private DepartmentNode require(Long id) {
-    return departments.find(id).orElseThrow(() -> new ResourceNotFoundException("部门不存在"));
+    return departments.find(id).orElseThrow(() -> new ResourceNotFoundException("DEPARTMENT_NOT_FOUND", "部门不存在"));
   }
 
   /** 返回无持久化技术的只读视图。 */
   private DepartmentData.View view(DepartmentNode n) {
-    return new DepartmentData.View(n.getId(), n.getName(), n.getParentId(), n.getManagerName());
+    return new DepartmentData.View(
+        n.getId(), n.getName(), n.getParentId(), n.getCode());
   }
 
   /** 获取当前部门图。 */
@@ -43,13 +44,11 @@ public class DddDepartmentService implements DepartmentUseCase {
     return values;
   }
 
-  /** 校验名称唯一，领域对象维护父级与防环。 */
+  /** 领域对象维护父级防环、同级名称唯一与编码唯一。 */
   private void apply(DepartmentNode n, DepartmentData.Input input) {
     Map<Long, DepartmentNode> nodes = graph();
-    if (nodes.values().stream()
-        .anyMatch(v -> v.getName().equals(input.name()) && !Objects.equals(v.getId(), n.getId())))
-      throw new ConflictException("部门名称已存在");
     n.relocate(input.name(), input.parentId(), nodes);
+    n.assertUnique(input.code(), nodes.values(), input.parentId(), input.name());
   }
 
   /** 列出组织目录。 */
@@ -62,7 +61,8 @@ public class DddDepartmentService implements DepartmentUseCase {
   public DepartmentData.View create(DepartmentData.Input input) {
     DepartmentNode n = new DepartmentNode();
     apply(n, input);
-    return view(departments.save(n));
+    DepartmentNode saved = departments.save(n);
+    return view(saved.assignDefaultCode() ? departments.save(saved) : saved);
   }
 
   /** 移动部门仍须满足整图无环。 */

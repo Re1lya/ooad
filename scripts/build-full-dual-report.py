@@ -33,14 +33,14 @@ s=re.sub(r'\[([^\]]+)\]\(([^)]+)\)',local_link,s)
 body=markdown.markdown(s,extensions=['tables','fenced_code','toc'])
 # 源码阅读页复制普通生产源码，仅包含固定所选类，不读取运行目录或凭据。
 selections=[
- ('HTTP 用户入口','controller/user/UserController.java'),('HTTP 边界映射','controller/common/HttpMapping.java'),
+ ('HTTP 用户入口','controller/user/UserController.java'),('DTO/VO 映射','controller/user/UserVoMapper.java'),
  ('用户用例端口','service/port/user/UserUseCase.java'),('结构化用户实现','service/user/UserService.java'),('面向对象用户实现','service/ddd/application/user/DddUserService.java'),
  ('账号领域对象','service/ddd/domain/model/Account.java'),('期限值对象','service/ddd/domain/model/AccessWindow.java'),
  ('领域用户仓储','service/ddd/domain/repository/AccountRepository.java'),('JPA 用户适配器','infrastructure/persistence/JpaAccountRepositoryAdapter.java'),
  ('结构化权限实现','service/permission/PermissionService.java'),('面向对象权限实现','service/ddd/application/permission/DddPermissionService.java'),('权限领域对象','service/ddd/domain/model/FrontendPermission.java'),
  ('角色继承应用服务','service/ddd/application/rbac/DddHierarchyService.java'),('角色图领域对象','service/ddd/domain/model/RoleGraph.java'),('授权领域快照','service/ddd/domain/model/AuthorizationSnapshot.java'),
  ('面向对象 API 鉴权','service/ddd/application/rbac/DddAuthorizationService.java'),
- ('结构化三表导入','service/importing/CompanyImportService.java'),('面向对象三表导入','service/ddd/application/importing/DddCompanyImportService.java'),('来源批次对象','service/ddd/domain/model/CompanyImportBatch.java'),
+ ('结构化员工信息同步','service/directory/DirectorySyncService.java'),('面向对象员工信息同步','service/ddd/application/directory/DddDirectorySyncService.java'),('员工目录领域对象','service/ddd/domain/model/EmployeeDirectory.java'),
  ('实际模式清单','controller/rbac/SystemInfoController.java')]
 code_nav=[];code_sections=[]
 for i,(label,relative) in enumerate(selections):

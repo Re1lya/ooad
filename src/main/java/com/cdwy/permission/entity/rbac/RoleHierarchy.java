@@ -18,10 +18,12 @@ public class RoleHierarchy {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
+  /** 高级角色（继承方），获得被继承角色的权限。 */
   @ManyToOne(optional = false, fetch = FetchType.LAZY)
   @JoinColumn(name = "senior_role_id", nullable = false)
   private Role seniorRole;
 
+  /** 被继承的角色。 */
   @ManyToOne(optional = false, fetch = FetchType.LAZY)
   @JoinColumn(name = "inherited_role_id", nullable = false)
   private Role inheritedRole;

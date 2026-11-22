@@ -3,47 +3,85 @@ package com.cdwy.permission.service.ddd.domain.repository;
 import com.cdwy.permission.service.ddd.domain.model.*;
 import java.util.*;
 
-/** AssignmentRepository 领域仓储端口。 */
+/**
+ * 授权关联仓储端口：维护用户角色分配、角色权限授权、权限与 API 绑定和角色继承四类显式关系，
+ * 只用两端标识 {@link Link} 交换数据。除批量的 {@link #addUserRoles} 外增删都幂等；
+ * 不展开继承、不防环，也不预先检查两端是否存在或启用，这些由领域对象和应用服务负责。
+ */
 public interface AssignmentRepository {
   /** 两端业务标识；不向领域层暴露关联实体。 */
   record Link(Long left, Long right) {}
 
-  /** 读取或保存领域状态；数据库异常由适配器翻译。 */
+  /**
+   * 全部用户的直接角色分配，{@code Link(userId, roleId)}，按关系记录标识升序；不含继承所得，
+   * 不过滤停用账号或角色。会读出整张表，查单个用户用 {@link #rolesOf}。
+   */
   List<Link> userRoles();
 
-  /** 读取或保存领域状态；数据库异常由适配器翻译。 */
+  /** 某个用户直接分配的角色标识；按用户查询，不加载全部用户的分配关系。 */
+  List<Long> rolesOf(Long userId);
+
+  /**
+   * 全部角色的直接授权，{@code Link(roleId, permissionId)}，按关系记录标识升序；
+   * 不含经继承获得的权限，也不过滤停用的角色或权限。
+   */
   List<Link> rolePermissions();
 
-  /** 读取或保存领域状态；数据库异常由适配器翻译。 */
+  /**
+   * 全部前端权限与 API 资源的绑定，{@code Link(permissionId, resourceId)}，按关系记录标识升序；
+   * 不过滤停用的权限、资源或应用。
+   */
   List<Link> bindings();
 
-  /** 读取或保存领域状态；数据库异常由适配器翻译。 */
+  /**
+   * 全部显式继承边，{@code Link(seniorRoleId, inheritedRoleId)}，前者获得后者的权限；
+   * 按关系记录标识升序，不展开传递闭包，也不过滤停用角色。
+   */
   List<Link> hierarchy();
 
-  /** 读取或保存领域状态；数据库异常由适配器翻译。 */
+  /**
+   * 给用户直接分配角色，已分配时跳过（幂等）；不检查账号可用或角色启用，由调用方先校验。
+   * 立即写入，并发重复或账号、角色不存在等约束冲突抛 {@code DATA_CONFLICT}。
+   */
   void addUserRole(Long userId, Long roleId);
 
-  /** 读取或保存领域状态；数据库异常由适配器翻译。 */
+  /** 批量授予用户角色（员工信息同步）；调用方保证这些分配尚不存在。 */
+  void addUserRoles(java.util.Collection<Link> links);
+
+  /** 撤销用户的一个直接角色，未分配时不报错（幂等）；不检查账号与角色是否存在，由调用方先校验。 */
   void removeUserRole(Long userId, Long roleId);
 
-  /** 读取或保存领域状态；数据库异常由适配器翻译。 */
+  /** 删除用户的全部直接角色分配；须在删除账号前、同一事务内调用，否则删除账号会违反外键约束。 */
   void removeUserRoles(Long userId);
 
-  /** 读取或保存领域状态；数据库异常由适配器翻译。 */
+  /**
+   * 给角色直接授予前端权限，已授予时跳过（幂等）；不检查角色启用或权限可用，由调用方先校验。
+   * 立即写入，并发重复或角色、权限不存在等约束冲突抛 {@code DATA_CONFLICT}。
+   */
   void addRolePermission(Long roleId, Long permissionId);
 
-  /** 读取或保存领域状态；数据库异常由适配器翻译。 */
+  /** 撤回角色的一条直接授权，未授予时不报错（幂等）；角色经继承获得的同一权限不受影响。 */
   void removeRolePermission(Long roleId, Long permissionId);
 
-  /** 读取或保存领域状态；数据库异常由适配器翻译。 */
+  /**
+   * 把前端权限绑定到 API 资源，已绑定时跳过（幂等）。不检查二者是否属于同一应用，
+   * 调用方先用 {@link FrontendPermission#assertBindable} 校验；约束冲突抛 {@code DATA_CONFLICT}。
+   */
   void bind(Long permissionId, Long resourceId);
 
-  /** 读取或保存领域状态；数据库异常由适配器翻译。 */
+  /** 解除前端权限与 API 资源的一条绑定，未绑定时不报错（幂等）。 */
   void unbind(Long permissionId, Long resourceId);
 
-  /** 读取或保存领域状态；数据库异常由适配器翻译。 */
+  /**
+   * 新增显式继承边，{@code senior} 获得 {@code inherited} 的权限；已存在时跳过（幂等）。
+   * 不做防环检查：调用方须先 {@link RoleCatalog#lockGraph}，再由领域角色图校验无环。
+   * 自继承或并发重复等约束冲突抛 {@code DATA_CONFLICT}。
+   */
   void inherit(Long senior, Long inherited);
 
-  /** 读取或保存领域状态；数据库异常由适配器翻译。 */
+  /**
+   * 删除一条显式继承边，不存在时不报错（幂等），经其他路径的继承不受影响。
+   * 调用方先 {@link RoleCatalog#lockGraph}，与加边串行执行。
+   */
   void removeInheritance(Long senior, Long inherited);
 }

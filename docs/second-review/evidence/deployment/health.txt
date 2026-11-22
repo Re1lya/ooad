@@ -1,0 +1,4 @@
+cdwy_rbac-frontend healthy
+cdwy_rbac-backend healthy
+course-project_course-mgt-frontend healthy
+course-project_course-mgt-backend healthy

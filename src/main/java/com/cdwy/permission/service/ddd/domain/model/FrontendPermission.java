@@ -2,6 +2,7 @@ package com.cdwy.permission.service.ddd.domain.model;
 
 import lombok.Getter;
 import lombok.Setter;
+import com.cdwy.permission.service.port.error.InvalidDataException;
 
 /** FrontendPermission 领域对象：只维护业务状态和不变量，不依赖 JPA。 */
 @Getter
@@ -15,8 +16,6 @@ public class FrontendPermission {
   private String menuPath;
   private Long parentId;
   private boolean active = true;
-  private String sourceDescription;
-  private String sourceGrants;
 
   public static final String MENU = "MENU", BUTTON = "BUTTON";
 
@@ -30,43 +29,55 @@ public class FrontendPermission {
       boolean hasChildren) {
     FrontendPermission p = parent == null ? null : nodes.get(parent);
     if (parent != null && p == null)
-      throw new com.cdwy.permission.service.port.error.ResourceNotFoundException("前端权限不存在");
-    if (BUTTON.equals(type) && p == null) throw new IllegalArgumentException("按钮必须隶属菜单");
+      throw new com.cdwy.permission.service.port.error.ResourceNotFoundException("PERMISSION_NOT_FOUND", "前端权限不存在");
+    if (BUTTON.equals(type) && p == null) throw new InvalidDataException("BUTTON_PARENT_REQUIRED", "按钮必须隶属菜单");
     if (p != null && (!MENU.equals(p.kind) || !java.util.Objects.equals(systemId, p.systemId)))
-      throw new IllegalArgumentException("父节点必须是同一应用的菜单");
+      throw new InvalidDataException("PERMISSION_PARENT_INVALID", "父节点必须是同一应用的菜单");
     java.util.Set<Long> seen = new java.util.HashSet<>();
     for (FrontendPermission n = p; n != null; n = nodes.get(n.parentId))
       if (java.util.Objects.equals(n.id, id) || !seen.add(n.id))
-        throw new IllegalArgumentException("权限树不能形成循环");
+        throw new InvalidDataException("PERMISSION_CYCLE", "权限树不能形成循环");
     if (BUTTON.equals(type) && id != null && hasChildren)
-      throw new com.cdwy.permission.service.port.error.ConflictException("有子节点的菜单不能改为按钮");
+      throw new com.cdwy.permission.service.port.error.ConflictException("PERMISSION_HAS_CHILDREN", "有子节点的菜单不能改为按钮");
     if (BUTTON.equals(type) && path != null && !path.isBlank())
-      throw new IllegalArgumentException("按钮不设置菜单地址");
+      throw new InvalidDataException("BUTTON_PATH_NOT_ALLOWED", "按钮不设置菜单地址");
     name = value;
     kind = type;
     menuPath = path == null || path.isBlank() ? null : path;
     parentId = parent;
   }
 
-  /** 停用仍保留原授权关系，后续计算实时排除。 */
-  public void changeStatus(boolean value) {
+  /**
+   * 启停菜单或按钮，授权关系保留，后续计算实时排除。控制台的内置菜单与按钮不能停用，否则所有人（包括管理员）都用不了对应页面。
+   *
+   * @param value 生效为 true
+   * @param builtIn 是否为控制台的内置菜单或按钮，由应用服务按内置目录判断
+   */
+  public void changeStatus(boolean value, boolean builtIn) {
+    if (!value) assertNotBuiltIn(builtIn);
     active = value;
   }
 
-  /** 关系未解除不允许删除。 */
-  public void assertDeletable(boolean referenced) {
+  /**
+   * 删除前检查：内置菜单与按钮抛 {@code CONSOLE_BUILT_IN}；仍有下级、角色授权或 API 绑定时抛 {@code PERMISSION_IN_USE}（均 409）。
+   *
+   * @param builtIn 是否为控制台的内置菜单或按钮
+   * @param referenced 是否仍有下级、角色授权或 API 绑定
+   */
+  public void assertDeletable(boolean builtIn, boolean referenced) {
+    assertNotBuiltIn(builtIn);
     if (referenced)
-      throw new com.cdwy.permission.service.port.error.ConflictException("仍有子节点、角色授权或 API 绑定");
+      throw new com.cdwy.permission.service.port.error.ConflictException("PERMISSION_IN_USE", "仍有子节点、角色授权或 API 绑定");
+  }
+
+  private static void assertNotBuiltIn(boolean builtIn) {
+    if (builtIn)
+      throw new com.cdwy.permission.service.port.error.ConflictException("CONSOLE_BUILT_IN", "权限管理系统的内置菜单与按钮不能停用或删除");
   }
 
   /** 同一业务系统内才允许绑定前端权限和 API 资源。 */
   public void assertBindable(ProtectedResource resource) {
     if (!java.util.Objects.equals(systemId, resource.getSystemId()))
-      throw new IllegalArgumentException("前端权限与 API 资源必须属于同一应用");
-  }
-
-  /** CloneFactory 的布尔 get 访问器约定。 */
-  public boolean getActive() {
-    return active;
+      throw new InvalidDataException("BINDING_SYSTEM_MISMATCH", "前端权限与 API 资源必须属于同一应用");
   }
 }

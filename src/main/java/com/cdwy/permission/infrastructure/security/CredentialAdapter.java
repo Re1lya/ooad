@@ -33,15 +33,15 @@ public class CredentialAdapter implements CredentialGateway {
     PasswordPolicy.validate(value);
   }
 
-  /** Token 只携带身份和凭证版本。 */
-  public String issue(Long id, long version) {
-    return tokens.issue(id, version);
+  /** Token 只携带身份、凭证版本和目标系统。 */
+  public String issue(Long id, long version, java.util.Collection<String> audience) {
+    return tokens.issue(id, version, audience);
   }
 
   /** 委托统一的签名及时间验证。 */
   public Claims verify(String header) {
     JwtTokenService.Identity identity = tokens.verify(header);
-    return new Claims(identity.userId(), identity.credentialVersion());
+    return new Claims(identity.userId(), identity.credentialVersion(), identity.audience());
   }
 
   /** 返回声明有效时长。 */

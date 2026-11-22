@@ -5,8 +5,8 @@ import java.time.Instant;
 
 /** 认证所需的密码散列、JWT 和时钟技术边界。 */
 public interface CredentialGateway {
-  /** JWT 验证后的身份，角色权限不写入 Token。 */
-  record Claims(Long id, long version) {}
+  /** JWT 验证后的身份与目标系统，角色权限不写入 Token。 */
+  record Claims(Long id, long version, java.util.Set<String> audience) {}
 
   /** 生成密码散列。 */
   String encode(String password);
@@ -17,8 +17,8 @@ public interface CredentialGateway {
   /** 按项目密码规则校验明文，不落日志。 */
   void validatePassword(String password);
 
-  /** 签发凭证版本号。 */
-  String issue(Long id, long version);
+  /** 按凭证版本号与目标系统签发。 */
+  String issue(Long id, long version, java.util.Collection<String> audience);
 
   /** 验签与有效期校验。 */
   Claims verify(String header);

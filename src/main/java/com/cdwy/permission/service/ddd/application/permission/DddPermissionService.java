@@ -1,5 +1,6 @@
 package com.cdwy.permission.service.ddd.application.permission;
 
+import com.cdwy.permission.service.auth.ConsoleCatalog;
 import com.cdwy.permission.service.ddd.domain.model.*;
 import com.cdwy.permission.service.ddd.domain.repository.*;
 import com.cdwy.permission.service.port.data.*;
@@ -42,12 +43,12 @@ public class DddPermissionService implements PermissionUseCase {
 
   /** 读取前端权限。 */
   private FrontendPermission require(Long id) {
-    return permissions.find(id).orElseThrow(() -> new ResourceNotFoundException("前端权限不存在"));
+    return permissions.find(id).orElseThrow(() -> new ResourceNotFoundException("PERMISSION_NOT_FOUND", "前端权限不存在"));
   }
 
   /** 读取 API 资源。 */
   private ProtectedResource resource(Long id) {
-    return resources.find(id).orElseThrow(() -> new ResourceNotFoundException("API 资源不存在"));
+    return resources.find(id).orElseThrow(() -> new ResourceNotFoundException("API_RESOURCE_NOT_FOUND", "API 资源不存在"));
   }
 
   /** 不重复访问数据库的结果转换。 */
@@ -60,9 +61,7 @@ public class DddPermissionService implements PermissionUseCase {
         n.getKind(),
         n.getMenuPath(),
         n.getParentId(),
-        n.getActive(),
-        n.getSourceDescription(),
-        n.getSourceGrants());
+        n.getActive());
   }
 
   /** 根据应用过滤权限。 */
@@ -77,8 +76,8 @@ public class DddPermissionService implements PermissionUseCase {
   @Transactional
   public PermissionData.View create(PermissionData.Input input) {
     if (permissions.all().stream().anyMatch(n -> n.getCode().equals(input.code())))
-      throw new ConflictException("前端权限编码已存在");
-    systems.find(input.systemId()).orElseThrow(() -> new ResourceNotFoundException("对象不存在"));
+      throw new ConflictException("PERMISSION_CODE_EXISTS", "前端权限编码已存在");
+    systems.find(input.systemId()).orElseThrow(() -> new ResourceNotFoundException("SYSTEM_NOT_FOUND", "应用不存在"));
     FrontendPermission n = new FrontendPermission();
     n.setSystemId(input.systemId());
     n.setCode(input.code());
@@ -104,7 +103,7 @@ public class DddPermissionService implements PermissionUseCase {
   @Transactional
   public PermissionData.View status(Long id, boolean active) {
     FrontendPermission n = require(id);
-    n.changeStatus(active);
+    n.changeStatus(active, ConsoleCatalog.isEntry(n.getCode()));
     return view(permissions.save(n));
   }
 
@@ -113,6 +112,7 @@ public class DddPermissionService implements PermissionUseCase {
   public void delete(Long id) {
     FrontendPermission n = require(id);
     n.assertDeletable(
+        ConsoleCatalog.isEntry(n.getCode()),
         permissions.hasChildren(id)
             || assignments.rolePermissions().stream().anyMatch(e -> e.right().equals(id))
             || assignments.bindings().stream().anyMatch(e -> e.left().equals(id)));
@@ -150,7 +150,9 @@ public class DddPermissionService implements PermissionUseCase {
                     n.getName(),
                     n.getMethod(),
                     n.getPath(),
-                    n.getActive()))
+                    n.getActive(),
+                    n.getCode(),
+                    n.getOperationId()))
         .toList();
   }
 

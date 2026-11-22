@@ -1,0 +1,18 @@
+# 权限系统后端镜像：使用宿主机预先构建的 JAR（mvn clean verify），构建阶段不访问 Maven 仓库。
+# 在仓库根目录执行：docker build -f deploy/permission/Dockerfile.backend -t <镜像名> .
+ARG JAVA_IMAGE=swr.cn-north-4.myhuaweicloud.com/oomall-javaee/openjdk:21-alpine
+FROM ${JAVA_IMAGE}
+
+RUN addgroup -S app && adduser -S app -G app && mkdir -p /app/logs && chown app:app /app/logs
+
+WORKDIR /app
+COPY --chown=app:app target/nified-permission-system-*.jar /app/app.jar
+
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75" \
+    SPRING_PROFILES_ACTIVE=swarm
+
+USER app
+# 18081 业务接口（只在 overlay 网络内访问），18082 管理端口（健康检查）
+EXPOSE 18081 18082
+
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]

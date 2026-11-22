@@ -1,0 +1,33 @@
+@startuml sequence-ddd-inherit
+!include common.iuml
+title DDD 顺序图：PUT /api/roles/{seniorId}/inherits/{inheritedId}
+autonumber
+actor 管理员
+participant "RoleHierarchyController" as C
+participant "DddHierarchyService\n(应用服务)" as S
+participant "RoleCatalog\n(仓储端口)" as RC
+participant "AssignmentRepository\n(仓储端口)" as AR
+participant "DddRoleGraphService" as G
+participant "RoleGraph\n(领域对象)" as RG
+participant "AuditTrailUseCase" as A
+管理员 -> C : PUT（Bearer JWT）
+C -> S : inherit(senior, inherited)
+activate S
+S -> RC : lockGraph()
+S -> RC : find(senior), find(inherited) : AccessRole
+S -> AR : hierarchy() : List<Link>
+S -> S : 组装邻接快照（只含 ID 与启用状态）
+S -> G : validate(senior, inherited, graph)
+G -> RG ** : new RoleGraph(graph)
+G -> RG : assertCanInherit(senior, inherited)
+alt 成环
+  RG --> S : IllegalArgumentException
+  S --> C : 400
+end
+S -> AR : inherit(senior, inherited)
+note right of AR : JpaAssignmentAdapter 写 sys_role_hierarchy
+S -> A : record("ROLE_INHERITANCE_ADDED", ...)
+S --> C : 完成
+deactivate S
+C --> 管理员 : 204 No Content
+@enduml

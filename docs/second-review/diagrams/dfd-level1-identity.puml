@@ -1,0 +1,35 @@
+@startuml dfd-level1-identity
+!include common.iuml
+!pragma layout smetana
+title 1 层数据流图：接入应用身份查询（GET /api/apps/{应用编码}/auth/me）
+top to bottom direction
+rectangle "课程项目管理系统" as Course
+usecase "1.1\n验证令牌" as P1
+usecase "1.2\n读取应用" as P2
+usecase "1.3\n展开角色继承" as P3
+usecase "1.4\n汇总应用内\n前端权限码" as P4
+usecase "1.5\n追加绑定的\nAPI 权限码" as P5
+usecase "1.6\n组装身份" as P6
+database "D1 账号\nsys_user / sys_account" as D1
+database "D2 应用\nbiz_system" as D2
+database "D3 用户角色\nsys_user_role" as D3
+database "D4 角色继承\nsys_role_hierarchy" as D4
+database "D5 角色权限\nsys_role_permission\nsys_permission" as D5
+database "D6 API 绑定\npermission_api\napi_resource" as D6
+
+Course --> P1 : Bearer JWT
+P1 --> D1 : 读凭证版本
+P1 --> P2 : 用户 ID
+Course --> P2 : 应用编码 cpm
+P2 --> D2 : 读应用状态
+P2 --> P3 : 用户 ID、应用
+P3 --> D3 : 读直接角色
+P3 --> D4 : 读继承边
+P3 --> P4 : 有效角色（含路径）
+P4 --> D5 : 读角色权限
+P4 --> P5 : 应用内有效菜单/按钮
+P5 --> D6 : 读绑定与资源
+P5 --> P6 : 前端权限码 + API 权限码
+P3 --> P6 : 角色编码
+P6 --> Course : {subject, roles, permissions}
+@enduml
