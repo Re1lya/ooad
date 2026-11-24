@@ -9,6 +9,7 @@ import com.cdwy.permission.service.auth.AdminBootstrapService;
 import com.cdwy.permission.support.RequestTransactionBoundary;
 import com.cdwy.permission.support.TestDatabase;
 import java.nio.charset.StandardCharsets;
+import java.time.OffsetDateTime;
 import java.util.*;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -108,6 +109,7 @@ class ApplicationIdentityTests {
   private static final String USERS_URL = "/api/users";
   private static final String USER_ROLE_URL = "/api/users/{userId}/roles/{roleId}";
   private static final String USER_STATUS_URL = "/api/users/{userId}/status";
+  private static final String USER_URL = "/api/users/{userId}";
   private static final String CPM_ROOTS_PAGED_URL = BASE + "/auth/departments?page={page}&pageSize={pageSize}";
   private static final String CPM_DEPARTMENT_USERS_PAGED_URL =
       BASE + "/auth/departments/{departmentId}/users?page={page}&pageSize={pageSize}";
@@ -408,6 +410,91 @@ class ApplicationIdentityTests {
                 .header("Origin", "http://course.example")
                 .header("Access-Control-Request-Method", "GET"))
         .andExpect(status().isOk());
+  }
+
+  @Test
+  @Tag("等价类")
+  @DisplayName("FR-29 审计查询按操作人姓名、操作人编号、起止时间筛选，条件不符时结果为空")
+  void FR29_auditQueryFilters() throws Exception {
+    call("POST", CPM_AUDIT_LOGS_URL, teacher, auditEntry("filter-1", "按条件筛选"), 201);
+    OffsetDateTime now = OffsetDateTime.now();
+    assertEquals(1, auditTotal("actor", "林"));
+    assertEquals(0, auditTotal("actor", "周"));
+    assertEquals(1, auditTotal("actorId", String.valueOf(lin)));
+    assertEquals(0, auditTotal("actorId", "999999"));
+    assertEquals(1, auditTotal("from", now.minusHours(1).toString(), "to", now.plusHours(1).toString()));
+    assertEquals(0, auditTotal("from", now.plusHours(1).toString()));
+    assertEquals(0, auditTotal("to", now.minusHours(1).toString()));
+  }
+
+  @Test
+  @Tag("边界值")
+  @DisplayName("FR-29 审计查询的操作人关键字 128 个字符可以、129 个拒绝；对象关键字 255 个字符可以、256 个拒绝")
+  void FR29_auditFilterLengthBoundaries() throws Exception {
+    auditQuery(200, "actor", "林".repeat(128));
+    auditQuery(400, "actor", "林".repeat(129));
+    auditQuery(200, "target", "按".repeat(255));
+    auditQuery(400, "target", "按".repeat(256));
+  }
+
+  @Test
+  @Tag("等价类")
+  @DisplayName("FR-29 操作人账号删除后，审计记录保留写入时的姓名和角色快照，并标明账号已删除")
+  void FR29_deletedActorKeepsSnapshot() throws Exception {
+    long temp =
+        create(USERS_URL, Map.of("username", "SG000500", "displayName", "临时教师", "password", PASSWORD));
+    call("PUT", url(USER_ROLE_URL, temp, teacherRole), admin, null, 204);
+    String token = appLogin("SG000500", List.of(CPM));
+    call("POST", CPM_AUDIT_LOGS_URL, token, auditEntry("deleted-actor", "删除前写入"), 201);
+    call("DELETE", url(USER_URL, temp), admin, null, 204);
+    JsonNode item = result(call("GET", url(CPM_AUDIT_LOGS_BY_TARGET_URL, "删除前写入"), teacher, null, 200)).get("items").get(0);
+    assertEquals("临时教师", item.get("actor").get("name").asString());
+    assertEquals(Set.of("teacher"), texts(item.get("actor").get("roles")));
+    assertTrue(item.get("actor").get("deleted").asBoolean());
+  }
+
+  @Test
+  @Tag("等价类")
+  @DisplayName("FR-29 审计关键字里的 % 和 _ 按普通字符匹配；空关键字等于不筛选；不带 before/after 也能写入")
+  void FR29_auditKeywordsAreLiteral() throws Exception {
+    Map<String, Object> plain = new HashMap<>(auditEntry("literal-1", "完成率100%_第一批"));
+    plain.remove("before");
+    plain.remove("after");
+    call("POST", CPM_AUDIT_LOGS_URL, teacher, plain, 201);
+    call("POST", CPM_AUDIT_LOGS_URL, teacher, auditEntry("literal-2", "完成率1000第一批"), 201);
+    assertEquals(1, auditTotal("target", "100%_"));
+    assertEquals(2, auditTotal("target", "完成率", "actor", ""));
+    JsonNode item = result(call("GET", url(CPM_AUDIT_LOGS_BY_TARGET_URL, "100%_"), teacher, null, 200)).get("items").get(0);
+    assertTrue(item.get("before").isNull());
+  }
+
+  @Test
+  @Tag("边界值")
+  @DisplayName("FR-30 两个 128 字名称的角色建立继承时，审计对象描述按 255 字截断并以“…”结尾")
+  void FR30_longRoleNamesAreTruncatedInAudit() throws Exception {
+    long senior = create(ROLES_URL, Map.of("code", "long-senior", "name", "甲".repeat(128)));
+    long junior = create(ROLES_URL, Map.of("code", "long-junior", "name", "乙".repeat(128)));
+    call("PUT", url(ROLE_INHERIT_URL, senior, junior), admin, null, 204);
+    String target = result(call("GET", url(AUDIT_LOGS_OF_SYSTEM_URL, "rbac"), admin, null, 200)).get("items").get(0).get("target").asString();
+    assertEquals(255, target.length());
+    assertTrue(target.startsWith("甲") && target.endsWith("…"));
+  }
+
+  Map<String, Object> auditEntry(String requestId, String target) {
+    return Map.of(
+        "requestId", requestId, "type", "ROSTER_CHANGED", "objectType", "class", "objectId", "cpm-class-9",
+        "target", target, "before", Map.of("imported", 0), "after", Map.of("imported", 1));
+  }
+
+  /** 用课程管理员的令牌按条件查询本应用审计，返回响应；参数按 名称, 值 成对给出。 */
+  MvcResult auditQuery(int status, String... pairs) throws Exception {
+    MockHttpServletRequestBuilder request = get(CPM_AUDIT_LOGS_URL).header("Authorization", "Bearer " + teacher);
+    for (int i = 0; i < pairs.length; i += 2) request.param(pairs[i], pairs[i + 1]);
+    return mvc.perform(request).andExpect(status().is(status)).andReturn();
+  }
+
+  long auditTotal(String... pairs) throws Exception {
+    return result(auditQuery(200, pairs)).get("total").asLong();
   }
 
   // ---------- 统一会话 ----------

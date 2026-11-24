@@ -9,6 +9,7 @@ import com.cdwy.permission.service.auth.AdminBootstrapService;
 import com.cdwy.permission.support.RequestTransactionBoundary;
 import com.cdwy.permission.support.TestDatabase;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.*;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,6 +46,13 @@ import tools.jackson.databind.json.JsonMapper;
 @AutoConfigureMockMvc
 class ConsoleRequirementTests {
   static final String PASSWORD = "Review-2026!";
+  /** 与 @SpringBootTest 中 permission.jwt.secret 相同。 */
+  static final String SIGNING_SECRET = "first-review-integration-signing-secret-32-bytes";
+  private static final String USER_URL = "/api/users/{userId}";
+  private static final String USERS_BY_KEYWORD_URL = "/api/users?keyword={keyword}";
+  private static final String USER_ROLES_URL = "/api/users/{userId}/roles";
+  private static final String SYSTEM_URL = "/api/systems/{systemId}";
+  private static final String PERMISSION_URL = "/api/permissions/{permissionId}";
   private static final String DEMO_COURSES_URL = "/api/demo/courses";
   private static final String DEPARTMENTS_URL = "/api/departments";
   private static final String DEPARTMENT_URL = "/api/departments/{departmentId}";
@@ -504,6 +512,130 @@ class ConsoleRequirementTests {
     call("GET", MY_PERMISSION_ORIGINS_URL, employee, null, 200);
     call("GET", url(USER_ORIGINS_URL, user), employee, null, 403);
     call("GET", url(USER_ORIGINS_URL, user), admin, null, 200);
+  }
+
+  // ---------- 修改、删除与列表 ----------
+
+  @Test
+  @Tag("等价类")
+  @DisplayName("FR-03 修改用户姓名后列表随之变化；管理员不能被改成有期限的外部人员（403）")
+  void FR03_updateUserAndProtectAdministrator() throws Exception {
+    JsonNode updated =
+        result(call("PUT", url(USER_URL, user), admin, Map.of("displayName", "新名字", "personType", "EMPLOYEE"), 200));
+    assertEquals("新名字", updated.get("displayName").asString());
+    long adminId = result(call("GET", url(USERS_BY_KEYWORD_URL, "admin"), admin, null, 200)).get("items").get(0).get("id").asLong();
+    call(
+        "PUT",
+        url(USER_URL, adminId),
+        admin,
+        Map.of("displayName", "管理员", "personType", "EXTERNAL", "expiresOn", java.time.LocalDate.now().plusDays(1).toString()),
+        403);
+    call(
+        "PUT",
+        url(USER_URL, adminId),
+        admin,
+        Map.of("displayName", "管理员", "personType", "EMPLOYEE", "expiresOn", java.time.LocalDate.now().plusDays(1).toString()),
+        403);
+  }
+
+  @Test
+  @Tag("等价类")
+  @DisplayName("FR-06 修改应用名称与访问地址，编码不变；删除没有菜单和接口的应用")
+  void FR06_updateAndDeleteSystem() throws Exception {
+    JsonNode updated =
+        result(call("PUT", url(SYSTEM_URL, system), admin, Map.of("name", "课程项目管理", "baseUrl", "http://course.example"), 200));
+    assertEquals("课程项目管理", updated.get("name").asString());
+    assertEquals("course", updated.get("code").asString());
+    long empty = create(SYSTEMS_URL, Map.of("code", "empty", "name", "空应用"));
+    call("DELETE", url(SYSTEM_URL, empty), admin, null, 204);
+    assertNull(find(result(call("GET", SYSTEMS_URL, admin, null, 200)), empty));
+  }
+
+  @Test
+  @Tag("等价类")
+  @DisplayName("FR-07 修改角色名称与描述，编码不变；删除没有授权和继承的角色")
+  void FR07_updateAndDeleteRole() throws Exception {
+    JsonNode updated =
+        result(call("PUT", url(ROLE_URL, role), admin, Map.of("name", "任课教师", "description", "负责授课"), 200));
+    assertEquals("任课教师", updated.get("name").asString());
+    assertEquals("teacher", updated.get("code").asString());
+    long spare = role("spare");
+    call("DELETE", url(ROLE_URL, spare), admin, null, 204);
+    assertNull(find(result(call("GET", ROLES_URL, admin, null, 200)), spare));
+  }
+
+  @Test
+  @Tag("等价类")
+  @DisplayName("FR-08 不指定应用时列出全部应用的菜单和按钮，权限树同样包含各应用的根菜单；删除没有引用的按钮")
+  void FR08_listAllApplicationsAndDeleteUnusedButton() throws Exception {
+    Set<String> all = codes(call("GET", PERMISSIONS_URL, admin, null, 200));
+    assertTrue(all.containsAll(Set.of("course:menu", "course:list", "rbac.users")));
+    Set<String> roots = new HashSet<>();
+    result(call("GET", "/api/permissions/tree", admin, null, 200)).forEach(n -> roots.add(n.get("permission").get("code").asString()));
+    assertTrue(roots.containsAll(Set.of("course:menu", "rbac.users")));
+    long spare =
+        create(PERMISSIONS_URL, Map.of("systemId", system, "code", "course:spare", "name", "备用", "type", "BUTTON", "parentId", menu));
+    call("DELETE", url(PERMISSION_URL, spare), admin, null, 204);
+    assertFalse(codes(call("GET", PERMISSIONS_URL, admin, null, 200)).contains("course:spare"));
+  }
+
+  @Test
+  @Tag("等价类")
+  @DisplayName("FR-10 查询用户直接分配的角色：含已停用的角色，不含继承得到的角色")
+  void FR10_listDirectRolesOfUser() throws Exception {
+    long observer = role("observer"), base = role("base");
+    edge(observer, base, 204);
+    call("PUT", url(USER_ROLE_URL, user, role), admin, null, 204);
+    call("PUT", url(USER_ROLE_URL, user, observer), admin, null, 204);
+    call("PUT", url(ROLE_STATUS_URL, role), admin, Map.of("enabled", false), 200);
+    Set<Long> direct = new HashSet<>();
+    result(call("GET", url(USER_ROLES_URL, user), admin, null, 200)).forEach(r -> direct.add(r.get("id").asLong()));
+    assertEquals(Set.of(role, observer), direct);
+  }
+
+  @Test
+  @Tag("边界值")
+  @DisplayName("FR-10 还没有分配任何角色的用户，角色列表为空")
+  void FR10_userWithoutRolesHasEmptyList() throws Exception {
+    assertEquals(0, result(call("GET", url(USER_ROLES_URL, user), admin, null, 200)).size());
+  }
+
+  // ---------- NFR-01 令牌本身的校验 ----------
+
+  @Test
+  @Tag("等价类")
+  @DisplayName("NFR-01 用测试密钥按签发规则构造的令牌可以通过校验（作为下一组异常用例的对照）")
+  void NFR01_wellFormedTokenIsAccepted() throws Exception {
+    Instant now = Instant.now();
+    call("GET", ME_URL, forge(user, 0L, List.of("rbac"), now, now.plusSeconds(600)), null, 200);
+  }
+
+  @Test
+  @Tag("异常")
+  @DisplayName("NFR-01 签名正确但字段不合规的令牌一律 401：缺凭证版本、缺目标系统、签发时间在未来、缺签发时间、用户标识为 0 或不是数字")
+  void NFR01_signedTokensWithInvalidClaimsAreRejected() throws Exception {
+    Instant now = Instant.now();
+    Instant later = now.plusSeconds(600);
+    call("GET", ME_URL, forge(user, null, List.of("rbac"), now, later), null, 401);
+    call("GET", ME_URL, forge(user, 0L, null, now, later), null, 401);
+    call("GET", ME_URL, forge(user, 0L, List.of("rbac"), now.plusSeconds(300), later), null, 401);
+    call("GET", ME_URL, forge(user, 0L, List.of("rbac"), null, later), null, 401);
+    call("GET", ME_URL, forge(0L, 0L, List.of("rbac"), now, later), null, 401);
+    call("GET", ME_URL, forge("abc", 0L, List.of("rbac"), now, later), null, 401);
+    call("GET", ME_URL, forge(user, 1L, List.of("rbac"), now, later), null, 401);
+  }
+
+  /** 用测试配置的签名密钥构造令牌；为 null 的字段不写入。 */
+  String forge(Object subject, Long version, List<String> audience, Instant issuedAt, Instant expiration) {
+    io.jsonwebtoken.JwtBuilder builder = io.jsonwebtoken.Jwts.builder();
+    if (subject != null) builder.subject(subject.toString());
+    if (audience != null) builder.audience().add(audience).and();
+    if (issuedAt != null) builder.issuedAt(Date.from(issuedAt));
+    if (expiration != null) builder.expiration(Date.from(expiration));
+    if (version != null) builder.claim("cv", version);
+    return builder
+        .signWith(io.jsonwebtoken.security.Keys.hmacShaKeyFor(SIGNING_SECRET.getBytes(StandardCharsets.UTF_8)))
+        .compact();
   }
 
   // ---------- FR-23 RBAC1 核心双实现 ----------

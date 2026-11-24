@@ -19,7 +19,7 @@ mvn -B clean verify          # 同时生成 target/site/jacoco/index.html
 python3 scripts/build-test-traceability.py   # 按测试源码重新生成本文第 3 节的三张表
 ----
 
-2026-11-24 结果（本机 MySQL 8.4）：282 个测试，失败 0、错误 0、跳过 0。JaCoCo：指令 95.2%、分支 85.1%、行 95.8%、方法 94.6%（含 CloneFactory 生成代码）。
+2026-11-24 结果（本机 MySQL 8.4）：315 个测试，失败 0、错误 0、跳过 0。JaCoCo：指令 97.8%、分支 89.1%、行 98.2%、方法 97.2%（含 CloneFactory 生成代码）。
 
 == 测试约定
 
@@ -52,9 +52,9 @@ python3 scripts/build-test-traceability.py   # 按测试源码重新生成本文
 [cols="3,1,1",options="header"]
 |===
 |测试类 |设计路线 |测试数
-|`ApplicationIdentityTests` / `DddApplicationIdentityTests` |结构化 + DDD |79
+|`ApplicationIdentityTests` / `DddApplicationIdentityTests` |结构化 + DDD |89
 |`ConsoleRbacTests` / `DddConsoleRbacTests` |结构化 + DDD |14
-|`ConsoleRequirementTests` / `DddConsoleRequirementTests` |结构化 + DDD |58
+|`ConsoleRequirementTests` / `DddConsoleRequirementTests` |结构化 + DDD |74
 |`DirectorySyncTests` / `DddDirectorySyncTests` |结构化 + DDD |24
 |`DualDesignBoundaryTests` |通用 |5
 |`ErrorCodeContractTests` / `DddErrorCodeContractTests` |结构化 + DDD |38
@@ -62,6 +62,7 @@ python3 scripts/build-test-traceability.py   # 按测试源码重新生成本文
 |`LayerLoggingTests` |通用 |5
 |`MySqlSchemaTests` |通用 |1
 |`PhaseTwoRbac1Tests` / `DddRbac1Tests` |结构化 + DDD |15
+|`XlsxReaderTests` |通用 |7
 |===
 
 === 等价类、边界值与异常
@@ -75,6 +76,7 @@ python3 scripts/build-test-traceability.py   # 按测试源码重新生成本文
 |FR-02 |本人身份与改密 |`FirstReviewWorkflowTests.FR02_passwordChangeInvalidatesOldTokens` |`ConsoleRequirementTests.FR02_passwordPolicyBoundaries` |`ErrorCodeContractTests.FR02_passwordChangeCodes` +
 `FirstReviewWorkflowTests.FR02_passwordChangeInvalidatesOldTokens`
 |FR-03 |用户维护 |`ApplicationIdentityTests.FR03_userSearchIsPagedInDatabaseAndKeepsDepartment` +
+`ConsoleRequirementTests.FR03_updateUserAndProtectAdministrator` +
 `FirstReviewWorkflowTests.FR03_disabledAccountInvalidatesTokenAndReenableDoesNotReviveIt` +
 `frontend-access-registry/tests/records.test.cjs` |`ConsoleRequirementTests.FR03_userFieldAndPagingBoundaries` |`ErrorCodeContractTests.FR03_userCreationCodes` +
 `FirstReviewWorkflowTests.FR03_deletionsRespectReferencesAndProtectAdministrator` +
@@ -86,15 +88,20 @@ python3 scripts/build-test-traceability.py   # 按测试源码重新生成本文
 |FR-05 |部门维护 |`ConsoleRequirementTests.FR05_departmentLifecycle` +
 `frontend-access-registry/tests/records.test.cjs` |`ConsoleRequirementTests.FR05_departmentBoundaries` |`ErrorCodeContractTests.FR05_departmentCodes` +
 `FirstReviewWorkflowTests.FR05_departmentTreeAndDeleteReferencesRemainConsistent`
-|FR-06 |应用维护 |`ConsoleRequirementTests.FR06_systemStatusControlsItsPermissions` |`ConsoleRequirementTests.FR06_systemFieldBoundaries` |`ErrorCodeContractTests.FR06_systemCodes`
-|FR-07 |角色维护 |`ConsoleRequirementTests.FR07_multipleRolesUnion` |`ConsoleRequirementTests.FR07_roleFieldBoundaries` |`ErrorCodeContractTests.FR07_roleCodes`
-|FR-08 |前端权限树 |`ConsoleRequirementTests.FR08_menuTreeIsReturnedByLevel` |`ConsoleRequirementTests.FR08_permissionFieldBoundaries` |`ErrorCodeContractTests.FR08_permissionTreeCodes` +
+|FR-06 |应用维护 |`ConsoleRequirementTests.FR06_systemStatusControlsItsPermissions` +
+`ConsoleRequirementTests.FR06_updateAndDeleteSystem` |`ConsoleRequirementTests.FR06_systemFieldBoundaries` |`ErrorCodeContractTests.FR06_systemCodes`
+|FR-07 |角色维护 |`ConsoleRequirementTests.FR07_multipleRolesUnion` +
+`ConsoleRequirementTests.FR07_updateAndDeleteRole` |`ConsoleRequirementTests.FR07_roleFieldBoundaries` |`ErrorCodeContractTests.FR07_roleCodes`
+|FR-08 |前端权限树 |`ConsoleRequirementTests.FR08_listAllApplicationsAndDeleteUnusedButton` +
+`ConsoleRequirementTests.FR08_menuTreeIsReturnedByLevel` |`ConsoleRequirementTests.FR08_permissionFieldBoundaries` |`ErrorCodeContractTests.FR08_permissionTreeCodes` +
 `FirstReviewWorkflowTests.FR08_menuTreeRejectsCyclesCrossApplicationParentsAndButtonParents`
 |FR-09 |API 资源维护 |`ConsoleRequirementTests.FR09_backendCodeCoversSeveralResources` +
 `frontend-access-registry/tests/records.test.cjs` |`ConsoleRequirementTests.FR09_resourceFieldBoundaries` |`ErrorCodeContractTests.FR09_resourceCodes` +
 `FirstReviewWorkflowTests.FR09_resourceValidationRejectsDuplicatesAndBroadWildcards`
-|FR-10 |用户角色分配 |`FirstReviewWorkflowTests.FR10_duplicateAssignmentsAreIdempotentAndGrantUnionSurvivesOneRoleRevocation` +
-`frontend-access-registry/tests/effective.test.cjs` |`ConsoleRequirementTests.FR10_lastRoleRevocation` |`ErrorCodeContractTests.FR10_inactiveGrantTargets`
+|FR-10 |用户角色分配 |`ConsoleRequirementTests.FR10_listDirectRolesOfUser` +
+`FirstReviewWorkflowTests.FR10_duplicateAssignmentsAreIdempotentAndGrantUnionSurvivesOneRoleRevocation` +
+`frontend-access-registry/tests/effective.test.cjs` |`ConsoleRequirementTests.FR10_lastRoleRevocation` +
+`ConsoleRequirementTests.FR10_userWithoutRolesHasEmptyList` |`ErrorCodeContractTests.FR10_inactiveGrantTargets`
 |FR-11 |角色权限分配 |`FirstReviewWorkflowTests.FR11_permissionRevocationAndApiUnbindingImmediatelyRejectExistingToken` |`ConsoleRequirementTests.FR11_singlePermissionOfRole` |`ErrorCodeContractTests.FR10_inactiveGrantTargets`
 |FR-12 |前端权限绑定 API |`FirstReviewWorkflowTests.FR11_permissionRevocationAndApiUnbindingImmediatelyRejectExistingToken` |`ConsoleRequirementTests.FR12_bindingCountBoundaries` |`ErrorCodeContractTests.FR12_bindingAcrossSystems` +
 `FirstReviewWorkflowTests.FR14_apiResourcesCannotBindAcrossApplicationsOrBypassMoreSpecificRoute`
@@ -130,8 +137,16 @@ python3 scripts/build-test-traceability.py   # 按测试源码重新生成本文
 |FR-23 |RBAC1 核心双实现 |`DddRbac1Tests.FR23_reportsSelectedImplementation` |`ConsoleRequirementTests.FR23_defaultStrategyIsStructured` |`ConsoleRequirementTests.FR23_strategyIsNotVisibleWithoutGrant`
 |FR-24 |员工信息同步预览 |`DirectorySyncTests.FR24_firstWorksheetFollowsWorkbookRelationshipAndSharedStrings` +
 `DirectorySyncTests.FR24_previewCountsChangesAndWritesNothing` +
+`XlsxReaderTests.FR24_readsInlineAndSharedStringsByAddress` +
 `frontend-access-registry/tests/sync-audit.test.cjs` +
-`frontend/tests/sync.test.cjs` |`DirectorySyncTests.FR24_columnLengthBoundaries` |`DirectorySyncTests.FR24_invalidSheetsAreRejectedWithRowNumbers` +
+`frontend/tests/sync.test.cjs` |`DirectorySyncTests.FR24_columnLengthBoundaries` +
+`XlsxReaderTests.FR24_columnLimit` +
+`XlsxReaderTests.FR24_expandedSizeLimit` +
+`XlsxReaderTests.FR24_fileSizeLimit` +
+`XlsxReaderTests.FR24_rowLimit` |`DirectorySyncTests.FR24_invalidSheetsAreRejectedWithRowNumbers` +
+`XlsxReaderTests.FR24_expandedSizeLimit` +
+`XlsxReaderTests.FR24_rejectsMalformedContent` +
+`XlsxReaderTests.FR24_rejectsUnsafeWorkbookRelationships` +
 `frontend/tests/sync.test.cjs`
 |FR-25 |员工信息同步确认 |`DirectorySyncTests.FR25_changesUpdateSourceFieldsAndKeepCredentialsAndGrants` +
 `DirectorySyncTests.FR25_commitBuildsTwoLevelTreeAndUnprovisionedUsers` +
@@ -152,10 +167,15 @@ python3 scripts/build-test-traceability.py   # 按测试源码重新生成本文
 `ApplicationIdentityTests.FR27_inheritanceChangeIsVisibleOnNextCall` +
 `DddApplicationIdentityTests.FR27_identityModuleReportsDdd` |`ApplicationIdentityTests.FR27_userWithoutRolesGetsEmptyIdentity` |`ApplicationIdentityTests.FR27_disabledApplicationAndMissingToken`
 |FR-28 |统一身份人员查询 |`ApplicationIdentityTests.FR28_lookupUserByIdentityId` |`ApplicationIdentityTests.FR28_disabledPeopleCanStillBeLookedUp` |`ApplicationIdentityTests.FR28_lookupUserByIdentityId`
-|FR-29 |接入应用审计 |`ApplicationIdentityTests.FR29_auditWriteIsIdempotentAndScoped` |`ApplicationIdentityTests.FR29_auditBoundaries` |`ApplicationIdentityTests.FR29_auditQueryRequiresPermissionInApplication` +
+|FR-29 |接入应用审计 |`ApplicationIdentityTests.FR29_auditKeywordsAreLiteral` +
+`ApplicationIdentityTests.FR29_auditQueryFilters` +
+`ApplicationIdentityTests.FR29_auditWriteIsIdempotentAndScoped` +
+`ApplicationIdentityTests.FR29_deletedActorKeepsSnapshot` |`ApplicationIdentityTests.FR29_auditBoundaries` +
+`ApplicationIdentityTests.FR29_auditFilterLengthBoundaries` |`ApplicationIdentityTests.FR29_auditQueryRequiresPermissionInApplication` +
 `ErrorCodeContractTests.FR29_auditSnapshotTooLarge`
 |FR-30 |继承变更审计 |`ApplicationIdentityTests.FR30_hierarchyChangesAreAudited` +
-`frontend-access-registry/tests/sync-audit.test.cjs` |`ApplicationIdentityTests.FR30_noAuditForIdempotentOrRejectedChanges` |`ApplicationIdentityTests.FR30_noAuditForIdempotentOrRejectedChanges`
+`frontend-access-registry/tests/sync-audit.test.cjs` |`ApplicationIdentityTests.FR30_longRoleNamesAreTruncatedInAudit` +
+`ApplicationIdentityTests.FR30_noAuditForIdempotentOrRejectedChanges` |`ApplicationIdentityTests.FR30_noAuditForIdempotentOrRejectedChanges`
 |FR-31 |接入应用登录 |`ApplicationIdentityTests.FR31_loginReturnsTokenContract` +
 `ApplicationIdentityTests.FR31_tokenAudienceIsEnforced` |`ApplicationIdentityTests.FR31_loginFieldBoundaries` |`ApplicationIdentityTests.FR31_loginRejectsBadCredentialsAndSystems` +
 `ApplicationIdentityTests.FR31_tokenAudienceIsEnforced` +
@@ -200,6 +220,7 @@ python3 scripts/build-test-traceability.py   # 按测试源码重新生成本文
 `FirstReviewWorkflowTests.FR02_passwordChangeInvalidatesOldTokens`：FR-02 改密后本人全部旧令牌失效，旧密码不能再登录 |结构化 + DDD
 |FR-03 |用户维护 |`ApplicationIdentityTests.FR03_userSearchIsPagedInDatabaseAndKeepsDepartment`：FR-03 用户列表按工号或姓名在数据库层检索并分页；新建用户的所属部门随结果返回 +
 `ConsoleRequirementTests.FR03_userFieldAndPagingBoundaries`：FR-03 登录名 1～64 个字符可以、65 个拒绝；姓名 128 个字符可以、129 个拒绝；分页 pageSize 1 与 100 可以，0、101 与 page 0 拒绝 +
+`ConsoleRequirementTests.FR03_updateUserAndProtectAdministrator`：FR-03 修改用户姓名后列表随之变化；管理员不能被改成有期限的外部人员（403） +
 `ErrorCodeContractTests.FR03_userCreationCodes`：FR-03 新建用户：登录名重复 USERNAME_EXISTS，弱密码 PASSWORD_POLICY_VIOLATION，部门不存在 DEPARTMENT_NOT_FOUND +
 `FirstReviewWorkflowTests.FR03_disabledAccountInvalidatesTokenAndReenableDoesNotReviveIt`：FR-03 停用账号使已签发令牌失效，重新启用也不恢复旧令牌 +
 `FirstReviewWorkflowTests.FR03_deletionsRespectReferencesAndProtectAdministrator`：FR-03 删除前检查引用，管理员账号受保护 +
@@ -214,12 +235,15 @@ python3 scripts/build-test-traceability.py   # 按测试源码重新生成本文
 `frontend-access-registry/tests/records.test.cjs`：FR-05 部门编码：新建留空按编号生成，修改时可改编码 |浏览器（两条路线各跑一遍）、结构化 + DDD
 |FR-06 |应用维护 |`ConsoleRequirementTests.FR06_systemStatusControlsItsPermissions`：FR-06 停用应用后其下菜单不再计入本人权限，重新启用后恢复 +
 `ConsoleRequirementTests.FR06_systemFieldBoundaries`：FR-06 应用编码 1 位与 64 位可以、65 位拒绝；名称 128 个字符可以、129 个拒绝 +
+`ConsoleRequirementTests.FR06_updateAndDeleteSystem`：FR-06 修改应用名称与访问地址，编码不变；删除没有菜单和接口的应用 +
 `ErrorCodeContractTests.FR06_systemCodes`：FR-06 应用：编码重复 SYSTEM_CODE_EXISTS，仍被引用 SYSTEM_IN_USE，引用不存在的应用 SYSTEM_NOT_FOUND |结构化 + DDD
 |FR-07 |角色维护 |`ConsoleRequirementTests.FR07_multipleRolesUnion`：FR-07 一人多角色取并集；停用其中一个角色只去掉它提供的权限 +
 `ConsoleRequirementTests.FR07_roleFieldBoundaries`：FR-07 角色编码 64 位可以、65 位拒绝；名称 128 个字符、描述 255 个字符可以，各超出一位拒绝 +
+`ConsoleRequirementTests.FR07_updateAndDeleteRole`：FR-07 修改角色名称与描述，编码不变；删除没有授权和继承的角色 +
 `ErrorCodeContractTests.FR07_roleCodes`：FR-07 角色：编码重复 ROLE_CODE_EXISTS，仍有授权 ROLE_IN_USE，仍有继承关系 ROLE_HAS_INHERITANCE |结构化 + DDD
 |FR-08 |前端权限树 |`ConsoleRequirementTests.FR08_menuTreeIsReturnedByLevel`：FR-08 同一应用的菜单下挂按钮与子菜单，权限树按层级返回 +
 `ConsoleRequirementTests.FR08_permissionFieldBoundaries`：FR-08 权限码与名称 128 个字符可以、129 个拒绝；菜单地址 255 个字符可以、256 个拒绝 +
+`ConsoleRequirementTests.FR08_listAllApplicationsAndDeleteUnusedButton`：FR-08 不指定应用时列出全部应用的菜单和按钮，权限树同样包含各应用的根菜单；删除没有引用的按钮 +
 `ErrorCodeContractTests.FR08_permissionTreeCodes`：FR-08 前端权限：编码重复、按钮无上级、按钮带地址、上级不合法、形成环路、有子节点改按钮、仍被使用 +
 `FirstReviewWorkflowTests.FR08_menuTreeRejectsCyclesCrossApplicationParentsAndButtonParents`：FR-08 菜单树拒绝环路、跨应用上级和以按钮为上级 |结构化 + DDD
 |FR-09 |API 资源维护 |`ConsoleRequirementTests.FR09_backendCodeCoversSeveralResources`：FR-09 同一后端权限码可以登记在多个接口上；接口可以单独停用和启用 +
@@ -228,6 +252,8 @@ python3 scripts/build-test-traceability.py   # 按测试源码重新生成本文
 `FirstReviewWorkflowTests.FR09_resourceValidationRejectsDuplicatesAndBroadWildcards`：FR-09 API 资源拒绝重复路由和过宽的通配路径 +
 `frontend-access-registry/tests/records.test.cjs`：FR-09 登记 API 资源时权限码与 operationId 可选，列表按 operationId 检索 |浏览器（两条路线各跑一遍）、结构化 + DDD
 |FR-10 |用户角色分配 |`ConsoleRequirementTests.FR10_lastRoleRevocation`：FR-10 用户只有一个角色时撤回它，权限立即清空；没有任何角色的用户权限为空 +
+`ConsoleRequirementTests.FR10_listDirectRolesOfUser`：FR-10 查询用户直接分配的角色：含已停用的角色，不含继承得到的角色 +
+`ConsoleRequirementTests.FR10_userWithoutRolesHasEmptyList`：FR-10 还没有分配任何角色的用户，角色列表为空 +
 `ErrorCodeContractTests.FR10_inactiveGrantTargets`：FR-10 FR-11 给用户授予停用角色、给角色授予停用权限都返回 GRANT_TARGET_INACTIVE +
 `FirstReviewWorkflowTests.FR10_duplicateAssignmentsAreIdempotentAndGrantUnionSurvivesOneRoleRevocation`：FR-10 重复分配幂等，撤回一个角色后其他角色提供的权限仍然有效 +
 `frontend-access-registry/tests/effective.test.cjs`：FR-10 FR-17 FR-19 用户授权盖印后，按人员查看有效权限的来源与继承路径 |浏览器（两条路线各跑一遍）、结构化 + DDD
@@ -281,8 +307,15 @@ python3 scripts/build-test-traceability.py   # 按测试源码重新生成本文
 `DirectorySyncTests.FR24_columnLengthBoundaries`：FR-24 各列长度上限：姓名、分公司、部门、岗位 128 个字符，用户名 64 个字符，电话 32 个字符可以，各超出一位拒绝并指出行号 +
 `DirectorySyncTests.FR24_invalidSheetsAreRejectedWithRowNumbers`：FR-24 员工表格式错误逐项拒绝，并指出 Excel 行号 +
 `DirectorySyncTests.FR24_firstWorksheetFollowsWorkbookRelationshipAndSharedStrings`：FR-24 按工作簿关系定位首张工作表并读取共享字符串（与课程系统提供的原表结构相同） +
+`XlsxReaderTests.FR24_readsInlineAndSharedStringsByAddress`：FR-24 内联字符串与共享字符串都能读出；按单元格地址放列，缺的列补空；全空的行跳过 +
+`XlsxReaderTests.FR24_columnLimit`：FR-24 列位置上限为第 64 列：BL 列可以，BM 列拒绝 +
+`XlsxReaderTests.FR24_rowLimit`：FR-24 行数上限为表头加 20001 行：20002 行可以，20003 行拒绝 +
+`XlsxReaderTests.FR24_fileSizeLimit`：FR-24 文件大小上限 8,000,000 字节：恰好上限时继续解析，多一个字节直接拒绝 +
+`XlsxReaderTests.FR24_expandedSizeLimit`：FR-24 解压后总大小上限 40,000,000 字节：恰好上限可以读取，多一个字节按压缩炸弹拒绝 +
+`XlsxReaderTests.FR24_rejectsUnsafeWorkbookRelationships`：FR-24 工作簿关系不安全或不完整时拒绝：缺关系文件、外部链接、不是工作表、路径越出 xl/worksheets、找不到首张表 +
+`XlsxReaderTests.FR24_rejectsMalformedContent`：FR-24 带 DTD 实体的工作表（XXE）、指向不存在的共享字符串、缺少工作表都按无法读取拒绝 +
 `frontend-access-registry/tests/sync-audit.test.cjs`：FR-24 FR-25 员工同步：预览变动、确认写入，同一张表再预览没有变化 +
-`frontend/tests/sync.test.cjs`：FR-24 FR-25 同步员工信息：预览、确认、重复执行无变化，更换文件或规则须重新预览 |浏览器（两条路线各跑一遍）、结构化 + DDD
+`frontend/tests/sync.test.cjs`：FR-24 FR-25 同步员工信息：预览、确认、重复执行无变化，更换文件或规则须重新预览 |浏览器（两条路线各跑一遍）、结构化 + DDD、通用
 |FR-25 |员工信息同步确认 |`DirectorySyncTests.FR25_commitBuildsTwoLevelTreeAndUnprovisionedUsers`：FR-25 确认后建成“分公司 / 部门”两级树，同名部门分属不同分公司；新人员停用且无法登录；按分公司授予教师或学生 +
 `DirectorySyncTests.FR25_rerunIsIdempotent`：FR-25 重复执行同一份表没有任何变化 +
 `DirectorySyncTests.FR25_changesUpdateSourceFieldsAndKeepCredentialsAndGrants`：FR-25 变化的人员只更新姓名、部门、岗位与电话，保留密码、启用状态与已有角色；不在表中的人员不受影响；角色只增不减 +
@@ -308,10 +341,15 @@ python3 scripts/build-test-traceability.py   # 按测试源码重新生成本文
 |FR-28 |统一身份人员查询 |`ApplicationIdentityTests.FR28_disabledPeopleCanStillBeLookedUp`：FR-28 已停用的人员仍能按工号查到姓名（员工信息同步新建的人员是停用的，课程系统要能选他们登记为教师） +
 `ApplicationIdentityTests.FR28_lookupUserByIdentityId`：FR-28 按统一身份用户标识查询姓名与工号；不存在 404 IDENTITY_USER_NOT_FOUND；旧路径已删除 |结构化 + DDD
 |FR-29 |接入应用审计 |`ApplicationIdentityTests.FR29_auditBoundaries`：FR-29 审计 requestId 64 个字符可以、65 个拒绝；查询每页 100 条可以、101 条拒绝 +
+`ApplicationIdentityTests.FR29_auditQueryFilters`：FR-29 审计查询按操作人姓名、操作人编号、起止时间筛选，条件不符时结果为空 +
+`ApplicationIdentityTests.FR29_auditFilterLengthBoundaries`：FR-29 审计查询的操作人关键字 128 个字符可以、129 个拒绝；对象关键字 255 个字符可以、256 个拒绝 +
+`ApplicationIdentityTests.FR29_deletedActorKeepsSnapshot`：FR-29 操作人账号删除后，审计记录保留写入时的姓名和角色快照，并标明账号已删除 +
+`ApplicationIdentityTests.FR29_auditKeywordsAreLiteral`：FR-29 审计关键字里的 % 和 _ 按普通字符匹配；空关键字等于不筛选；不带 before/after 也能写入 +
 `ApplicationIdentityTests.FR29_auditWriteIsIdempotentAndScoped`：FR-29 审计写入按 requestId 幂等，查询按应用隔离并保留操作人快照 +
 `ApplicationIdentityTests.FR29_auditQueryRequiresPermissionInApplication`：FR-29 应用内没有任何有效权限的用户不能查询审计；请求体校验 400 +
 `ErrorCodeContractTests.FR29_auditSnapshotTooLarge`：FR-29 写入审计记录时 before 内容过长返回 AUDIT_SNAPSHOT_TOO_LARGE |结构化 + DDD
 |FR-30 |继承变更审计 |`ApplicationIdentityTests.FR30_noAuditForIdempotentOrRejectedChanges`：FR-30 重复建立已有的继承不再写审计；被拒绝的成环继承也不写审计 +
+`ApplicationIdentityTests.FR30_longRoleNamesAreTruncatedInAudit`：FR-30 两个 128 字名称的角色建立继承时，审计对象描述按 255 字截断并以“…”结尾 +
 `ApplicationIdentityTests.FR30_hierarchyChangesAreAudited`：FR-30 角色继承建立与解除写入审计记录，操作人为当前管理员 +
 `frontend-access-registry/tests/sync-audit.test.cjs`：FR-30 审计日志默认看权限系统自己的记录，类型与对象写中文 |浏览器（两条路线各跑一遍）、结构化 + DDD
 |FR-31 |接入应用登录 |`ApplicationIdentityTests.FR31_loginReturnsTokenContract`：FR-31 登录不需要令牌，响应只有 accessToken、tokenType、expiresIn +
@@ -351,7 +389,9 @@ python3 scripts/build-test-traceability.py   # 按测试源码重新生成本文
 `ApplicationIdentityTests.FR39_disablingEndsTheSessionInEverySystem`：FR-39 统一会话：管理员停用后，本人在控制台和各接入应用的令牌同时失效，重新启用也不恢复旧令牌 +
 `ApplicationIdentityTests.FR39_logoutInOneApplicationEndsTheSessionEverywhere`：FR-39 统一会话：在任一接入应用退出，本人在控制台和其他应用的令牌一起失效 +
 `ApplicationIdentityTests.FR39_passwordResetEndsTheSessionEverywhere`：FR-39 统一会话：管理员重置密码后各系统的旧令牌失效，旧密码不能再登录 |结构化 + DDD
-|NFR-01 |认证与身份边界 |`ErrorCodeContractTests.NFR01_authenticationAndAuthorizationCodes`：NFR-01 未登录或凭证错误返回 UNAUTHORIZED，普通用户调用管理接口返回 FORBIDDEN +
+|NFR-01 |认证与身份边界 |`ConsoleRequirementTests.NFR01_wellFormedTokenIsAccepted`：NFR-01 用测试密钥按签发规则构造的令牌可以通过校验（作为下一组异常用例的对照） +
+`ConsoleRequirementTests.NFR01_signedTokensWithInvalidClaimsAreRejected`：NFR-01 签名正确但字段不合规的令牌一律 401：缺凭证版本、缺目标系统、签发时间在未来、缺签发时间、用户标识为 0 或不是数字 +
+`ErrorCodeContractTests.NFR01_authenticationAndAuthorizationCodes`：NFR-01 未登录或凭证错误返回 UNAUTHORIZED，普通用户调用管理接口返回 FORBIDDEN +
 `FirstReviewWorkflowTests.NFR01_badCredentialsMissingMalformedExpiredAndForgedTokensReturn401`：NFR-01 错误凭证、缺少或畸形令牌、过期或伪造令牌一律返回 401 +
 `FirstReviewWorkflowTests.NFR01_ordinaryUsersCannotManageAndAdministratorHasNoAutomaticBusinessGrant`：NFR-01 普通用户不能调用管理接口，管理员也不会自动获得业务接口权限 +
 `FirstReviewWorkflowTests.NFR01_initializationCannotEscalateOrdinaryUserAndRemovedEndpointsAreNotRegistered`：NFR-01 初始化不能把普通账号提升为管理员，已删除的接口不再注册 |结构化 + DDD
@@ -411,7 +451,7 @@ python3 scripts/build-test-traceability.py   # 按测试源码重新生成本文
 |`DEPARTMENT_NAME_EXISTS` |409 |`ErrorCodeContractTests.FR05_departmentCodes`
 |`DEPARTMENT_NOT_FOUND` |404 |`ErrorCodeContractTests.FR03_userCreationCodes`、`ErrorCodeContractTests.NFR07_everyByIdEndpointRejectsMissingIds`
 |`EMPLOYEE_SHEET_INVALID` |400 |`DirectorySyncTests.FR24_columnLengthBoundaries`、`DirectorySyncTests.FR24_invalidSheetsAreRejectedWithRowNumbers`
-|`EXCEL_INVALID` |400 |`DirectorySyncTests.FR24_invalidSheetsAreRejectedWithRowNumbers`
+|`EXCEL_INVALID` |400 |`DirectorySyncTests.FR24_invalidSheetsAreRejectedWithRowNumbers`、`XlsxReaderTests.FR24_columnLimit`、`XlsxReaderTests.FR24_expandedSizeLimit`、`XlsxReaderTests.FR24_fileSizeLimit`、`XlsxReaderTests.FR24_rejectsMalformedContent`、`XlsxReaderTests.FR24_rejectsUnsafeWorkbookRelationships`、`XlsxReaderTests.FR24_rowLimit`
 |`FORBIDDEN` |403 |`ApplicationIdentityTests.FR35_departmentQueryValidationAndAccess`、`ConsoleRbacTests.FR38_personalEndpointsAndFailClosed`、`ErrorCodeContractTests.NFR01_authenticationAndAuthorizationCodes`
 |`GRANT_TARGET_INACTIVE` |400 |`ErrorCodeContractTests.FR10_inactiveGrantTargets`
 |`IDENTITY_DEPARTMENT_NOT_FOUND` |404 |`ApplicationIdentityTests.FR35_departmentQueryValidationAndAccess`、`ApplicationIdentityTests.FR36_departmentUsers`
