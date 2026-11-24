@@ -55,26 +55,6 @@ image::deployment-swarm.png[Swarm 部署图,800]
 * 老师的登录服务在 DEBUG 级别把整个登录结果（含访问令牌）写进日志。课程 stack 用 `BACKEND_LOG_LEVEL_LOGIN=INFO` 把 `cn.edu.xmu.projectmgt.service.ddd.application.auth`、`cn.edu.xmu.projectmgt.service.structured.auth` 两个包调到 INFO，不改老师代码；其余各层仍是 DEBUG，分层切面的“开始/完成”日志和课程后端调用统一身份的外部请求日志照常输出。
 * 每台节点只有约 1.8 GB 内存，所以两个后端放在不同节点，都设了内存上限，更新顺序为先停后启。部署后 CDWY3、CDWY4 各剩约 900 MB 可用内存。
 
-== 与老师部署方案的不同
-
-课程系统按老师仓库 `deploy/README.md` 与 `deploy/stack.yml` 部署：服务名、镜像、网络 `javaee-proxy`、端口（前端 ingress 80、Prometheus ingress 9090）、健康检查、内存上限、Nginx 配置与 Prometheus 抓取配置都与老师相同。下表是全部不同之处，都是本集群的条件或安全上的需要：
-
-[cols="3,4",options="header"]
-|===
-|不同 |原因
-|数据库密码用 docker secret（老师 stack 已有的 `configtree:/run/secrets/` 读取），不放环境变量 |老师文档也提醒环境变量会被能查看服务配置的人看到
-|JDBC 地址加 `useSSL=false&allowPublicKeyRetrieval=true`，连接池 5，账号 `course_project` |共用的 `lab_mysql` 是 MySQL 9.2（默认 `caching_sha2_password`）且多个应用共用；账号按老师说的“你们自己的数据库设计”
-|`CORS_ALLOWED_ORIGINS` 必填，只放行课程前端地址（老师默认 `*`） |课程后端只经前端 Nginx 同源访问，不需要放开
-|登录服务两个包日志为 INFO |老师的登录服务在 DEBUG 级别把含访问令牌的登录结果写进日志
-|三个服务固定在 CDWY4（`cdwy.course=true`），副本数固定为 1 |前端镜像在该节点上构建，没有推送到镜像仓库；Prometheus 数据卷要留在同一台机器
-|后端更新顺序先停后启，`start_period` 120 秒（老师先启后停、60 秒） |每台节点只有约 1.8 GB 内存，放不下新旧两个后端；小节点上后端启动较慢
-|部署命令 `docker stack deploy --resolve-image never`，不带 `--with-registry-auth`、`--prune` |前端镜像只在本节点上，后端按摘要固定、已在节点上拉取
-|权限系统前端改用 8080 |课程前端按老师的写法占用全部节点的 80
-|`lab_prometheus` 停用 |与老师 stack 的 `prometheus` 端口和网络别名相同
-|===
-
-老师仓库 `24a4d7d` 的前端单元测试有一项失败（`current-user.test.ts` 期望“请求开始”日志，`current-user.ts` 没有打印），是老师代码本身的问题，我们不改老师代码，打包脚本对此只告警；类型检查通过。
-
 == 准备
 
 * 集群节点为 x86_64。权限系统与课程前端 Dockerfile 的基础镜像（SWR `oomall-javaee` 的 `openjdk:21-alpine`、`nginx:stable-alpine`）只有 amd64 版本，所以这些镜像直接在服务所在节点上构建，不需要镜像仓库。
@@ -156,7 +136,7 @@ deploy/course/package-frontend.sh ../course-project-mgt http://120.46.213.158:80
 
 * 权限系统的打包默认先运行 `mvn clean verify`，测试连接真实 MySQL，须先设置 `TEST_DB_HOST`、`TEST_DB_PORT`、`TEST_DB_NAME`、`TEST_DB_USERNAME`、`TEST_DB_PASSWORD`（见 link:04-test-traceability.adoc[需求—测试追踪]）；已经在同一提交上跑过测试时，可设 `SKIP_TESTS=1` 只打包。
 
-* 课程系统只打包前端（老师要求前端由各组自己编译，统一身份地址在构建时写入），按老师部署文档 6.3 节执行 `typecheck`、`test:run`、`build`，并做两项检查：产物里没有开发地址和 Mock 凭据，并且已写入统一身份地址。老师 `e9a6dff` 之后的两个提交没有改前端代码，`990cea2` 编出的资源文件与之前部署的内容哈希相同。
+* 课程系统只打包前端（老师要求前端由各组自己编译，统一身份地址在构建时写入），按老师部署文档 6.3 节执行 `typecheck`、`test:run`、`build`（老师 `24a4d7d` 自带的单元测试有一项未通过，是老师代码本身的问题，脚本只告警），并做两项检查：产物里没有开发地址和 Mock 凭据，并且已写入统一身份地址。老师 `e9a6dff` 之后的两个提交没有改前端代码，`990cea2` 编出的资源文件与之前部署的内容哈希相同。
 * 课程后端不需要编译，在 CDWY4 上拉取老师的镜像。
 * 把包传到对应节点后，解包并在节点上构建：
 +
