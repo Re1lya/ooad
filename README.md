@@ -14,7 +14,7 @@
 | 检查要求 | 本版落实 |
 |---|---|
 | 两个系统的权限都由权限系统管理 | 实现 Apifox「统一身份鉴权」的 8 个接口（`/api/apps/{应用编码}/auth/login`、`logout`、`me`、`permissions/{permission}`、`api-permissions/{operationId}`、`departments`、`departments/{departmentId}/users`、`users/{userId}`）及审计接口 `/auth/audit-logs`，与老师课程项目管理系统的统一身份契约一致；课程系统只需配置 `IDENTITY_BASE_URL=http://rbac-backend:18081/api/apps/course-project-management`。API 资源新增后端权限码（`TC`、`CV` 等），随角色及继承下发 |
-| 前后端部署到 Docker Swarm | 已部署：权限系统 http://120.46.213.158/ （首页进权限台账，原管理控制台在 `/ui/`；stack `cdwy`，[deploy/stack.yml](deploy/stack.yml)），课程系统 http://124.70.102.248/ （stack `course-project`，[deploy/course/stack.yml](deploy/course/stack.yml)，后端用老师发布的镜像，前端按老师 master 编译，未改老师代码）；老师员工信息表的一万名员工都是测试账号（总公司员工是教师，分公司员工是学生）；权限系统与课程前端的镜像在服务器上构建，密码用 docker secret，健康检查用 Actuator；[部署说明](docs/second-review/05-deployment.adoc)、[部署证据](docs/second-review/evidence/deployment/README.md) |
+| 前后端部署到 Docker Swarm | 已部署：权限系统 http://120.46.213.158:8080/ （首页进权限台账，原管理控制台在 `/ui/`；stack `cdwy`，[deploy/stack.yml](deploy/stack.yml)），课程系统 http://124.70.102.248/ （stack `course-project`，[deploy/course/stack.yml](deploy/course/stack.yml)，后端用老师发布的镜像，前端按老师 master 编译，未改老师代码）；老师员工信息表的一万名员工都是测试账号（总公司员工是教师，分公司员工是学生）；权限系统与课程前端的镜像在服务器上构建，密码用 docker secret，健康检查用 Actuator；[部署说明](docs/second-review/05-deployment.adoc)、[部署证据](docs/second-review/evidence/deployment/README.md) |
 | 菜单切换产生 logback 日志 | 前端每个请求带 `X-Client-Menu`；`logback-spring.xml` + `RequestLoggingFilter`（请求号、菜单、操作人）+ `LayerLoggingAspect`（Controller / Service / DDD 应用服务 / 基础设施分层日志，令牌与密码打码） |
 | 需求与测试对应 | [需求规格](docs/second-review/01-requirements.adoc) FR-01~FR-39、NFR-01~NFR-12；[需求—测试追踪](docs/second-review/04-test-traceability.adoc)（由 `scripts/build-test-traceability.py` 按测试源码生成） |
 | 按课程代码规范整改 | DTO/VO 分包并以 `DTO`/`VO` 结尾，Controller 负责 DTO → Command、Result → VO 映射；优先 CloneFactory 0.0.2 拷贝；Lombok 去样板代码，禁用 `var`；全部类与公开方法写中文 Javadoc；列表分页统一 `page`/`pageSize`/`total`；格式校验在 API 层，业务异常带稳定错误码；测试连接真实 MySQL 并回滚、带需求编号、每个错误码与不存在的 id 都有契约测试。见[详细设计](docs/second-review/03-detailed-design.adoc)“代码规范”一节 |
@@ -27,7 +27,7 @@
 
 | 目标 | 入口 |
 |---|---|
-| 打开已部署的权限台账 | http://120.46.213.158/ |
+| 打开已部署的权限台账 | http://120.46.213.158:8080/ |
 | 直接进入本机权限台账前端 | `http://127.0.0.1:18081/access-registry/index.html` |
 | 查看原管理控制台 | `http://127.0.0.1:18081/ui/index.html` |
 | 了解 Vue 前端构建 | [`frontend-access-registry/README.md`](frontend-access-registry/README.md) |
@@ -57,7 +57,7 @@
 | 权限台账 Vue 前端 | `http://127.0.0.1:18081/access-registry/index.html` | 当前整合的现代化管理台，覆盖工作台、用户、部门、应用、角色、继承、权限、API 资源、授权、权限来源、员工同步和审计；菜单与写操作按本人授权显示 |
 | 原管理控制台 | `http://127.0.0.1:18081/ui/index.html` | 仓库原有的管理页面，用于兼容和对照 |
 
-服务器上的部署：http://120.46.213.158/ 进入权限台账，http://120.46.213.158/ui/index.html 是原管理控制台（见[部署说明](docs/second-review/05-deployment.adoc)）。
+服务器上的部署：http://120.46.213.158:8080/ 进入权限台账，http://120.46.213.158:8080/ui/index.html 是原管理控制台（见[部署说明](docs/second-review/05-deployment.adoc)）。
 
 下面的图片只用于说明视觉布局，不能替代运行中的页面：
 

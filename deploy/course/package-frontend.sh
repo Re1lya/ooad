@@ -8,13 +8,13 @@
 #   在该节点：cd /root/ooad-deploy && tar xzf course-frontend-<提交号>.tar.gz && course-frontend-<提交号>/build-image.sh
 #
 # 用法：deploy/course/package-frontend.sh <老师仓库目录> <权限系统公网地址> [输出目录，默认 build]
-#   例：deploy/course/package-frontend.sh ../course-project-mgt http://120.46.213.158
+#   例：deploy/course/package-frontend.sh ../course-project-mgt http://120.46.213.158:8080
 #   前端构建时写入 VITE_IDENTITY_BASE_URL=<权限系统公网地址>/api/apps/course-project-management
 # 依赖：Node 22.22.2 或 24.15+
 set -euo pipefail
 
 REPO="$(cd "${1:?用法: package-frontend.sh <老师仓库目录> <权限系统公网地址> [输出目录]}" && pwd)"
-PUBLIC_URL="${2:?缺少权限系统公网地址，例如 http://120.46.213.158}"
+PUBLIC_URL="${2:?缺少权限系统公网地址，例如 http://120.46.213.158:8080}"
 OUT_DIR="${3:-build}"
 mkdir -p "${OUT_DIR}"
 OUT_DIR="$(cd "${OUT_DIR}" && pwd)"
@@ -25,7 +25,11 @@ if [ -n "$(git -C "${REPO}" status --porcelain -- web)" ]; then
   exit 1
 fi
 
-(cd "${REPO}/web" && npm ci --no-audit --no-fund \
+# 老师文档 6.3 节：typecheck、test:run、build。类型检查必须通过；老师自己的单元测试未通过时只告警，
+# 因为我们不改老师的代码（24a4d7d 中 current-user.test.ts 期望的“请求开始”日志在 current-user.ts 里没有）
+(cd "${REPO}/web" && npm ci --no-audit --no-fund && npm run typecheck)
+(cd "${REPO}/web" && npm run test:run) || echo "警告：老师仓库的前端单元测试有失败项，见上方输出" >&2
+(cd "${REPO}/web" \
   && VITE_API_BASE_URL=/api VITE_IDENTITY_BASE_URL="${IDENTITY_URL}" VITE_MOCK_ENABLED=false npm run build)
 
 # 老师文档 6.3 节的检查：产物不含开发地址和 Mock 凭据；另外确认写入了统一身份地址

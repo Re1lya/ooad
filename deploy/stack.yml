@@ -1,6 +1,6 @@
 # Cdwy 统一权限管理系统：Docker Swarm stack（stack 名 cdwy）。
 #
-#   浏览器 ──► rbac-frontend:80（host 模式，发布在权限系统节点）──/api/──► rbac-backend:18081
+#   浏览器 ──► rbac-frontend（host 模式发布 8080，在权限系统节点；80 留给课程前端）──/api/──► rbac-backend:18081
 #   课程系统 course-mgt-backend ──javaee-proxy──► rbac-backend:18081/api/apps/course-project-management
 #   rbac-backend ──javaee-proxy──► mysql:3306
 #
@@ -76,7 +76,7 @@ services:
     ports:
       # host 模式只占用所在节点的端口；改用 ingress 时整个集群的同一端口都会被占用
       - target: 80
-        published: ${RBAC_HTTP_PORT:-80}
+        published: ${RBAC_HTTP_PORT:-8080}
         protocol: tcp
         mode: ${RBAC_PUBLISH_MODE:-host}
     networks:

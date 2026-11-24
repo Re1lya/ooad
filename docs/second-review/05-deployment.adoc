@@ -16,11 +16,15 @@ Cdwy 小组
 
 2026-11-24 跟进老师 11-23 的更新：老师用同一标签 `0.0.1` 重新发布了课程后端（对应老师仓库 master `24a4d7d`），新版在 14 个管理接口（课程、学期、教师、操作日志）前，以权限码（老师代码中的 `AuthorityCodes`，如 `TC`、`TV`、`TEC`）作为 operationId 调 `/auth/api-permissions/{operationId}`。我们把课程系统 API 资源的 operationId 改为对应的权限码（`CTM`、`TCM` 各对应两个接口，operationId 在应用内唯一，只给其中一个；两个接口绑在同一个按钮上，授权结果相同），课程后端改用新镜像，前端也按老师仓库 `24a4d7d` 重新编译（相对 `990cea2` 只多了查询当前用户时的控制台日志）。更新后公网接口验收 46/46、浏览器走查 13 步通过，权限系统日志中可见课程后端按权限码查询。
 
+2026-11-24 晚补上老师 stack 里的 Prometheus：课程 stack 新增 `prometheus` 服务，抓取配置原样取自老师仓库 `deploy/prometheus/prometheus.yml`，按 `tasks.course-mgt-backend:8081/actuator/prometheus` 抓取课程后端，目标状态为 up。集群原有的 `lab_prometheus`（lab3 实验）停用：副本数改为 0，并去掉它在 CDWY1 上占用的 9090 端口；服务定义保留。课程前后端未重启，更新后公网接口验收 48/48。
+
+同晚课程前端也改回老师的写法：ingress 发布 80，集群所有节点的 80 都进入课程系统。权限系统因此改用安全组放行的 8080（新地址 http://120.46.213.158:8080/ ），并让出原来被 `lab_productdemoaop`（副本已是 0）占着的 ingress 8080。权限系统前端的 Nginx 加了 `absolute_redirect off`，首页跳转不再丢掉 8080；镜像 `cdwy/rbac-frontend:39ba5ec-port8080` 只替换了这份 Nginx 配置。课程前端按新地址重新编译（老师仓库 `24a4d7d`，镜像 `course-mgt-frontend:24a4d7d-rbac8080`）。更新后公网接口验收 48/48。
+
 [cols="2,3,2,3",options="header"]
 |===
 |系统 |访问地址 |stack |位置与镜像
-|统一权限管理系统 |http://120.46.213.158/ （权限台账；原管理控制台 http://120.46.213.158/ui/index.html） |`cdwy` |CDWY3（`hcss-ecs-a955`）；`cdwy/rbac-backend:39ba5ec`、`cdwy/rbac-frontend:39ba5ec`；结构化路线
-|课程项目管理系统 |http://124.70.102.248/ |`course-project` |CDWY4（`hcss-ecs-1488`）；后端为老师发布的 `oomall-javaee/course-mgt-backend:0.0.1`（11-23 重新发布版，按摘要 `sha256:88a476df…` 固定），前端 `course-mgt-frontend:24a4d7d` 由我们按老师仓库编译；未改老师代码；DDD 路线
+|统一权限管理系统 |http://120.46.213.158:8080/ （权限台账；原管理控制台 http://120.46.213.158:8080/ui/index.html） |`cdwy` |CDWY3（`hcss-ecs-a955`）；`cdwy/rbac-backend:39ba5ec`、`cdwy/rbac-frontend:39ba5ec-port8080`；结构化路线
+|课程项目管理系统 |http://124.70.102.248/ （ingress 发布，任一节点 IP 的 80 都可访问；跨域白名单只有这个地址，请用它访问） |`course-project` |CDWY4（`hcss-ecs-1488`）；后端为老师发布的 `oomall-javaee/course-mgt-backend:0.0.1`（11-23 重新发布版，按摘要 `sha256:88a476df…` 固定），前端 `course-mgt-frontend:24a4d7d-rbac8080` 由我们按老师仓库编译；未改老师代码；DDD 路线
 |数据库 |集群内 `mysql:3306` |`lab`（已有） |CDWY2 的 `lab_mysql`（MySQL 9.2），新建库 `cdwy_rbac`、`course_project`
 |===
 
@@ -35,24 +39,41 @@ image::deployment-swarm.png[Swarm 部署图,800]
 [cols="2,3,2,4",options="header"]
 |===
 |服务 |镜像来源 |端口 |说明
-|`rbac-frontend` |`deploy/permission/Dockerfile.frontend` |host 模式发布 80 |Nginx 托管权限台账 `/access-registry/`（首页跳到这里）与原管理控制台 `/ui/`，`/api/` 转发到 `rbac-backend:18081`
+|`rbac-frontend` |`deploy/permission/Dockerfile.frontend` |host 模式发布 8080 |Nginx 托管权限台账 `/access-registry/`（首页跳到这里）与原管理控制台 `/ui/`，`/api/` 转发到 `rbac-backend:18081`
 |`rbac-backend` |`deploy/permission/Dockerfile.backend` |18081 业务、18082 健康（只在网络内） |`SPRING_PROFILES_ACTIVE=swarm`；logback 写控制台和 `/app/logs`；CORS 只放行课程前端的源地址
-|`course-mgt-frontend` |老师仓库 `web/Dockerfile`，我们编译 |host 模式发布 80 |老师的 Nginx 配置：`/api/` 转发到 `course-mgt-backend:8080`
-|`course-mgt-backend` |老师发布的镜像 |8080 业务、8081 健康（只在网络内） |`APP_IDENTITY_BASE_URL=http://rbac-backend:18081/api/apps/course-project-management`；登录服务所在的两个包日志为 INFO
+|`course-mgt-frontend` |老师仓库 `web/Dockerfile`，我们编译 |ingress 发布 80（与老师相同） |老师的 Nginx 配置：`/api/` 转发到 `course-mgt-backend:8080`
+|`course-mgt-backend` |老师发布的镜像 |8080 业务、8081 健康与指标（只在网络内） |`APP_IDENTITY_BASE_URL=http://rbac-backend:18081/api/apps/course-project-management`；登录服务所在的两个包日志为 INFO
+|`prometheus`（课程 stack） |老师 stack 中的 SWR `oomall-javaee/prom/prometheus` |ingress 发布 9090 |老师的抓取配置：按 `tasks.course-mgt-backend` 发现后端任务，抓 `:8081/actuator/prometheus`；固定在 CDWY4，数据卷 `course-project_prometheus_data`
 |===
 
 几点说明：
 
 * 两个 stack 都接入集群已有的外部 overlay 网络 `javaee-proxy`，与 `lab`、`lab4` 共用。Swarm 给每个服务加上与服务名相同的网络别名，所以课程后端用 `rbac-backend` 访问权限系统，两个后端都用 `mysql` 访问 `lab_mysql`。
-* 课程前端在浏览器里直接调用统一身份的 `/auth/permissions`、`/auth/departments` 等接口。地址在构建课程前端时写入 `VITE_IDENTITY_BASE_URL=http://120.46.213.158/api/apps/course-project-management`，所以权限系统的公网地址变了，要重新构建课程前端。
-* 两个前端都用 host 模式发布 80 端口，原因有两个：
-** 华为云安全组只放行 80、443、8080；
-** ingress 的 8080 已被 `lab_productdemoaop` 占用，而 ingress 模式会让所有节点的同一端口都被占用。
-+
-host 模式只占用服务所在节点的端口，两个系统因此各用一台节点的 80 端口。
-* 老师 stack 里的 Prometheus 没有部署：集群已有 `lab_prometheus`（网络别名同为 `prometheus`），节点内存也不够。
+* 课程前端在浏览器里直接调用统一身份的 `/auth/permissions`、`/auth/departments` 等接口。地址在构建课程前端时写入 `VITE_IDENTITY_BASE_URL=http://120.46.213.158:8080/api/apps/course-project-management`，所以权限系统的公网地址变了，要重新构建课程前端。
+* 端口按老师的写法：课程前端用 ingress 发布 80，Prometheus 用 ingress 发布 9090。ingress 模式会占用所有节点的同一端口，所以权限系统前端改用 host 模式发布 8080，只占 CDWY3。华为云安全组只放行 80、443、8080。
+* Prometheus 按老师的写法部署（服务名 `prometheus`、ingress 发布 9090、抓取配置不变），只多了一条放置约束，让数据卷固定在 CDWY4。它和 lab3 实验的 `lab_prometheus` 网络别名相同、端口相同，所以 `lab_prometheus` 停用（副本 0，去掉 9090 端口发布）。安全组没有放行 9090，从公网打不开 Prometheus 页面；在集群内或经 ssh 端口转发访问。
 * 老师的登录服务在 DEBUG 级别把整个登录结果（含访问令牌）写进日志。课程 stack 用 `BACKEND_LOG_LEVEL_LOGIN=INFO` 把 `cn.edu.xmu.projectmgt.service.ddd.application.auth`、`cn.edu.xmu.projectmgt.service.structured.auth` 两个包调到 INFO，不改老师代码；其余各层仍是 DEBUG，分层切面的“开始/完成”日志和课程后端调用统一身份的外部请求日志照常输出。
 * 每台节点只有约 1.8 GB 内存，所以两个后端放在不同节点，都设了内存上限，更新顺序为先停后启。部署后 CDWY3、CDWY4 各剩约 900 MB 可用内存。
+
+== 与老师部署方案的不同
+
+课程系统按老师仓库 `deploy/README.md` 与 `deploy/stack.yml` 部署：服务名、镜像、网络 `javaee-proxy`、端口（前端 ingress 80、Prometheus ingress 9090）、健康检查、内存上限、Nginx 配置与 Prometheus 抓取配置都与老师相同。下表是全部不同之处，都是本集群的条件或安全上的需要：
+
+[cols="3,4",options="header"]
+|===
+|不同 |原因
+|数据库密码用 docker secret（老师 stack 已有的 `configtree:/run/secrets/` 读取），不放环境变量 |老师文档也提醒环境变量会被能查看服务配置的人看到
+|JDBC 地址加 `useSSL=false&allowPublicKeyRetrieval=true`，连接池 5，账号 `course_project` |共用的 `lab_mysql` 是 MySQL 9.2（默认 `caching_sha2_password`）且多个应用共用；账号按老师说的“你们自己的数据库设计”
+|`CORS_ALLOWED_ORIGINS` 必填，只放行课程前端地址（老师默认 `*`） |课程后端只经前端 Nginx 同源访问，不需要放开
+|登录服务两个包日志为 INFO |老师的登录服务在 DEBUG 级别把含访问令牌的登录结果写进日志
+|三个服务固定在 CDWY4（`cdwy.course=true`），副本数固定为 1 |前端镜像在该节点上构建，没有推送到镜像仓库；Prometheus 数据卷要留在同一台机器
+|后端更新顺序先停后启，`start_period` 120 秒（老师先启后停、60 秒） |每台节点只有约 1.8 GB 内存，放不下新旧两个后端；小节点上后端启动较慢
+|部署命令 `docker stack deploy --resolve-image never`，不带 `--with-registry-auth`、`--prune` |前端镜像只在本节点上，后端按摘要固定、已在节点上拉取
+|权限系统前端改用 8080 |课程前端按老师的写法占用全部节点的 80
+|`lab_prometheus` 停用 |与老师 stack 的 `prometheus` 端口和网络别名相同
+|===
+
+老师仓库 `24a4d7d` 的前端单元测试有一项失败（`current-user.test.ts` 期望“请求开始”日志，`current-user.ts` 没有打印），是老师代码本身的问题，我们不改老师代码，打包脚本对此只告警；类型检查通过。
 
 == 准备
 
@@ -130,12 +151,12 @@ unset pw
 [source,bash]
 ----
 deploy/permission/package-images.sh                                             # build/rbac-images-<提交号>.tar.gz
-deploy/course/package-frontend.sh ../course-project-mgt http://120.46.213.158  # build/course-frontend-<提交号>.tar.gz
+deploy/course/package-frontend.sh ../course-project-mgt http://120.46.213.158:8080  # build/course-frontend-<提交号>.tar.gz
 ----
 
 * 权限系统的打包默认先运行 `mvn clean verify`，测试连接真实 MySQL，须先设置 `TEST_DB_HOST`、`TEST_DB_PORT`、`TEST_DB_NAME`、`TEST_DB_USERNAME`、`TEST_DB_PASSWORD`（见 link:04-test-traceability.adoc[需求—测试追踪]）；已经在同一提交上跑过测试时，可设 `SKIP_TESTS=1` 只打包。
 
-* 课程系统只打包前端（老师要求前端由各组自己编译，统一身份地址在构建时写入），按老师部署文档执行，并做两项检查：产物里没有开发地址和 Mock 凭据，并且已写入统一身份地址。老师 `e9a6dff` 之后的两个提交没有改前端代码，`990cea2` 编出的资源文件与之前部署的内容哈希相同。
+* 课程系统只打包前端（老师要求前端由各组自己编译，统一身份地址在构建时写入），按老师部署文档 6.3 节执行 `typecheck`、`test:run`、`build`，并做两项检查：产物里没有开发地址和 Mock 凭据，并且已写入统一身份地址。老师 `e9a6dff` 之后的两个提交没有改前端代码，`990cea2` 编出的资源文件与之前部署的内容哈希相同。
 * 课程后端不需要编译，在 CDWY4 上拉取老师的镜像。
 * 把包传到对应节点后，解包并在节点上构建：
 +
@@ -148,7 +169,7 @@ docker pull swr.cn-north-4.myhuaweicloud.com/oomall-javaee/course-mgt-backend:0.
 
 == 部署
 
-在管理节点 CDWY1 上，把 link:../../deploy/stack.yml[deploy/stack.yml] 和 link:../../deploy/course/stack.yml[deploy/course/stack.yml] 分别放到 `/root/ooad-deploy/rbac`、`/root/ooad-deploy/course`。再按 link:../../deploy/.env.example[.env.example]、link:../../deploy/course/env.example[env.example] 写好各自的 `.env`：只有镜像名、端口和地址，没有密码。先部署权限系统：
+在管理节点 CDWY1 上，把 link:../../deploy/stack.yml[deploy/stack.yml] 和 link:../../deploy/course/stack.yml[deploy/course/stack.yml]（连同同目录的 `prometheus/prometheus.yml`）分别放到 `/root/ooad-deploy/rbac`、`/root/ooad-deploy/course`。再按 link:../../deploy/.env.example[.env.example]、link:../../deploy/course/env.example[env.example] 写好各自的 `.env`：只有镜像名、端口和地址，没有密码。先部署权限系统：
 
 [source,bash]
 ----
@@ -167,7 +188,7 @@ docker stack services cdwy; docker stack services course-project
 
 [source,bash]
 ----
-RBAC_URL=http://120.46.213.158 RBAC_ADMIN=admin RBAC_ADMIN_PASSWORD=... \
+RBAC_URL=http://120.46.213.158:8080 RBAC_ADMIN=admin RBAC_ADMIN_PASSWORD=... \
 EMPLOYEE_XLSX=市政公司员工信息表.xlsx DEMO_PASSWORD=... python3 scripts/register-course-app.py
 ----
 
@@ -182,7 +203,7 @@ EMPLOYEE_XLSX=市政公司员工信息表.xlsx DEMO_PASSWORD=... python3 scripts
 
 [source,bash]
 ----
-RBAC_URL=http://120.46.213.158 COURSE_URL=http://124.70.102.248/api COURSE_ORIGIN=http://124.70.102.248 \
+RBAC_URL=http://120.46.213.158:8080 COURSE_URL=http://124.70.102.248/api COURSE_ORIGIN=http://124.70.102.248 \
 RBAC_ADMIN=admin RBAC_ADMIN_PASSWORD=... DEMO_PASSWORD=... python3 scripts/verify-course-integration.py
 ----
 
@@ -191,8 +212,8 @@ RBAC_ADMIN=admin RBAC_ADMIN_PASSWORD=... DEMO_PASSWORD=... python3 scripts/verif
 [cols="1,4,4",options="header"]
 |===
 |序号 |操作 |预期
-|1 |`docker stack services cdwy`、`docker stack services course-project` |4 个服务都是 `1/1`，`docker ps` 显示 healthy
-|2 |打开 http://120.46.213.158/ ，用 `admin` 登录 |进入权限台账总览；侧栏有全部 12 个菜单，页头显示“管理员”
+|1 |`docker stack services cdwy`、`docker stack services course-project` |5 个服务都是 `1/1`，`docker ps` 显示 healthy；课程 stack 的 Prometheus 目标 `course-project-backend` 为 up
+|2 |打开 http://120.46.213.158:8080/ ，用 `admin` 登录 |进入权限台账总览；侧栏有全部 12 个菜单，页头显示“管理员”
 |3 |依次切换“用户”“继承图谱”“API 资源”等菜单，同时执行 `docker service logs -f cdwy_rbac-backend` |每次切换都出现 `[menu=users]`、`[menu=hierarchy]` 等请求开始与结束日志（日志时间为 UTC）
 |4 |权限台账“接入应用”“API 资源”“继承图谱” |`course-project-management` 应用、20 个带 operationId 的 API、“课程管理员 → 课程督导 → 教师”继承；权限系统自身的应用、管理员角色与管理接口只显示“内置”
 |5 |打开 http://124.70.102.248/ ，从教师入口用 SG000001 登录 |侧栏“管理”下有课程、学期、教师、日志
