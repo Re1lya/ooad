@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UserController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.controller.user</a> &gt; <span class="el_source">UserController.java</span></div><h1>UserController.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.controller.user;
+
+import com.cdwy.permission.config.BusinessAccess;
+import com.cdwy.permission.config.CurrentUser;
+import com.cdwy.permission.dto.common.StatusDTO;
+import com.cdwy.permission.dto.user.PasswordResetDTO;
+import com.cdwy.permission.dto.user.UserCreateDTO;
+import com.cdwy.permission.dto.user.UserUpdateDTO;
+import com.cdwy.permission.service.port.user.UserUseCase;
+import com.cdwy.permission.vo.common.PageVO;
+import com.cdwy.permission.vo.user.UserVO;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Size;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+
+/** 人员管理：新建、检索、修改、启停、重置密码与删除。 */
+@RestController
+@BusinessAccess(BusinessAccess.CONSOLE)
+@RequiredArgsConstructor
+@RequestMapping(&quot;/api/users&quot;)
+public class UserController {
+  private final UserUseCase service;
+  private final UserVoMapper mapper;
+
+  /** 新建人员。 */
+  @PostMapping
+  @ResponseStatus(HttpStatus.CREATED)
+  public UserVO create(@Valid @RequestBody UserCreateDTO input) {
+<span class="fc" id="L43">    return mapper.toVO(service.create(mapper.toCommand(input)));</span>
+  }
+
+  /** 按工号、学号或姓名分页检索人员，页码从 1 开始。 */
+  @GetMapping
+  public PageVO&lt;UserVO&gt; list(
+      @RequestParam(defaultValue = &quot;1&quot;) @Min(value = 1, message = &quot;须大于等于 1&quot;) int page,
+      @RequestParam(defaultValue = &quot;20&quot;)
+          @Min(value = 1, message = &quot;须在 1 到 100 之间&quot;)
+          @Max(value = 100, message = &quot;须在 1 到 100 之间&quot;)
+          int pageSize,
+      @RequestParam(required = false) @Size(max = 100, message = &quot;最长 100 个字符&quot;)
+          String keyword) {
+<span class="fc" id="L56">    return mapper.toPageVO(service.list(page, pageSize, keyword));</span>
+  }
+
+  /** 人员详情。 */
+  @GetMapping(&quot;/{id}&quot;)
+  public UserVO get(@PathVariable Long id) {
+<span class="fc" id="L62">    return mapper.toVO(service.get(id));</span>
+  }
+
+  /** 修改姓名、部门、人员类型与有效期。 */
+  @PutMapping(&quot;/{id}&quot;)
+  public UserVO update(@PathVariable Long id, @Valid @RequestBody UserUpdateDTO input) {
+<span class="fc" id="L68">    return mapper.toVO(service.update(id, mapper.toCommand(input)));</span>
+  }
+
+  /** 启用或停用；不能停用自己。 */
+  @PutMapping(&quot;/{id}/status&quot;)
+  public UserVO status(
+      HttpServletRequest request, @PathVariable Long id, @Valid @RequestBody StatusDTO input) {
+<span class="fc" id="L75">    return mapper.toVO(service.status(CurrentUser.from(request).id(), id, input.enabled()));</span>
+  }
+
+  /** 管理员重置密码。 */
+  @PutMapping(&quot;/{id}/password&quot;)
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void password(@PathVariable Long id, @Valid @RequestBody PasswordResetDTO input) {
+<span class="fc" id="L82">    service.password(id, input.password());</span>
+<span class="fc" id="L83">  }</span>
+
+  /** 删除人员；不能删除自己。 */
+  @DeleteMapping(&quot;/{id}&quot;)
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void delete(HttpServletRequest request, @PathVariable Long id) {
+<span class="fc" id="L89">    service.delete(CurrentUser.from(request).id(), id);</span>
+<span class="fc" id="L90">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

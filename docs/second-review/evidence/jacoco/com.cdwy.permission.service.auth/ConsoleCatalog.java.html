@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ConsoleCatalog.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.service.auth</a> &gt; <span class="el_source">ConsoleCatalog.java</span></div><h1>ConsoleCatalog.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.service.auth;
+
+import com.cdwy.permission.service.port.data.PermissionType;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+/**
+ * 权限系统自身（应用 rbac）的内置授权目录：控制台每个页面一个菜单，写操作一个按钮，管理接口登记为 API 资源并绑定到菜单或按钮。
+ *
+ * &lt;p&gt;一个读接口可以绑定多个菜单（例如角色列表同时服务“角色管理”“角色继承”“授权工作台”“用户管理”页面），体现前端权限与 API 的多对多关系。
+ * “我的权限”“修改密码”等个人接口只要求登录，不在此登记。
+ */
+public final class ConsoleCatalog {
+  private ConsoleCatalog() {}
+
+  /** 应用编码，与 JWT 中控制台令牌的 aud 一致。 */
+  public static final String SYSTEM = JwtTokenService.CONSOLE_AUDIENCE;
+
+  /** rbac 应用首次登记时的名称；之后管理员改的名称不会被覆盖。 */
+  public static final String SYSTEM_NAME = &quot;权限管理系统&quot;;
+
+  /** 内置管理员角色：拥有 rbac 应用的全部菜单与按钮，分配给启动管理员。 */
+  public static final String ADMIN_ROLE = &quot;rbac-admin&quot;;
+
+  /** 内置管理员角色首次创建时的名称。 */
+  public static final String ADMIN_ROLE_NAME = &quot;权限管理员&quot;;
+
+  /** 菜单或按钮；按钮的 parent 是所属菜单的编码。 */
+<span class="fc" id="L30">  public record Entry(String code, String name, PermissionType type, String menuPath, String parent) {}</span>
+
+  /** 管理接口与它绑定的菜单或按钮编码。 */
+<span class="fc" id="L33">  public record Api(String name, String method, String path, List&lt;String&gt; grantedBy) {}</span>
+
+  private static Entry menu(String code, String name, String path) {
+<span class="fc" id="L36">    return new Entry(code, name, PermissionType.MENU, path, null);</span>
+  }
+
+  private static Entry button(String code, String name, String parent) {
+<span class="fc" id="L40">    return new Entry(code, name, PermissionType.BUTTON, null, parent);</span>
+  }
+
+  private static Api api(String name, String method, String path, String... grantedBy) {
+<span class="fc" id="L44">    return new Api(name, method, path, List.of(grantedBy));</span>
+  }
+
+  /** 控制台的菜单与按钮。顺序有意义：按钮必须排在所属菜单之后，登记时按顺序查找上级。 */
+<span class="fc" id="L48">  public static final List&lt;Entry&gt; ENTRIES =</span>
+<span class="fc" id="L49">      List.of(</span>
+<span class="fc" id="L50">          menu(&quot;rbac.overview&quot;, &quot;工作台&quot;, &quot;/overview&quot;),</span>
+<span class="fc" id="L51">          menu(&quot;rbac.users&quot;, &quot;用户管理&quot;, &quot;/users&quot;),</span>
+<span class="fc" id="L52">          button(&quot;rbac.users.write&quot;, &quot;维护用户&quot;, &quot;rbac.users&quot;),</span>
+<span class="fc" id="L53">          button(&quot;rbac.directory.sync&quot;, &quot;同步员工信息&quot;, &quot;rbac.users&quot;),</span>
+<span class="fc" id="L54">          menu(&quot;rbac.departments&quot;, &quot;部门管理&quot;, &quot;/departments&quot;),</span>
+<span class="fc" id="L55">          button(&quot;rbac.departments.write&quot;, &quot;维护部门&quot;, &quot;rbac.departments&quot;),</span>
+<span class="fc" id="L56">          menu(&quot;rbac.systems&quot;, &quot;应用管理&quot;, &quot;/systems&quot;),</span>
+<span class="fc" id="L57">          button(&quot;rbac.systems.write&quot;, &quot;维护应用&quot;, &quot;rbac.systems&quot;),</span>
+<span class="fc" id="L58">          menu(&quot;rbac.roles&quot;, &quot;角色管理&quot;, &quot;/roles&quot;),</span>
+<span class="fc" id="L59">          button(&quot;rbac.roles.write&quot;, &quot;维护角色&quot;, &quot;rbac.roles&quot;),</span>
+<span class="fc" id="L60">          menu(&quot;rbac.hierarchy&quot;, &quot;角色继承&quot;, &quot;/hierarchy&quot;),</span>
+<span class="fc" id="L61">          button(&quot;rbac.hierarchy.write&quot;, &quot;维护继承关系&quot;, &quot;rbac.hierarchy&quot;),</span>
+<span class="fc" id="L62">          menu(&quot;rbac.permissions&quot;, &quot;菜单与按钮&quot;, &quot;/permissions&quot;),</span>
+<span class="fc" id="L63">          button(&quot;rbac.permissions.write&quot;, &quot;维护菜单与按钮&quot;, &quot;rbac.permissions&quot;),</span>
+<span class="fc" id="L64">          menu(&quot;rbac.resources&quot;, &quot;API 资源&quot;, &quot;/resources&quot;),</span>
+<span class="fc" id="L65">          button(&quot;rbac.resources.write&quot;, &quot;维护 API 资源&quot;, &quot;rbac.resources&quot;),</span>
+<span class="fc" id="L66">          menu(&quot;rbac.grants&quot;, &quot;授权工作台&quot;, &quot;/grants&quot;),</span>
+<span class="fc" id="L67">          button(&quot;rbac.grants.write&quot;, &quot;授予与撤销权限&quot;, &quot;rbac.grants&quot;),</span>
+<span class="fc" id="L68">          menu(&quot;rbac.effective&quot;, &quot;有效权限&quot;, &quot;/effective&quot;),</span>
+<span class="fc" id="L69">          menu(&quot;rbac.audit&quot;, &quot;审计日志&quot;, &quot;/audit&quot;));</span>
+
+  private static final String USERS = &quot;rbac.users&quot;, USERS_W = &quot;rbac.users.write&quot;;
+
+  /**
+   * 控制台的管理接口及其绑定的菜单或按钮。按应用 rbac 鉴权的控制器接口（{@code /api/me} 个人接口除外）必须与本清单一一对应，
+   * 由测试 FR-38 校验；未登记的接口请求一律拒绝（403）。
+   */
+<span class="fc" id="L77">  public static final List&lt;Api&gt; APIS =</span>
+<span class="fc" id="L78">      List.of(</span>
+<span class="fc" id="L79">          api(&quot;系统信息&quot;, &quot;GET&quot;, &quot;/api/system-info&quot;, &quot;rbac.overview&quot;),</span>
+<span class="fc" id="L80">          api(&quot;用户列表&quot;, &quot;GET&quot;, &quot;/api/users&quot;, USERS, &quot;rbac.effective&quot;, &quot;rbac.overview&quot;),</span>
+<span class="fc" id="L81">          api(&quot;用户详情&quot;, &quot;GET&quot;, &quot;/api/users/{id}&quot;, USERS, &quot;rbac.effective&quot;),</span>
+<span class="fc" id="L82">          api(&quot;新建用户&quot;, &quot;POST&quot;, &quot;/api/users&quot;, USERS_W),</span>
+<span class="fc" id="L83">          api(&quot;修改用户&quot;, &quot;PUT&quot;, &quot;/api/users/{id}&quot;, USERS_W),</span>
+<span class="fc" id="L84">          api(&quot;启停用户&quot;, &quot;PUT&quot;, &quot;/api/users/{id}/status&quot;, USERS_W),</span>
+<span class="fc" id="L85">          api(&quot;重置密码&quot;, &quot;PUT&quot;, &quot;/api/users/{id}/password&quot;, USERS_W),</span>
+<span class="fc" id="L86">          api(&quot;删除用户&quot;, &quot;DELETE&quot;, &quot;/api/users/{id}&quot;, USERS_W),</span>
+<span class="fc" id="L87">          api(&quot;用户的角色&quot;, &quot;GET&quot;, &quot;/api/users/{userId}/roles&quot;, USERS, &quot;rbac.effective&quot;),</span>
+<span class="fc" id="L88">          api(&quot;分配角色&quot;, &quot;PUT&quot;, &quot;/api/users/{userId}/roles/{roleId}&quot;, USERS_W),</span>
+<span class="fc" id="L89">          api(&quot;取消角色&quot;, &quot;DELETE&quot;, &quot;/api/users/{userId}/roles/{roleId}&quot;, USERS_W),</span>
+<span class="fc" id="L90">          api(&quot;预览员工信息同步&quot;, &quot;POST&quot;, &quot;/api/directory/sync/preview&quot;, &quot;rbac.directory.sync&quot;),</span>
+<span class="fc" id="L91">          api(&quot;确认员工信息同步&quot;, &quot;POST&quot;, &quot;/api/directory/sync/commit&quot;, &quot;rbac.directory.sync&quot;),</span>
+<span class="fc" id="L92">          api(&quot;部门列表&quot;, &quot;GET&quot;, &quot;/api/departments&quot;, &quot;rbac.departments&quot;, USERS),</span>
+<span class="fc" id="L93">          api(&quot;新建部门&quot;, &quot;POST&quot;, &quot;/api/departments&quot;, &quot;rbac.departments.write&quot;),</span>
+<span class="fc" id="L94">          api(&quot;修改部门&quot;, &quot;PUT&quot;, &quot;/api/departments/{id}&quot;, &quot;rbac.departments.write&quot;),</span>
+<span class="fc" id="L95">          api(&quot;删除部门&quot;, &quot;DELETE&quot;, &quot;/api/departments/{id}&quot;, &quot;rbac.departments.write&quot;),</span>
+<span class="fc" id="L96">          api(</span>
+              &quot;应用列表&quot;,
+              &quot;GET&quot;,
+              &quot;/api/systems&quot;,
+              &quot;rbac.systems&quot;,
+              &quot;rbac.permissions&quot;,
+              &quot;rbac.resources&quot;,
+              &quot;rbac.grants&quot;,
+              &quot;rbac.audit&quot;,
+              &quot;rbac.overview&quot;),
+<span class="fc" id="L106">          api(&quot;接入应用&quot;, &quot;POST&quot;, &quot;/api/systems&quot;, &quot;rbac.systems.write&quot;),</span>
+<span class="fc" id="L107">          api(&quot;修改应用&quot;, &quot;PUT&quot;, &quot;/api/systems/{id}&quot;, &quot;rbac.systems.write&quot;),</span>
+<span class="fc" id="L108">          api(&quot;启停应用&quot;, &quot;PUT&quot;, &quot;/api/systems/{id}/status&quot;, &quot;rbac.systems.write&quot;),</span>
+<span class="fc" id="L109">          api(&quot;删除应用&quot;, &quot;DELETE&quot;, &quot;/api/systems/{id}&quot;, &quot;rbac.systems.write&quot;),</span>
+<span class="fc" id="L110">          api(</span>
+              &quot;角色列表&quot;,
+              &quot;GET&quot;,
+              &quot;/api/roles&quot;,
+              &quot;rbac.roles&quot;,
+              &quot;rbac.hierarchy&quot;,
+              &quot;rbac.grants&quot;,
+              USERS,
+              &quot;rbac.overview&quot;),
+<span class="fc" id="L119">          api(&quot;新建角色&quot;, &quot;POST&quot;, &quot;/api/roles&quot;, &quot;rbac.roles.write&quot;),</span>
+<span class="fc" id="L120">          api(&quot;修改角色&quot;, &quot;PUT&quot;, &quot;/api/roles/{id}&quot;, &quot;rbac.roles.write&quot;),</span>
+<span class="fc" id="L121">          api(&quot;启停角色&quot;, &quot;PUT&quot;, &quot;/api/roles/{id}/status&quot;, &quot;rbac.roles.write&quot;),</span>
+<span class="fc" id="L122">          api(&quot;删除角色&quot;, &quot;DELETE&quot;, &quot;/api/roles/{id}&quot;, &quot;rbac.roles.write&quot;),</span>
+<span class="fc" id="L123">          api(&quot;角色层级&quot;, &quot;GET&quot;, &quot;/api/role-hierarchy&quot;, &quot;rbac.hierarchy&quot;, &quot;rbac.roles&quot;),</span>
+<span class="fc" id="L124">          api(&quot;角色有效权限&quot;, &quot;GET&quot;, &quot;/api/roles/{roleId}/effective-permissions&quot;, &quot;rbac.hierarchy&quot;, &quot;rbac.grants&quot;),</span>
+<span class="fc" id="L125">          api(&quot;建立继承&quot;, &quot;PUT&quot;, &quot;/api/roles/{seniorId}/inherits/{inheritedId}&quot;, &quot;rbac.hierarchy.write&quot;),</span>
+<span class="fc" id="L126">          api(&quot;解除继承&quot;, &quot;DELETE&quot;, &quot;/api/roles/{seniorId}/inherits/{inheritedId}&quot;, &quot;rbac.hierarchy.write&quot;),</span>
+<span class="fc" id="L127">          api(</span>
+              &quot;菜单与按钮列表&quot;,
+              &quot;GET&quot;,
+              &quot;/api/permissions&quot;,
+              &quot;rbac.permissions&quot;,
+              &quot;rbac.grants&quot;,
+              &quot;rbac.hierarchy&quot;,
+              &quot;rbac.resources&quot;),
+<span class="fc" id="L135">          api(&quot;菜单树&quot;, &quot;GET&quot;, &quot;/api/permissions/tree&quot;, &quot;rbac.permissions&quot;, &quot;rbac.grants&quot;),</span>
+<span class="fc" id="L136">          api(&quot;新建菜单或按钮&quot;, &quot;POST&quot;, &quot;/api/permissions&quot;, &quot;rbac.permissions.write&quot;),</span>
+<span class="fc" id="L137">          api(&quot;修改菜单或按钮&quot;, &quot;PUT&quot;, &quot;/api/permissions/{id}&quot;, &quot;rbac.permissions.write&quot;),</span>
+<span class="fc" id="L138">          api(&quot;启停菜单或按钮&quot;, &quot;PUT&quot;, &quot;/api/permissions/{id}/status&quot;, &quot;rbac.permissions.write&quot;),</span>
+<span class="fc" id="L139">          api(&quot;删除菜单或按钮&quot;, &quot;DELETE&quot;, &quot;/api/permissions/{id}&quot;, &quot;rbac.permissions.write&quot;),</span>
+<span class="fc" id="L140">          api(&quot;菜单绑定的接口&quot;, &quot;GET&quot;, &quot;/api/permissions/{id}/resources&quot;, &quot;rbac.permissions&quot;, &quot;rbac.resources&quot;),</span>
+<span class="fc" id="L141">          api(&quot;绑定接口&quot;, &quot;PUT&quot;, &quot;/api/permissions/{id}/resources/{resourceId}&quot;, &quot;rbac.resources.write&quot;),</span>
+<span class="fc" id="L142">          api(&quot;解绑接口&quot;, &quot;DELETE&quot;, &quot;/api/permissions/{id}/resources/{resourceId}&quot;, &quot;rbac.resources.write&quot;),</span>
+<span class="fc" id="L143">          api(&quot;API 资源列表&quot;, &quot;GET&quot;, &quot;/api/resources&quot;, &quot;rbac.resources&quot;, &quot;rbac.permissions&quot;),</span>
+<span class="fc" id="L144">          api(&quot;登记接口&quot;, &quot;POST&quot;, &quot;/api/resources&quot;, &quot;rbac.resources.write&quot;),</span>
+<span class="fc" id="L145">          api(&quot;修改接口&quot;, &quot;PUT&quot;, &quot;/api/resources/{id}&quot;, &quot;rbac.resources.write&quot;),</span>
+<span class="fc" id="L146">          api(&quot;启停接口&quot;, &quot;PUT&quot;, &quot;/api/resources/{id}/status&quot;, &quot;rbac.resources.write&quot;),</span>
+<span class="fc" id="L147">          api(&quot;删除接口&quot;, &quot;DELETE&quot;, &quot;/api/resources/{id}&quot;, &quot;rbac.resources.write&quot;),</span>
+<span class="fc" id="L148">          api(&quot;角色的直接权限&quot;, &quot;GET&quot;, &quot;/api/roles/{roleId}/permissions&quot;, &quot;rbac.grants&quot;, &quot;rbac.hierarchy&quot;),</span>
+<span class="fc" id="L149">          api(&quot;授予权限&quot;, &quot;PUT&quot;, &quot;/api/roles/{roleId}/permissions/{permissionId}&quot;, &quot;rbac.grants.write&quot;),</span>
+<span class="fc" id="L150">          api(&quot;撤销权限&quot;, &quot;DELETE&quot;, &quot;/api/roles/{roleId}/permissions/{permissionId}&quot;, &quot;rbac.grants.write&quot;),</span>
+<span class="fc" id="L151">          api(&quot;用户权限来源&quot;, &quot;GET&quot;, &quot;/api/users/{userId}/permission-origins&quot;, &quot;rbac.effective&quot;, USERS),</span>
+<span class="fc" id="L152">          api(&quot;审计日志&quot;, &quot;GET&quot;, &quot;/api/audit-logs&quot;, &quot;rbac.audit&quot;, &quot;rbac.overview&quot;));</span>
+
+  /** 内置菜单与按钮的编码；放在 ENTRIES 之后初始化。 */
+<span class="fc" id="L155">  private static final Set&lt;String&gt; ENTRY_CODES =</span>
+<span class="fc" id="L156">      ENTRIES.stream().map(Entry::code).collect(Collectors.toUnmodifiableSet());</span>
+
+  /** 内置管理接口的“方法 路径”；放在 APIS 之后初始化。 */
+<span class="fc" id="L159">  private static final Set&lt;String&gt; API_KEYS =</span>
+<span class="fc" id="L160">      APIS.stream().map(api -&gt; api.method() + &quot; &quot; + api.path()).collect(Collectors.toUnmodifiableSet());</span>
+
+  /** 是否为权限系统自身的内置应用 rbac。 */
+  public static boolean isSystem(String systemCode) {
+<span class="fc" id="L164">    return SYSTEM.equals(systemCode);</span>
+  }
+
+  /** 是否为内置管理员角色 rbac-admin。 */
+  public static boolean isAdminRole(String roleCode) {
+<span class="fc" id="L169">    return ADMIN_ROLE.equals(roleCode);</span>
+  }
+
+  /** 是否为控制台的内置菜单或按钮。权限编码全局唯一，内置编码只会属于 rbac 应用，所以按编码判断即可。 */
+  public static boolean isEntry(String permissionCode) {
+<span class="fc" id="L174">    return ENTRY_CODES.contains(permissionCode);</span>
+  }
+
+  /** 是否为控制台的内置管理接口：属于 rbac 应用，且方法与路径在内置目录中（不同应用可以登记相同的方法与路径）。 */
+  public static boolean isApi(String systemCode, String method, String path) {
+<span class="pc bpc" id="L179" title="1 of 4 branches missed.">    return isSystem(systemCode) &amp;&amp; API_KEYS.contains(method + &quot; &quot; + path);</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

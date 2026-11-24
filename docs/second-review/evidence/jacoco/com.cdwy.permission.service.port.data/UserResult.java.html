@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UserResult.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.service.port.data</a> &gt; <span class="el_source">UserResult.java</span></div><h1>UserResult.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.service.port.data;
+
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * 用户用例与登录结果中的用户信息：两种设计路线都由 CloneFactory 从账号实体或领域对象按同名字段复制，控制器再转换为 VO。
+ *
+ * &lt;p&gt;不含密码散列与凭证版本。{@code kind} 是 {@link PersonType} 的名称；{@code expiresAt} 为空表示不限期；
+ * {@code companyName}、{@code jobTitle}、{@code phone}、{@code sourceDepartment} 来自员工信息同步，未经同步的用户为空。
+ */
+@Getter
+@Setter
+<span class="fc" id="L14">public class UserResult {</span>
+
+  private Long id;
+
+  private String username;
+
+  private String displayName;
+
+  private boolean enabled;
+
+  private boolean administrator;
+
+  private Long departmentId;
+
+  private String kind;
+
+  private java.time.Instant expiresAt;
+
+  private String companyName;
+
+  private String jobTitle;
+
+  private String phone;
+
+  private String sourceDepartment;
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RoleGraphUseCase.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.service.port.rbac</a> &gt; <span class="el_source">RoleGraphUseCase.java</span></div><h1>RoleGraphUseCase.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.service.port.rbac;
+
+import java.util.*;
+
+/** FR-23：两种设计共享的纯角色图用例；不依赖 JPA、Web 或 Token。 */
+public interface RoleGraphUseCase {
+  /** 角色的不可变计算快照。 */
+<span class="fc" id="L8">  record Node(Long id, boolean enabled) {}</span>
+
+  /** 到达某角色的一条最短有效路径。 */
+<span class="fc" id="L11">  record Path(Long roleId, List&lt;Long&gt; ids) {}</span>
+
+  /** 校验高级角色到被继承角色的新增边，不忽略停用节点。 */
+  void validate(Long seniorId, Long inheritedId, Map&lt;Long, List&lt;Node&gt;&gt; graph);
+
+  /** 解析有效节点及最短路径。 */
+  List&lt;Path&gt; resolve(Node assigned, Map&lt;Long, List&lt;Node&gt;&gt; graph);
+
+  /** 实际装载的实现标识。 */
+  String strategy();
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

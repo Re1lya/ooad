@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PersonType.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.service.port.data</a> &gt; <span class="el_source">PersonType.java</span></div><h1>PersonType.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.service.port.data;
+
+/**
+ * 人员类型，决定账号是否限期。请求 DTO、VO 与结构化实现的实体使用本枚举；用例数据以枚举名称字符串传递，DDD 领域模型使用同名字符串常量。
+ *
+ * &lt;p&gt;限期人员的有效期按项目时区计算：截止日当天仍可用，次日零点起失效。
+ */
+<span class="fc" id="L8">public enum PersonType {</span>
+  /** 正式员工：不设有效期；管理员只能是此类型，员工信息同步新建的人员也是此类型。 */
+<span class="fc" id="L10">  EMPLOYEE,</span>
+  /** 外部人员：必须设置有效期，最长 {@code permission.policy.external-max-days} 天（默认 365）。 */
+<span class="fc" id="L12">  EXTERNAL,</span>
+  /** 临时人员：必须设置有效期，最长 {@code permission.policy.temporary-max-days} 天（默认 90）。 */
+<span class="fc" id="L14">  TEMPORARY</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

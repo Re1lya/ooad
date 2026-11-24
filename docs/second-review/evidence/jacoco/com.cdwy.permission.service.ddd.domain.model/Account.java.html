@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Account.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.service.ddd.domain.model</a> &gt; <span class="el_source">Account.java</span></div><h1>Account.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.service.ddd.domain.model;
+
+import lombok.Getter;
+import lombok.Setter;
+
+/** Account 领域对象：只维护业务状态和不变量，不依赖 JPA。 */
+@cn.edu.xmu.clonefactory.CopyTo(com.cdwy.permission.service.port.data.UserResult.class)
+@Getter
+@Setter
+<span class="fc" id="L10">public class Account {</span>
+  private Long id;
+  private String username;
+  private String passwordHash;
+  private String displayName;
+<span class="fc" id="L15">  private boolean enabled = true;</span>
+  private boolean administrator;
+  private long credentialVersion;
+<span class="fc" id="L18">  private String kind = EMPLOYEE;</span>
+  private java.time.Instant expiresAt;
+  private Long departmentId;
+  private String companyName;
+  private String jobTitle;
+  private String phone;
+  private String sourceDepartment;
+
+  public static final String EMPLOYEE = &quot;EMPLOYEE&quot;, EXTERNAL = &quot;EXTERNAL&quot;, TEMPORARY = &quot;TEMPORARY&quot;;
+
+  /** 凭证与业务授权每次根据账号当前状态判断。 */
+  public boolean usable(java.time.Instant now) {
+<span class="fc bfc" id="L30" title="All 6 branches covered.">    return enabled &amp;&amp; (expiresAt == null || expiresAt.isAfter(now));</span>
+  }
+
+  /** 人员身份与有效期由对象维护，管理员不能被改为限期账号。 */
+  public void profile(
+      String name, Long department, String type, java.time.LocalDate day, AccessWindow window) {
+<span class="pc bpc" id="L36" title="1 of 6 branches missed.">    if (administrator &amp;&amp; (!EMPLOYEE.equals(type) || day != null))</span>
+<span class="fc" id="L37">      throw new com.cdwy.permission.service.port.error.ForbiddenException(&quot;管理员不能改为有期限的人员身份&quot;);</span>
+<span class="fc" id="L38">    java.time.Instant expiry = window.expiry(type, day);</span>
+<span class="fc" id="L39">    displayName = name;</span>
+<span class="fc" id="L40">    departmentId = department;</span>
+<span class="fc" id="L41">    kind = type;</span>
+<span class="fc" id="L42">    expiresAt = expiry;</span>
+<span class="fc" id="L43">  }</span>
+
+  /** 停用或重新启用均使旧凭证失效；重复请求不重复增加版本。 */
+  public void changeStatus(Long actor, boolean value) {
+<span class="pc bpc" id="L47" title="1 of 6 branches missed.">    if (!value &amp;&amp; (java.util.Objects.equals(actor, id) || administrator))</span>
+<span class="fc" id="L48">      throw new com.cdwy.permission.service.port.error.ForbiddenException(&quot;不能停用本人或管理员&quot;);</span>
+<span class="fc bfc" id="L49" title="All 2 branches covered.">    if (enabled != value) {</span>
+<span class="fc" id="L50">      enabled = value;</span>
+<span class="fc" id="L51">      credentialVersion++;</span>
+    }
+<span class="fc" id="L53">  }</span>
+
+  /** 退出登录：递增凭证版本，令牌不需要服务端保存。 */
+  public void logout() {
+<span class="fc" id="L57">    credentialVersion++;</span>
+<span class="fc" id="L58">  }</span>
+
+  /** 修改密码后使旧 JWT 失效。 */
+  public void resetPassword(String hash) {
+<span class="fc" id="L62">    passwordHash = hash;</span>
+<span class="fc" id="L63">    credentialVersion++;</span>
+<span class="fc" id="L64">  }</span>
+
+  /** 删除保护不依赖页面是否显示按钮。 */
+  public void assertDeletable(Long actor) {
+<span class="fc bfc" id="L68" title="All 4 branches covered.">    if (java.util.Objects.equals(actor, id) || administrator)</span>
+<span class="fc" id="L69">      throw new com.cdwy.permission.service.port.error.ForbiddenException(&quot;不能删除本人或管理员&quot;);</span>
+<span class="fc" id="L70">  }</span>
+
+  /** 员工信息同步新建人员时使用的密码散列占位值：不是 BCrypt 格式，任何密码都无法匹配。 */
+  public static final String UNPROVISIONED = &quot;!UNPROVISIONED:&quot;;
+
+  /** 员工信息同步新建的人员：停用、没有可用密码；管理员设置密码并启用后才能登录。 */
+  public static Account unprovisioned(String username) {
+<span class="fc" id="L77">    Account account = new Account();</span>
+<span class="fc" id="L78">    account.username = username;</span>
+<span class="fc" id="L79">    account.enabled = false;</span>
+<span class="fc" id="L80">    account.passwordHash = UNPROVISIONED + java.util.UUID.randomUUID();</span>
+<span class="fc" id="L81">    account.kind = EMPLOYEE;</span>
+<span class="fc" id="L82">    return account;</span>
+  }
+
+  /**
+   * 员工信息同步：只更新来源字段，保留凭证、启用状态、期限与授权；管理员账号不参与同步。
+   *
+   * @return 是否有字段发生变化
+   */
+  public boolean syncSource(
+      String name, Long department, String company, String source, String job, String telephone) {
+<span class="fc bfc" id="L92" title="All 2 branches covered.">    if (administrator)</span>
+<span class="fc" id="L93">      throw new com.cdwy.permission.service.port.error.ConflictException(</span>
+          &quot;SYNC_ADMINISTRATOR_CONFLICT&quot;, &quot;用户名 &quot; + username + &quot; 是管理员账号，员工信息不能覆盖它&quot;);
+<span class="fc" id="L95">    boolean changed =</span>
+<span class="fc bfc" id="L96" title="All 2 branches covered.">        !java.util.Objects.equals(displayName, name)</span>
+<span class="fc bfc" id="L97" title="All 2 branches covered.">            || !java.util.Objects.equals(departmentId, department)</span>
+<span class="pc bpc" id="L98" title="1 of 2 branches missed.">            || !java.util.Objects.equals(companyName, company)</span>
+<span class="pc bpc" id="L99" title="1 of 2 branches missed.">            || !java.util.Objects.equals(sourceDepartment, source)</span>
+<span class="pc bpc" id="L100" title="1 of 2 branches missed.">            || !java.util.Objects.equals(jobTitle, job)</span>
+<span class="pc bpc" id="L101" title="1 of 2 branches missed.">            || !java.util.Objects.equals(phone, telephone);</span>
+<span class="fc" id="L102">    displayName = name;</span>
+<span class="fc" id="L103">    departmentId = department;</span>
+<span class="fc" id="L104">    companyName = company;</span>
+<span class="fc" id="L105">    sourceDepartment = source;</span>
+<span class="fc" id="L106">    jobTitle = job;</span>
+<span class="fc" id="L107">    phone = telephone;</span>
+<span class="fc" id="L108">    return changed;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

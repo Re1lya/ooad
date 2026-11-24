@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DddResourceService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.service.ddd.application.resource</a> &gt; <span class="el_source">DddResourceService.java</span></div><h1>DddResourceService.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.service.ddd.application.resource;
+
+import com.cdwy.permission.service.auth.ConsoleCatalog;
+import com.cdwy.permission.service.ddd.domain.model.*;
+import com.cdwy.permission.service.ddd.domain.repository.*;
+import com.cdwy.permission.service.port.data.*;
+import com.cdwy.permission.service.port.error.*;
+import com.cdwy.permission.service.port.resource.ResourceUseCase;
+import java.util.*;
+import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+/** DddResourceService 应用服务：编排领域对象与仓储端口，禁止依赖 JPA。 */
+@Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+@ConditionalOnProperty(name = &quot;app.backend-strategy&quot;, havingValue = &quot;ddd&quot;)
+public class DddResourceService implements ResourceUseCase {
+  /** 返回实际装载模式。 */
+  @Override
+  public String strategy() {
+<span class="fc" id="L24">    return &quot;ddd&quot;;</span>
+  }
+
+  private final ResourceCatalog resources;
+  private final SystemCatalog systems;
+  private final AssignmentRepository assignments;
+  private final com.cdwy.permission.service.port.rbac.ResourcePathMatcher matcher;
+
+  /** 读取 API 资源。 */
+  private ProtectedResource require(Long id) {
+<span class="fc" id="L34">    return resources.find(id).orElseThrow(() -&gt; new ResourceNotFoundException(&quot;API_RESOURCE_NOT_FOUND&quot;, &quot;API 资源不存在&quot;));</span>
+  }
+
+  /** 资源结果。 */
+  private ResourceData.View view(ProtectedResource n) {
+<span class="fc" id="L39">    return new ResourceData.View(</span>
+<span class="fc" id="L40">        n.getId(),</span>
+<span class="fc" id="L41">        n.getSystemId(),</span>
+<span class="fc" id="L42">        n.getName(),</span>
+<span class="fc" id="L43">        n.getMethod(),</span>
+<span class="fc" id="L44">        n.getPath(),</span>
+<span class="fc" id="L45">        n.getActive(),</span>
+<span class="fc" id="L46">        n.getCode(),</span>
+<span class="fc" id="L47">        n.getOperationId());</span>
+  }
+
+  /** 全部注册资源。 */
+  public List&lt;ResourceData.View&gt; list() {
+<span class="fc" id="L52">    return resources.all().stream().map(this::view).toList();</span>
+  }
+
+  /** 检查资源唯一性和路径规则。 */
+  @Transactional
+  public ResourceData.View create(ResourceData.Create input) {
+<span class="fc" id="L58">    ProtectedResource n = new ProtectedResource();</span>
+<span class="fc" id="L59">    n.setSystemId(input.systemId());</span>
+<span class="fc" id="L60">    n.setName(input.name());</span>
+<span class="fc" id="L61">    n.setMethod(input.method());</span>
+<span class="fc" id="L62">    n.setPath(input.path());</span>
+<span class="fc" id="L63">    n.setCode(input.code());</span>
+<span class="fc" id="L64">    n.setOperationId(input.operationId());</span>
+<span class="fc" id="L65">    n.assertPath();</span>
+<span class="fc" id="L66">    n.assertCode();</span>
+<span class="fc" id="L67">    n.assertOperationId();</span>
+<span class="fc" id="L68">    matcher.validate(input.path());</span>
+<span class="fc" id="L69">    if (resources.all().stream()</span>
+<span class="fc bfc" id="L70" title="All 2 branches covered.">        .anyMatch(</span>
+            v -&gt;
+<span class="fc bfc" id="L72" title="All 2 branches covered.">                v.getSystemId().equals(input.systemId())</span>
+<span class="fc bfc" id="L73" title="All 2 branches covered.">                    &amp;&amp; v.getMethod().equals(input.method())</span>
+<span class="fc bfc" id="L74" title="All 2 branches covered.">                    &amp;&amp; v.getPath().equals(input.path()))) throw new ConflictException(&quot;API_RESOURCE_EXISTS&quot;, &quot;API 资源已存在&quot;);</span>
+<span class="fc bfc" id="L75" title="All 2 branches covered.">    if (input.operationId() != null</span>
+<span class="fc" id="L76">        &amp;&amp; resources.all().stream()</span>
+<span class="fc bfc" id="L77" title="All 2 branches covered.">            .anyMatch(</span>
+                v -&gt;
+<span class="fc bfc" id="L79" title="All 2 branches covered.">                    v.getSystemId().equals(input.systemId())</span>
+<span class="fc bfc" id="L80" title="All 2 branches covered.">                        &amp;&amp; input.operationId().equals(v.getOperationId())))</span>
+<span class="fc" id="L81">      throw new ConflictException(&quot;API_OPERATION_EXISTS&quot;, &quot;该应用已登记相同 operationId 的接口&quot;);</span>
+<span class="fc" id="L82">    systems.find(input.systemId()).orElseThrow(() -&gt; new ResourceNotFoundException(&quot;SYSTEM_NOT_FOUND&quot;, &quot;应用不存在&quot;));</span>
+<span class="fc" id="L83">    return view(resources.save(n));</span>
+  }
+
+  /** 修改显示名称。 */
+  @Transactional
+  public ResourceData.View update(Long id, ResourceData.Update input) {
+<span class="nc" id="L89">    ProtectedResource n = require(id);</span>
+<span class="nc" id="L90">    n.rename(input.name());</span>
+<span class="nc" id="L91">    return view(resources.save(n));</span>
+  }
+
+  /** 停用仍保留资源标识防止宽泛规则绕过。 */
+  @Transactional
+  public ResourceData.View status(Long id, boolean active) {
+<span class="fc" id="L97">    ProtectedResource n = require(id);</span>
+<span class="fc" id="L98">    n.changeStatus(active, builtIn(n));</span>
+<span class="fc" id="L99">    return view(resources.save(n));</span>
+  }
+
+  /** 有绑定时拒绝删除。 */
+  @Transactional
+  public void delete(Long id) {
+<span class="fc" id="L105">    ProtectedResource n = require(id);</span>
+<span class="pc" id="L106">    n.assertDeletable(builtIn(n), assignments.bindings().stream().anyMatch(e -&gt; e.right().equals(id)));</span>
+<span class="nc" id="L107">    resources.delete(id);</span>
+<span class="nc" id="L108">  }</span>
+
+  /** 控制台的内置管理接口：属于内置应用 rbac，且方法与路径在内置目录中。 */
+  private boolean builtIn(ProtectedResource n) {
+<span class="fc" id="L112">    String systemCode = systems.find(n.getSystemId()).map(ManagedSystem::getCode).orElse(null);</span>
+<span class="fc" id="L113">    return ConsoleCatalog.isApi(systemCode, n.getMethod(), n.getPath());</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

@@ -183,7 +183,7 @@ mvn -B clean verify
 | 前端 | 两个前端的 TypeScript 检查与 Vite 生产构建通过；权限台账 8 个浏览器测试、原管理控制台 5 组浏览器测试，两种设计路线各自通过（2026-11-22） |
 | 跨系统联调 | 与老师课程系统联调（2026-11-22 按老师的部署通知更新：后端用老师发布的镜像，前端按 master `990cea2` 编译，一万名员工都是测试账号），两种模式与公网部署各 45/45 项通过，13 张走查截图 |
 
-需求与测试的对应见[需求—测试追踪](docs/second-review/04-test-traceability.adoc)。完整 JaCoCo 报告在构建后生成到 `target/site/jacoco/index.html`。
+需求与测试的对应见[需求—测试追踪](docs/second-review/04-test-traceability.adoc)。完整 JaCoCo 报告在构建后生成到 `target/site/jacoco/index.html`；2026-11-24 这次运行的报告存档在 [docs/second-review/evidence/jacoco/index.html](docs/second-review/evidence/jacoco/index.html)（下载仓库后用浏览器打开）。
 
 ## 技术栈
 

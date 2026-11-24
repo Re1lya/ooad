@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>LoginVO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.vo.identity</a> &gt; <span class="el_source">LoginVO.java</span></div><h1>LoginVO.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.vo.identity;
+
+/**
+ * 接入应用的登录结果；不含用户资料，角色与权限由 /auth/me 查询。
+ *
+ * @param accessToken 访问令牌，aud 为登录时的 systems
+ * @param tokenType 令牌类型，固定为 Bearer
+ * @param expiresIn 有效期秒数
+ */
+<span class="fc" id="L10">public record LoginVO(String accessToken, String tokenType, long expiresIn) {}</span>
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

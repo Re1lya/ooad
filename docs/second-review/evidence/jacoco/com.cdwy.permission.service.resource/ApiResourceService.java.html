@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ApiResourceService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.service.resource</a> &gt; <span class="el_source">ApiResourceService.java</span></div><h1>ApiResourceService.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.service.resource;
+
+import com.cdwy.permission.entity.resource.ApiResource;
+import com.cdwy.permission.repository.rbac.PermissionApiRepository;
+import com.cdwy.permission.repository.resource.ApiResourceRepository;
+import com.cdwy.permission.service.auth.ConsoleCatalog;
+import com.cdwy.permission.service.port.data.*;
+import com.cdwy.permission.service.port.error.*;
+import com.cdwy.permission.service.port.resource.ResourceUseCase;
+import com.cdwy.permission.service.system.SystemService;
+import java.util.List;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.util.pattern.PathPatternParser;
+
+/** 结构化事务脚本：按查询、业务校验、写入和结果转换组织处理步骤。 */
+@Service
+@RequiredArgsConstructor
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(
+    name = &quot;app.backend-strategy&quot;,
+    havingValue = &quot;structured&quot;,
+    matchIfMissing = true)
+@Transactional(readOnly = true)
+public class ApiResourceService implements ResourceUseCase {
+  /** 返回事务脚本实现标识。 */
+  @Override
+  public String strategy() {
+<span class="fc" id="L29">    return &quot;structured&quot;;</span>
+  }
+
+  private final ApiResourceRepository resources;
+  private final PermissionApiRepository bindings;
+  private final SystemService systems;
+
+  /** 按标识读取 API 资源实体，前端权限的绑定用例也复用；不存在时抛 {@code API_RESOURCE_NOT_FOUND}（404）。 */
+  public ApiResource require(Long id) {
+<span class="fc" id="L38">    return resources.findById(id).orElseThrow(() -&gt; new ResourceNotFoundException(&quot;API_RESOURCE_NOT_FOUND&quot;, &quot;API 资源不存在&quot;));</span>
+  }
+
+  /** 实体转换为与持久化无关的结果；列出菜单或按钮绑定的接口时也复用。 */
+  public static ResourceData.View view(ApiResource r) {
+<span class="fc" id="L43">    return new ResourceData.View(</span>
+<span class="fc" id="L44">        r.getId(),</span>
+<span class="fc" id="L45">        r.getSystem().getId(),</span>
+<span class="fc" id="L46">        r.getName(),</span>
+<span class="fc" id="L47">        r.getMethod(),</span>
+<span class="fc" id="L48">        r.getPath(),</span>
+<span class="fc" id="L49">        r.getActive(),</span>
+<span class="fc" id="L50">        r.getCode(),</span>
+<span class="fc" id="L51">        r.getOperationId());</span>
+  }
+
+  /** 按标识升序列出所有应用的 API 资源，含已停用的。 */
+  public List&lt;ResourceData.View&gt; list() {
+<span class="fc" id="L56">    return resources.findAll(org.springframework.data.domain.Sort.by(&quot;id&quot;)).stream()</span>
+<span class="fc" id="L57">        .map(ApiResourceService::view)</span>
+<span class="fc" id="L58">        .toList();</span>
+  }
+
+  /**
+   * 登记 API 资源，新资源默认启用。路径须能按 Spring {@code PathPattern} 解析，否则 HTTP 400；同一应用内“方法 + 路径”已登记抛
+   * {@code API_RESOURCE_EXISTS}，operationId 已登记抛 {@code API_OPERATION_EXISTS}（均 409）；应用不存在抛
+   * {@code SYSTEM_NOT_FOUND}（404）。
+   */
+  @Transactional
+  public ResourceData.View create(ResourceData.Create input) {
+<span class="fc" id="L68">    PathPatternParser.defaultInstance.parse(input.path());</span>
+<span class="fc bfc" id="L69" title="All 2 branches covered.">    if (resources.existsBySystem_IdAndMethodAndPath(input.systemId(), input.method(), input.path()))</span>
+<span class="fc" id="L70">      throw new ConflictException(&quot;API_RESOURCE_EXISTS&quot;, &quot;API 资源已存在&quot;);</span>
+<span class="fc bfc" id="L71" title="All 2 branches covered.">    if (input.operationId() != null</span>
+<span class="fc bfc" id="L72" title="All 2 branches covered.">        &amp;&amp; resources.existsBySystem_IdAndOperationId(input.systemId(), input.operationId()))</span>
+<span class="fc" id="L73">      throw new ConflictException(&quot;API_OPERATION_EXISTS&quot;, &quot;该应用已登记相同 operationId 的接口&quot;);</span>
+<span class="fc" id="L74">    ApiResource r = new ApiResource();</span>
+<span class="fc" id="L75">    r.setSystem(systems.require(input.systemId()));</span>
+<span class="fc" id="L76">    r.setMethod(input.method());</span>
+<span class="fc" id="L77">    r.setPath(input.path());</span>
+<span class="fc" id="L78">    r.setName(input.name());</span>
+<span class="fc" id="L79">    r.setCode(input.code());</span>
+<span class="fc" id="L80">    r.setOperationId(input.operationId());</span>
+<span class="fc" id="L81">    return view(resources.save(r));</span>
+  }
+
+  /** 只改显示名称：方法、路径、权限码和 operationId 登记后不可改；修改由 JPA 脏检查在事务提交时写回。 */
+  @Transactional
+  public ResourceData.View update(Long id, ResourceData.Update input) {
+<span class="nc" id="L87">    ApiResource value = require(id);</span>
+<span class="nc" id="L88">    value.setName(input.name());</span>
+<span class="nc" id="L89">    return view(value);</span>
+  }
+
+  /**
+   * 启停资源，绑定关系保留。停用后接口鉴权仍优先匹配到它并直接拒绝，不会退回到更宽泛的资源；接入应用查询时它既不提供权限码，也判为不可调用。
+   */
+  @Transactional
+  public ResourceData.View status(Long id, boolean active) {
+<span class="fc" id="L97">    ApiResource value = require(id);</span>
+<span class="fc bfc" id="L98" title="All 2 branches covered.">    if (!active) protectBuiltIn(value);</span>
+<span class="fc" id="L99">    value.setActive(active);</span>
+<span class="fc" id="L100">    return view(value);</span>
+  }
+
+  /** 删除资源；仍绑定任何菜单或按钮时抛 {@code API_RESOURCE_IN_USE}（409），须先解绑。 */
+  @Transactional
+  public void delete(Long id) {
+<span class="fc" id="L106">    ApiResource value = require(id);</span>
+<span class="fc" id="L107">    protectBuiltIn(value);</span>
+<span class="pc bpc" id="L108" title="1 of 2 branches missed.">    if (bindings.existsByResource_Id(id)) throw new ConflictException(&quot;API_RESOURCE_IN_USE&quot;, &quot;API 资源仍绑定前端权限&quot;);</span>
+<span class="nc" id="L109">    resources.delete(value);</span>
+<span class="nc" id="L110">  }</span>
+
+  /** 控制台的内置管理接口：停用或删除后所有人（包括管理员）都调用不了，抛 {@code CONSOLE_BUILT_IN}（409）。 */
+  private static void protectBuiltIn(ApiResource value) {
+<span class="fc bfc" id="L114" title="All 2 branches covered.">    if (ConsoleCatalog.isApi(value.getSystem().getCode(), value.getMethod(), value.getPath()))</span>
+<span class="fc" id="L115">      throw new ConflictException(&quot;CONSOLE_BUILT_IN&quot;, &quot;权限管理系统的内置管理接口不能停用或删除&quot;);</span>
+<span class="fc" id="L116">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

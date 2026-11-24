@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>BusinessSystem.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.entity.system</a> &gt; <span class="el_source">BusinessSystem.java</span></div><h1>BusinessSystem.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.entity.system;
+
+import cn.edu.xmu.clonefactory.CopyFrom;
+import cn.edu.xmu.clonefactory.CopyTo;
+import com.cdwy.permission.service.ddd.domain.model.ManagedSystem;
+import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * 接入应用（表 {@code biz_system}），权限系统自身在启动时登记为 {@code rbac}；DDD 路线的持久化适配器按 {@code @CopyTo}/{@code
+ * @CopyFrom} 与 {@link ManagedSystem} 互相拷贝。
+ */
+@CopyTo(ManagedSystem.class)
+@CopyFrom(ManagedSystem.class)
+@Entity
+@Table(name = &quot;biz_system&quot;)
+@Getter
+@Setter
+<span class="fc" id="L21">public class BusinessSystem {</span>
+  /** 主键由数据库生成：不提供 setter，从领域对象拷回实体时也不覆盖。 */
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  @Setter(AccessLevel.NONE)
+  @CopyFrom.Exclude(ManagedSystem.class)
+  private Long id;
+
+  /** 应用编码，全局唯一；也是令牌 {@code aud} 的取值和 {@code /api/apps/{应用编码}} 路径中的应用段。 */
+  @Column(nullable = false, unique = true, length = 64)
+  private String code;
+
+  @Column(nullable = false, length = 128)
+  private String name;
+
+  /** 应用访问地址，只做登记展示，不参与鉴权。 */
+  @Column(length = 255)
+  private String baseUrl;
+
+  /** 启用状态：停用后该应用的 API 资源不再参与鉴权匹配，菜单和按钮也不计入有效权限。 */
+<span class="fc" id="L41">  @Column(nullable = false)</span>
+  private boolean enabled = true;
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

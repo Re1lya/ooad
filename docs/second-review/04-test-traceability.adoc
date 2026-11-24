@@ -19,7 +19,7 @@ mvn -B clean verify          # 同时生成 target/site/jacoco/index.html
 python3 scripts/build-test-traceability.py   # 按测试源码重新生成本文第 3 节的三张表
 ----
 
-2026-11-24 结果（本机 MySQL 8.4）：315 个测试，失败 0、错误 0、跳过 0。JaCoCo：指令 97.8%、分支 89.1%、行 98.2%、方法 97.2%（含 CloneFactory 生成代码）。
+2026-11-24 结果（本机 MySQL 8.4）：315 个测试，失败 0、错误 0、跳过 0。JaCoCo：指令 97.8%、分支 89.1%、行 98.2%、方法 97.2%（含 CloneFactory 生成代码）。这次运行的完整报告存档在 link:evidence/jacoco/index.html[evidence/jacoco/index.html]，可逐个包、类查看每一行的覆盖情况。
 
 == 测试约定
 

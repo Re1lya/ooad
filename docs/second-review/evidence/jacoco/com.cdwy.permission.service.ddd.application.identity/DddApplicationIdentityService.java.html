@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DddApplicationIdentityService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.service.ddd.application.identity</a> &gt; <span class="el_source">DddApplicationIdentityService.java</span></div><h1>DddApplicationIdentityService.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.service.ddd.application.identity;
+
+import com.cdwy.permission.service.ddd.domain.model.*;
+import com.cdwy.permission.service.ddd.domain.repository.*;
+import com.cdwy.permission.service.ddd.domain.repository.AssignmentRepository.Link;
+import com.cdwy.permission.service.port.auth.CredentialGateway;
+import com.cdwy.permission.service.port.data.IdentityData;
+import com.cdwy.permission.service.port.data.AuditData;
+import com.cdwy.permission.service.port.data.PermissionData;
+import com.cdwy.permission.service.port.data.UserData;
+import com.cdwy.permission.service.port.error.ResourceNotFoundException;
+import com.cdwy.permission.service.port.error.ForbiddenException;
+import com.cdwy.permission.service.port.identity.ApplicationIdentityUseCase;
+import java.util.*;
+import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+/**
+ * DDD 应用服务：只负责加载聚合与编排，规则由领域对象承担。
+ *
+ * &lt;ul&gt;
+ *   &lt;li&gt;{@link AuthorizationSnapshot}：展开角色继承、计算有效角色与应用内有效权限（信息专家）；
+ *   &lt;li&gt;{@link ManagedSystem}：自身是否启用；{@link Account}：账号是否可用；
+ *   &lt;li&gt;{@link ProtectedResource}：资源自己判断能否提供后端权限码、能否被调用；
+ *   &lt;li&gt;目录查询经 {@link DepartmentDirectory}、{@link AccountRepository} 端口在数据库分页。
+ * &lt;/ul&gt;
+ */
+@Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+@ConditionalOnProperty(name = &quot;app.backend-strategy&quot;, havingValue = &quot;ddd&quot;)
+public class DddApplicationIdentityService implements ApplicationIdentityUseCase {
+<span class="fc" id="L37">  private static final Logger log = LoggerFactory.getLogger(DddApplicationIdentityService.class);</span>
+
+  private final AccountRepository accounts;
+  private final RoleCatalog roles;
+  private final PermissionCatalog permissions;
+  private final SystemCatalog systems;
+  private final ResourceCatalog resources;
+  private final AssignmentRepository assignments;
+  private final DepartmentDirectory departments;
+  private final CredentialGateway credentials;
+  private final com.cdwy.permission.service.port.audit.AuditTrailUseCase audit;
+
+  /** 返回实际装载模式。 */
+  @Override
+  public String strategy() {
+<span class="fc" id="L52">    return &quot;ddd&quot;;</span>
+  }
+
+  /** 加载快照后交给领域对象计算；应用停用或账号失效时不返回任何角色与权限。 */
+  @Override
+  public IdentityData.Current current(Long userId, String systemCode) {
+<span class="fc" id="L58">    ManagedSystem app = system(systemCode);</span>
+<span class="fc" id="L59">    Account account = account(userId);</span>
+<span class="fc bfc" id="L60" title="All 2 branches covered.">    if (!usable(app, account))</span>
+<span class="fc" id="L61">      return new IdentityData.Current(</span>
+<span class="fc" id="L62">          account.getUsername(),</span>
+<span class="fc" id="L63">          List.of(),</span>
+<span class="fc" id="L64">          List.of(),</span>
+<span class="fc" id="L65">          account.getDisplayName(),</span>
+<span class="fc" id="L66">          account.getUsername());</span>
+
+<span class="fc" id="L68">    AuthorizationSnapshot snapshot = snapshot();</span>
+<span class="fc" id="L69">    List&lt;Long&gt; assigned = assignments.rolesOf(userId);</span>
+<span class="fc" id="L70">    List&lt;String&gt; roleCodes =</span>
+<span class="fc" id="L71">        snapshot.effectiveRoles(assigned).stream().map(AccessRole::getCode).toList();</span>
+<span class="fc" id="L72">    List&lt;PermissionData.View&gt; granted = snapshot.grantedIn(app.getId(), assigned);</span>
+<span class="fc" id="L73">    Set&lt;Long&gt; grantedIds = new HashSet&lt;&gt;();</span>
+<span class="fc" id="L74">    Set&lt;String&gt; codes = new LinkedHashSet&lt;&gt;();</span>
+<span class="fc bfc" id="L75" title="All 2 branches covered.">    for (PermissionData.View view : granted) {</span>
+<span class="fc" id="L76">      grantedIds.add(view.id());</span>
+<span class="fc" id="L77">      codes.add(view.code());</span>
+<span class="fc" id="L78">    }</span>
+<span class="fc" id="L79">    List&lt;Link&gt; bindings = assignments.bindings();</span>
+<span class="fc bfc" id="L80" title="All 2 branches covered.">    for (ProtectedResource resource : resources.all())</span>
+<span class="fc bfc" id="L81" title="All 2 branches covered.">      if (resource.getSystemId().equals(app.getId())</span>
+<span class="fc" id="L82">          &amp;&amp; bindings.stream()</span>
+<span class="fc bfc" id="L83" title="All 6 branches covered.">              .anyMatch(b -&gt; b.right().equals(resource.getId()) &amp;&amp; grantedIds.contains(b.left())))</span>
+<span class="fc" id="L84">        resource.authorityCode().ifPresent(codes::add);</span>
+<span class="fc" id="L85">    log.info(</span>
+        &quot;接入应用 {} 查询身份：用户 {} 角色 {} 个、权限码 {} 个&quot;,
+        systemCode,
+<span class="fc" id="L88">        account.getUsername(),</span>
+<span class="fc" id="L89">        roleCodes.size(),</span>
+<span class="fc" id="L90">        codes.size());</span>
+<span class="fc" id="L91">    return new IdentityData.Current(</span>
+<span class="fc" id="L92">        account.getUsername(),</span>
+        roleCodes,
+<span class="fc" id="L94">        List.copyOf(codes),</span>
+<span class="fc" id="L95">        account.getDisplayName(),</span>
+<span class="fc" id="L96">        account.getUsername());</span>
+  }
+
+  /** 按登录名查询人员，工号沿用登录名。 */
+  @Override
+  public IdentityData.User lookup(String systemCode, String userId) {
+<span class="fc" id="L102">    system(systemCode);</span>
+<span class="fc" id="L103">    Account account =</span>
+        accounts
+<span class="fc" id="L105">            .username(userId)</span>
+<span class="fc" id="L106">            .orElseThrow(</span>
+<span class="fc" id="L107">                () -&gt; new ResourceNotFoundException(&quot;IDENTITY_USER_NOT_FOUND&quot;, &quot;统一身份认证系统中没有找到该用户&quot;));</span>
+<span class="fc" id="L108">    return new IdentityData.User(</span>
+<span class="fc" id="L109">        account.getUsername(), account.getUsername(), account.getDisplayName());</span>
+  }
+
+  /** 由快照给出应用内有效前端权限，再看是否包含该权限码。 */
+  @Override
+  public boolean permitted(Long userId, String systemCode, String permission) {
+<span class="fc" id="L115">    ManagedSystem app = system(systemCode);</span>
+<span class="fc" id="L116">    Account account = account(userId);</span>
+<span class="fc bfc" id="L117" title="All 2 branches covered.">    return usable(app, account)</span>
+<span class="fc" id="L118">        &amp;&amp; snapshot().grantedIn(app.getId(), assignments.rolesOf(userId)).stream()</span>
+<span class="fc bfc" id="L119" title="All 2 branches covered.">            .anyMatch(view -&gt; view.code().equals(permission));</span>
+  }
+
+  /** 资源由 operationId 定位，是否可调用交给 {@link ProtectedResource#callableBy}。 */
+  @Override
+  public IdentityData.ApiCheck apiPermission(Long userId, String systemCode, String operationId) {
+<span class="fc" id="L125">    ManagedSystem app = system(systemCode);</span>
+<span class="fc" id="L126">    ProtectedResource resource =</span>
+<span class="fc" id="L127">        resources.all().stream()</span>
+<span class="fc" id="L128">            .filter(r -&gt; r.getSystemId().equals(app.getId()))</span>
+<span class="fc" id="L129">            .filter(r -&gt; operationId.equals(r.getOperationId()))</span>
+<span class="fc" id="L130">            .findFirst()</span>
+<span class="fc" id="L131">            .orElseThrow(</span>
+<span class="fc" id="L132">                () -&gt; new ResourceNotFoundException(&quot;API_OPERATION_NOT_FOUND&quot;, &quot;没有找到对应的 API 操作&quot;));</span>
+<span class="fc" id="L133">    Account account = account(userId);</span>
+<span class="fc bfc" id="L134" title="All 2 branches covered.">    if (!usable(app, account)) return new IdentityData.ApiCheck(operationId, false);</span>
+<span class="fc" id="L135">    Set&lt;Long&gt; granted = new HashSet&lt;&gt;();</span>
+<span class="fc" id="L136">    snapshot()</span>
+<span class="fc" id="L137">        .grantedIn(app.getId(), assignments.rolesOf(userId))</span>
+<span class="fc" id="L138">        .forEach(view -&gt; granted.add(view.id()));</span>
+<span class="fc" id="L139">    List&lt;Long&gt; bound =</span>
+<span class="fc" id="L140">        assignments.bindings().stream()</span>
+<span class="fc" id="L141">            .filter(b -&gt; b.right().equals(resource.getId()))</span>
+<span class="fc" id="L142">            .map(Link::left)</span>
+<span class="fc" id="L143">            .toList();</span>
+<span class="fc" id="L144">    return new IdentityData.ApiCheck(operationId, resource.callableBy(granted, bound));</span>
+  }
+
+  /** 一层部门经端口分页读取，再批量判断是否有子部门。 */
+  @Override
+  public IdentityData.Page&lt;IdentityData.Department&gt; departments(
+      String systemCode, Long parentId, IdentityData.Query query) {
+<span class="fc" id="L151">    system(systemCode);</span>
+<span class="fc bfc" id="L152" title="All 4 branches covered.">    if (parentId != null &amp;&amp; departments.find(parentId).isEmpty()) throw missingDepartment();</span>
+<span class="fc" id="L153">    UserData.Page&lt;DepartmentNode&gt; rows =</span>
+<span class="fc" id="L154">        departments.level(parentId, query.keyword(), query.page(), query.pageSize());</span>
+<span class="fc" id="L155">    Set&lt;Long&gt; parents =</span>
+<span class="fc" id="L156">        departments.withChildren(rows.items().stream().map(DepartmentNode::getId).toList());</span>
+<span class="fc" id="L157">    return new IdentityData.Page&lt;&gt;(</span>
+<span class="fc" id="L158">        query.page(),</span>
+<span class="fc" id="L159">        query.pageSize(),</span>
+<span class="fc" id="L160">        rows.total(),</span>
+<span class="fc" id="L161">        rows.items().stream()</span>
+<span class="fc" id="L162">            .map(</span>
+                n -&gt;
+<span class="fc" id="L164">                    new IdentityData.Department(</span>
+<span class="fc" id="L165">                        n.getId(),</span>
+<span class="fc" id="L166">                        n.getCode(),</span>
+<span class="fc" id="L167">                        n.getName(),</span>
+<span class="fc" id="L168">                        n.getParentId(),</span>
+<span class="fc" id="L169">                        parents.contains(n.getId())))</span>
+<span class="fc" id="L170">            .toList());</span>
+  }
+
+  /** 部门存在时经端口分页读取成员。 */
+  @Override
+  public IdentityData.Page&lt;IdentityData.DepartmentUser&gt; departmentUsers(
+      String systemCode, Long departmentId, IdentityData.Query query) {
+<span class="fc" id="L177">    system(systemCode);</span>
+<span class="fc" id="L178">    DepartmentNode department = departments.find(departmentId).orElseThrow(this::missingDepartment);</span>
+<span class="fc" id="L179">    UserData.Page&lt;Account&gt; rows =</span>
+<span class="fc" id="L180">        accounts.members(departmentId, query.keyword(), query.page(), query.pageSize());</span>
+<span class="fc" id="L181">    return new IdentityData.Page&lt;&gt;(</span>
+<span class="fc" id="L182">        query.page(),</span>
+<span class="fc" id="L183">        query.pageSize(),</span>
+<span class="fc" id="L184">        rows.total(),</span>
+<span class="fc" id="L185">        rows.items().stream()</span>
+<span class="fc" id="L186">            .map(</span>
+                a -&gt;
+<span class="fc" id="L188">                    new IdentityData.DepartmentUser(</span>
+<span class="fc" id="L189">                        a.getUsername(),</span>
+<span class="fc" id="L190">                        a.getUsername(),</span>
+<span class="fc" id="L191">                        a.getDisplayName(),</span>
+<span class="fc" id="L192">                        department.getId(),</span>
+<span class="fc" id="L193">                        department.getName()))</span>
+<span class="fc" id="L194">            .toList());</span>
+  }
+
+  /** 角色、权限、应用与关联的当前快照；角色权限不写进 JWT。 */
+  private AuthorizationSnapshot snapshot() {
+<span class="fc" id="L199">    return new AuthorizationSnapshot(</span>
+<span class="fc" id="L200">        roles.all(),</span>
+<span class="fc" id="L201">        permissions.all(),</span>
+<span class="fc" id="L202">        systems.all(),</span>
+<span class="fc" id="L203">        assignments.hierarchy(),</span>
+<span class="fc" id="L204">        assignments.rolePermissions());</span>
+  }
+
+  /** 应用启用且账号可用（启用、未过期）时，用户在该应用内才有任何角色与权限。 */
+  private boolean usable(ManagedSystem app, Account account) {
+<span class="pc bpc" id="L209" title="1 of 4 branches missed.">    return app.getEnabled() &amp;&amp; account.usable(credentials.now());</span>
+  }
+
+  /** 应用存在 → 管理员直接放行，否则须在本应用内至少拥有一项有效权限 → 查询。 */
+  @Override
+  public AuditData.Page auditLogs(
+      Long userId, boolean administrator, String systemCode, AuditData.Query query) {
+<span class="fc" id="L216">    system(systemCode);</span>
+<span class="pc bpc" id="L217" title="1 of 4 branches missed.">    if (!administrator &amp;&amp; current(userId, systemCode).permissions().isEmpty())</span>
+<span class="fc" id="L218">      throw new ForbiddenException(&quot;当前用户在该应用内没有任何有效权限，不能查看审计日志&quot;);</span>
+<span class="fc" id="L219">    return audit.query(systemCode, query);</span>
+  }
+
+  /** 应用存在 → 账号存在 → 写入（操作人快照由审计服务记录）。 */
+  @Override
+  @Transactional
+  public AuditData.Entry writeAuditLog(Long userId, String systemCode, AuditData.Write write) {
+<span class="fc" id="L226">    system(systemCode);</span>
+<span class="fc" id="L227">    account(userId);</span>
+<span class="fc" id="L228">    return audit.write(systemCode, userId, write);</span>
+  }
+
+  private Account account(Long id) {
+<span class="pc" id="L232">    return accounts.find(id).orElseThrow(() -&gt; new ResourceNotFoundException(&quot;USER_NOT_FOUND&quot;, &quot;用户不存在&quot;));</span>
+  }
+
+  private ManagedSystem system(String code) {
+<span class="fc" id="L236">    return systems.all().stream()</span>
+<span class="fc" id="L237">        .filter(app -&gt; app.getCode().equals(code))</span>
+<span class="fc" id="L238">        .findFirst()</span>
+<span class="pc" id="L239">        .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;SYSTEM_NOT_FOUND&quot;, &quot;接入应用不存在&quot;));</span>
+  }
+
+  private ResourceNotFoundException missingDepartment() {
+<span class="fc" id="L243">    return new ResourceNotFoundException(&quot;IDENTITY_DEPARTMENT_NOT_FOUND&quot;, &quot;部门不存在&quot;);</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PermissionService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.service.permission</a> &gt; <span class="el_source">PermissionService.java</span></div><h1>PermissionService.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.service.permission;
+
+import com.cdwy.permission.entity.permission.*;
+import com.cdwy.permission.entity.rbac.PermissionApi;
+import com.cdwy.permission.repository.permission.PermissionRepository;
+import com.cdwy.permission.repository.rbac.*;
+import com.cdwy.permission.service.auth.ConsoleCatalog;
+import com.cdwy.permission.service.port.data.*;
+import com.cdwy.permission.service.port.data.PermissionType;
+import com.cdwy.permission.service.port.error.*;
+import com.cdwy.permission.service.port.permission.PermissionUseCase;
+import com.cdwy.permission.service.resource.ApiResourceService;
+import com.cdwy.permission.service.system.SystemService;
+import java.util.*;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+/** 结构化事务脚本：按查询、业务校验、写入和结果转换组织处理步骤。 */
+@Service
+@RequiredArgsConstructor
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(
+    name = &quot;app.backend-strategy&quot;,
+    havingValue = &quot;structured&quot;,
+    matchIfMissing = true)
+@Transactional(readOnly = true)
+public class PermissionService implements PermissionUseCase {
+  /** 返回事务脚本实现标识。 */
+  @Override
+  public String strategy() {
+<span class="fc" id="L31">    return &quot;structured&quot;;</span>
+  }
+
+  private final PermissionRepository permissions;
+  private final RolePermissionRepository grants;
+  private final PermissionApiRepository bindings;
+  private final SystemService systems;
+  private final ApiResourceService resources;
+
+  /** 按标识读取前端权限（菜单或按钮），不存在抛 {@code PERMISSION_NOT_FOUND}；授权服务也复用此方法。 */
+  public Permission require(Long id) {
+<span class="fc" id="L42">    return permissions.findById(id).orElseThrow(() -&gt; new ResourceNotFoundException(&quot;PERMISSION_NOT_FOUND&quot;, &quot;前端权限不存在&quot;));</span>
+  }
+
+  /** 实体转为用例结果：类型取枚举名，根节点的 {@code parentId} 为 null；授权服务输出权限时也用它。 */
+  public static PermissionData.View view(Permission p) {
+<span class="fc" id="L47">    return new PermissionData.View(</span>
+<span class="fc" id="L48">        p.getId(),</span>
+<span class="fc" id="L49">        p.getSystem().getId(),</span>
+<span class="fc" id="L50">        p.getCode(),</span>
+<span class="fc" id="L51">        p.getName(),</span>
+<span class="fc" id="L52">        p.getType().name(),</span>
+<span class="fc" id="L53">        p.getMenuPath(),</span>
+<span class="fc bfc" id="L54" title="All 2 branches covered.">        p.getParent() == null ? null : p.getParent().getId(),</span>
+<span class="fc" id="L55">        p.getActive());</span>
+  }
+
+  /** 按标识顺序列出菜单与按钮，含已失效节点；{@code systemId} 为空时返回全部应用，未知应用得到空列表。 */
+  public List&lt;PermissionData.View&gt; list(Long systemId) {
+<span class="pc bpc" id="L60" title="1 of 2 branches missed.">    return (systemId == null</span>
+<span class="fc" id="L61">            ? permissions.findAll(org.springframework.data.domain.Sort.by(&quot;id&quot;))</span>
+<span class="nc" id="L62">            : permissions.findAllBySystem_IdOrderById(systemId))</span>
+<span class="fc" id="L63">        .stream().map(PermissionService::view).toList();</span>
+  }
+
+  /**
+   * 新建与修改共用的结构校验，依次为：上级须存在（{@code PERMISSION_NOT_FOUND}）；按钮必须有上级
+   * （{@code BUTTON_PARENT_REQUIRED}）；上级须是同一应用的菜单（{@code PERMISSION_PARENT_INVALID}）；
+   * 沿上级链向上不能回到自身，以自身为上级也算成环（{@code PERMISSION_CYCLE}）；已有下级的菜单不能改为按钮
+   * （冲突 {@code PERMISSION_HAS_CHILDREN}）；按钮不能填菜单地址（{@code BUTTON_PATH_NOT_ALLOWED}）。
+   * 全部通过后才写入名称、类型、地址和上级，空白地址存为 null。
+   */
+  private void apply(Permission p, String name, PermissionType type, String path, Long parentId) {
+<span class="fc bfc" id="L74" title="All 2 branches covered.">    Permission parent = parentId == null ? null : require(parentId);</span>
+<span class="fc bfc" id="L75" title="All 4 branches covered.">    if (type == PermissionType.BUTTON &amp;&amp; parent == null)</span>
+<span class="fc" id="L76">      throw new InvalidDataException(&quot;BUTTON_PARENT_REQUIRED&quot;, &quot;按钮必须隶属菜单&quot;);</span>
+<span class="fc bfc" id="L77" title="All 2 branches covered.">    if (parent != null</span>
+<span class="fc bfc" id="L78" title="All 2 branches covered.">        &amp;&amp; (parent.getType() != PermissionType.MENU</span>
+<span class="fc bfc" id="L79" title="All 2 branches covered.">            || !parent.getSystem().getId().equals(p.getSystem().getId())))</span>
+<span class="fc" id="L80">      throw new InvalidDataException(&quot;PERMISSION_PARENT_INVALID&quot;, &quot;父节点必须是同一应用的菜单&quot;);</span>
+<span class="fc bfc" id="L81" title="All 2 branches covered.">    for (Permission next = parent; next != null; next = next.getParent())</span>
+<span class="fc bfc" id="L82" title="All 2 branches covered.">      if (Objects.equals(next.getId(), p.getId())) throw new InvalidDataException(&quot;PERMISSION_CYCLE&quot;, &quot;权限树不能形成循环&quot;);</span>
+<span class="fc bfc" id="L83" title="All 2 branches covered.">    if (type == PermissionType.BUTTON</span>
+<span class="fc bfc" id="L84" title="All 2 branches covered.">        &amp;&amp; p.getId() != null</span>
+<span class="fc bfc" id="L85" title="All 2 branches covered.">        &amp;&amp; permissions.existsByParent_Id(p.getId())) throw new ConflictException(&quot;PERMISSION_HAS_CHILDREN&quot;, &quot;有子节点的菜单不能改为按钮&quot;);</span>
+<span class="pc bpc" id="L86" title="1 of 6 branches missed.">    if (type == PermissionType.BUTTON &amp;&amp; path != null &amp;&amp; !path.isBlank())</span>
+<span class="fc" id="L87">      throw new InvalidDataException(&quot;BUTTON_PATH_NOT_ALLOWED&quot;, &quot;按钮不设置菜单地址&quot;);</span>
+<span class="fc" id="L88">    p.setName(name);</span>
+<span class="fc" id="L89">    p.setType(type);</span>
+<span class="pc bpc" id="L90" title="1 of 4 branches missed.">    p.setMenuPath(path == null || path.isBlank() ? null : path);</span>
+<span class="fc" id="L91">    p.setParent(parent);</span>
+<span class="fc" id="L92">  }</span>
+
+  /**
+   * 新建菜单或按钮并返回含新标识的视图：编码全局唯一（冲突 {@code PERMISSION_CODE_EXISTS}），所属应用须存在
+   * （{@code SYSTEM_NOT_FOUND}），结构规则见 {@code apply}。新节点默认生效，授予角色后才进入有效权限；不写审计日志。
+   */
+  @Transactional
+  public PermissionData.View create(PermissionData.Input input) {
+<span class="fc bfc" id="L100" title="All 2 branches covered.">    if (permissions.existsByCode(input.code())) throw new ConflictException(&quot;PERMISSION_CODE_EXISTS&quot;, &quot;前端权限编码已存在&quot;);</span>
+<span class="fc" id="L101">    Permission p = new Permission();</span>
+<span class="fc" id="L102">    p.setCode(input.code());</span>
+<span class="fc" id="L103">    p.setSystem(systems.require(input.systemId()));</span>
+<span class="fc" id="L104">    apply(</span>
+<span class="fc" id="L105">        p, input.name(), PermissionType.valueOf(input.type()), input.menuPath(), input.parentId());</span>
+<span class="fc" id="L106">    return view(permissions.save(p));</span>
+  }
+
+  /**
+   * 修改名称、类型、菜单地址与上级，编码、所属应用和生效状态不变；不存在抛 {@code PERMISSION_NOT_FOUND}，
+   * 结构规则见 {@code apply}。已有角色授权和 API 绑定保留；改动在事务提交时由脏检查写回，不写审计日志。
+   */
+  @Transactional
+  public PermissionData.View update(Long id, PermissionData.Update input) {
+<span class="fc" id="L115">    Permission p = require(id);</span>
+<span class="fc" id="L116">    apply(</span>
+<span class="fc" id="L117">        p, input.name(), PermissionType.valueOf(input.type()), input.menuPath(), input.parentId());</span>
+<span class="fc" id="L118">    return view(p);</span>
+  }
+
+  /**
+   * 设置生效状态，重复设置无副作用；不存在抛 {@code PERMISSION_NOT_FOUND}。失效后该节点及全部下级都不再计入
+   * 任何人的有效权限，也不能再授予角色；已有授权、绑定和下级的状态字段都保留，重新生效即恢复。鉴权按请求实时计算，
+   * 已签发令牌的下一次请求即受影响，凭证版本不变；事务提交时写回，不写审计日志。
+   */
+  @Transactional
+  public PermissionData.View status(Long id, boolean active) {
+<span class="fc" id="L128">    Permission p = require(id);</span>
+<span class="fc bfc" id="L129" title="All 2 branches covered.">    if (!active) protectBuiltIn(p);</span>
+<span class="fc" id="L130">    p.setActive(active);</span>
+<span class="fc" id="L131">    return view(p);</span>
+  }
+
+  /**
+   * 删除菜单或按钮：不存在抛 {@code PERMISSION_NOT_FOUND}；仍有下级、角色授权或 API 绑定时抛
+   * {@code PERMISSION_IN_USE}（冲突），不做级联删除。不写审计日志。
+   */
+  @Transactional
+  public void delete(Long id) {
+<span class="fc" id="L140">    Permission p = require(id);</span>
+<span class="fc" id="L141">    protectBuiltIn(p);</span>
+<span class="fc bfc" id="L142" title="All 2 branches covered.">    if (permissions.existsByParent_Id(id)</span>
+<span class="fc bfc" id="L143" title="All 2 branches covered.">        || grants.existsByPermission_Id(id)</span>
+<span class="pc bpc" id="L144" title="1 of 2 branches missed.">        || bindings.existsByPermission_Id(id)) throw new ConflictException(&quot;PERMISSION_IN_USE&quot;, &quot;仍有子节点、角色授权或 API 绑定&quot;);</span>
+<span class="fc" id="L145">    permissions.delete(p);</span>
+<span class="fc" id="L146">  }</span>
+
+  /**
+   * 把 API 资源绑定到菜单或按钮：两端须存在（{@code PERMISSION_NOT_FOUND}、{@code API_RESOURCE_NOT_FOUND}）
+   * 且属于同一应用（{@code BINDING_SYSTEM_MISMATCH}），不检查两端是否生效；已绑定时幂等。
+   * 持有该权限的用户下一次请求即可调用该资源；不写审计日志。
+   */
+  @Transactional
+  public void bind(Long permissionId, Long resourceId) {
+<span class="fc" id="L155">    Permission permission = require(permissionId);</span>
+<span class="fc" id="L156">    com.cdwy.permission.entity.resource.ApiResource resource = resources.require(resourceId);</span>
+<span class="fc bfc" id="L157" title="All 2 branches covered.">    if (!permission.getSystem().getId().equals(resource.getSystem().getId()))</span>
+<span class="fc" id="L158">      throw new InvalidDataException(&quot;BINDING_SYSTEM_MISMATCH&quot;, &quot;前端权限与 API 资源必须属于同一应用&quot;);</span>
+<span class="fc bfc" id="L159" title="All 2 branches covered.">    if (!bindings.existsByPermission_IdAndResource_Id(permissionId, resourceId))</span>
+<span class="fc" id="L160">      bindings.save(new PermissionApi(permission, resource));</span>
+<span class="fc" id="L161">  }</span>
+
+  /**
+   * 解除绑定，保留 API 资源登记：两端须存在（{@code PERMISSION_NOT_FOUND}、{@code API_RESOURCE_NOT_FOUND}），
+   * 未绑定时幂等。已签发令牌的下一次请求即失去经此绑定得到的访问；不写审计日志。
+   */
+  @Transactional
+  public void unbind(Long permissionId, Long resourceId) {
+<span class="fc" id="L169">    require(permissionId);</span>
+<span class="fc" id="L170">    resources.require(resourceId);</span>
+<span class="fc" id="L171">    bindings.deleteByPermission_IdAndResource_Id(permissionId, resourceId);</span>
+<span class="fc" id="L172">  }</span>
+
+  /** 该权限绑定的 API 资源，含已停用的；权限不存在抛 {@code PERMISSION_NOT_FOUND}。 */
+  public List&lt;ResourceData.View&gt; resources(Long permissionId) {
+<span class="fc" id="L176">    require(permissionId);</span>
+<span class="fc" id="L177">    return bindings.findAllByPermission_Id(permissionId).stream()</span>
+<span class="fc" id="L178">        .map(b -&gt; ApiResourceService.view(b.getResource()))</span>
+<span class="fc" id="L179">        .toList();</span>
+  }
+
+  /** 自身及每一级上级都生效且所属应用启用才算可用；授予与有效权限计算都以此为准，祖先失效会屏蔽整棵子树。 */
+  public static boolean usable(Permission p) {
+<span class="fc bfc" id="L184" title="All 2 branches covered.">    for (Permission n = p; n != null; n = n.getParent())</span>
+<span class="fc bfc" id="L185" title="All 4 branches covered.">      if (!n.getActive() || !n.getSystem().getEnabled()) return false;</span>
+<span class="fc" id="L186">    return true;</span>
+  }
+
+  /**
+   * 把权限集合组装成森林，沿上级链补齐祖先作为导航容器：只有集合内的节点 {@code granted} 为 true，
+   * 补出的祖先不代表拥有其授权或 API。本方法不按生效状态过滤，由调用方先筛选。同级节点按标识升序，与 DDD 路线一致，
+   * 不随授权来源的遍历顺序变化。
+   */
+  public static List&lt;PermissionData.Tree&gt; tree(Collection&lt;Permission&gt; granted) {
+<span class="fc" id="L195">    Map&lt;Long, Permission&gt; nodes = new TreeMap&lt;&gt;();</span>
+<span class="fc" id="L196">    Set&lt;Long&gt; exact = new HashSet&lt;&gt;();</span>
+<span class="fc bfc" id="L197" title="All 2 branches covered.">    for (Permission p : granted) {</span>
+<span class="fc" id="L198">      exact.add(p.getId());</span>
+<span class="fc bfc" id="L199" title="All 2 branches covered.">      for (Permission n = p; n != null; n = n.getParent()) nodes.putIfAbsent(n.getId(), n);</span>
+<span class="fc" id="L200">    }</span>
+<span class="fc" id="L201">    return nodes.values().stream()</span>
+<span class="fc bfc" id="L202" title="All 2 branches covered.">        .filter(p -&gt; p.getParent() == null)</span>
+<span class="fc" id="L203">        .map(p -&gt; branch(p, nodes.values(), exact))</span>
+<span class="fc" id="L204">        .toList();</span>
+  }
+
+  /** 递归构造以 {@code p} 为根的子树；下级沿用 {@code nodes} 的标识升序。 */
+  private static PermissionData.Tree branch(
+      Permission p, Collection&lt;Permission&gt; nodes, Set&lt;Long&gt; exact) {
+<span class="fc" id="L210">    return new PermissionData.Tree(</span>
+<span class="fc" id="L211">        view(p),</span>
+<span class="fc" id="L212">        exact.contains(p.getId()),</span>
+<span class="fc" id="L213">        nodes.stream()</span>
+<span class="fc bfc" id="L214" title="All 4 branches covered.">            .filter(n -&gt; n.getParent() != null &amp;&amp; n.getParent().getId().equals(p.getId()))</span>
+<span class="fc" id="L215">            .map(n -&gt; branch(n, nodes, exact))</span>
+<span class="fc" id="L216">            .toList());</span>
+  }
+
+  /**
+   * 管理端权限目录树，含已失效节点；传入的就是全部节点，所以每个节点的 {@code granted} 都为 true。
+   * {@code systemId} 为空时返回全部应用，不校验应用是否存在。
+   */
+  public List&lt;PermissionData.Tree&gt; tree(Long systemId) {
+<span class="fc" id="L224">    return tree(</span>
+<span class="fc bfc" id="L225" title="All 2 branches covered.">        (systemId == null</span>
+<span class="fc" id="L226">            ? permissions.findAll(org.springframework.data.domain.Sort.by(&quot;id&quot;))</span>
+<span class="fc" id="L227">            : permissions.findAllBySystem_IdOrderById(systemId)));</span>
+  }
+
+  /** 控制台的内置菜单与按钮：停用或删除后所有人（包括管理员）都用不了对应页面，可能连恢复它的页面也打不开，抛 {@code CONSOLE_BUILT_IN}（409）。 */
+  private static void protectBuiltIn(Permission p) {
+<span class="fc bfc" id="L232" title="All 2 branches covered.">    if (ConsoleCatalog.isEntry(p.getCode()))</span>
+<span class="fc" id="L233">      throw new ConflictException(&quot;CONSOLE_BUILT_IN&quot;, &quot;权限管理系统的内置菜单与按钮不能停用或删除&quot;);</span>
+<span class="fc" id="L234">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

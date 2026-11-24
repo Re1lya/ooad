@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EmployeeDirectory.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.service.ddd.domain.model</a> &gt; <span class="el_source">EmployeeDirectory.java</span></div><h1>EmployeeDirectory.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.service.ddd.domain.model;
+
+import com.cdwy.permission.service.port.data.DirectoryData;
+import java.util.*;
+import java.util.function.UnaryOperator;
+
+/**
+ * 员工信息同步的领域对象（信息专家）：持有员工表与同步规则，决定部门复用还是新建、人员新建还是更新、补授哪些角色，并统计变化。
+ *
+ * &lt;p&gt;不依赖数据库：新建部门交给调用方提供的函数保存并取得标识（预览时只分配临时标识）；人员是否需要保存由 {@link
+ * Account#syncSource} 判断。
+ */
+public class EmployeeDirectory {
+  /** 需要补授的一条角色分配。 */
+<span class="fc" id="L15">  public record Grant(String username, Long roleId) {}</span>
+
+  private final DirectoryData.Rule rule;
+  private final List&lt;DirectoryData.Row&gt; rows;
+<span class="fc" id="L19">  private final Map&lt;String, Long&gt; departmentIds = new HashMap&lt;&gt;();</span>
+  private int departmentsCreated, departmentsKept, usersCreated, usersUpdated, usersUnchanged;
+  private int roleGrants;
+
+  /** 以同步规则和已校验的员工表数据行创建；数据行做防御性复制，统计从零开始。 */
+<span class="fc" id="L24">  public EmployeeDirectory(DirectoryData.Rule rule, List&lt;DirectoryData.Row&gt; rows) {</span>
+<span class="fc" id="L25">    this.rule = rule;</span>
+<span class="fc" id="L26">    this.rows = List.copyOf(rows);</span>
+<span class="fc" id="L27">  }</span>
+
+  /** 分公司为根部门、部门为其子部门；按“上级 + 名称”复用已有部门，缺少的交给 create 保存。 */
+  public void placeDepartments(
+      Collection&lt;DepartmentNode&gt; existing, UnaryOperator&lt;DepartmentNode&gt; create) {
+<span class="fc" id="L32">    Map&lt;String, DepartmentNode&gt; known = new HashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L33" title="All 2 branches covered.">    for (DepartmentNode node : existing) known.put(key(node.getParentId(), node.getName()), node);</span>
+<span class="fc bfc" id="L34" title="All 2 branches covered.">    for (DirectoryData.Row row : rows) {</span>
+<span class="fc" id="L35">      Long company = place(known, null, row.company(), row.company(), create);</span>
+<span class="fc" id="L36">      place(known, company, row.department(), departmentKey(row), create);</span>
+<span class="fc" id="L37">    }</span>
+<span class="fc" id="L38">  }</span>
+
+  /**
+   * 放置一个分公司或部门并返回其标识：同一行键只放置并计数一次；按“上级 + 名称”找到已有部门即复用，否则交给 create 保存后计入新建。
+   */
+  private Long place(
+      Map&lt;String, DepartmentNode&gt; known,
+      Long parent,
+      String name,
+      String rowKey,
+      UnaryOperator&lt;DepartmentNode&gt; create) {
+<span class="fc" id="L49">    Long placed = departmentIds.get(rowKey);</span>
+<span class="fc bfc" id="L50" title="All 2 branches covered.">    if (placed != null) return placed;</span>
+<span class="fc" id="L51">    DepartmentNode node = known.get(key(parent, name));</span>
+<span class="fc bfc" id="L52" title="All 2 branches covered.">    if (node == null) {</span>
+<span class="fc" id="L53">      node = new DepartmentNode();</span>
+<span class="fc" id="L54">      node.setName(name);</span>
+<span class="fc" id="L55">      node.setParentId(parent);</span>
+<span class="fc" id="L56">      node = create.apply(node);</span>
+<span class="fc" id="L57">      known.put(key(parent, name), node);</span>
+<span class="fc" id="L58">      departmentsCreated++;</span>
+<span class="fc" id="L59">    } else departmentsKept++;</span>
+<span class="fc" id="L60">    departmentIds.put(rowKey, node.getId());</span>
+<span class="fc" id="L61">    return node.getId();</span>
+  }
+
+  /**
+   * 按用户名新建或更新人员，返回需要保存的账号（新建的标识为空）；existing 会补入新建的账号。
+   *
+   * @param existing 用户名 → 已有账号
+   */
+  public List&lt;Account&gt; reconcile(Map&lt;String, Account&gt; existing) {
+<span class="fc" id="L70">    List&lt;Account&gt; changed = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L71" title="All 2 branches covered.">    for (DirectoryData.Row row : rows) {</span>
+<span class="fc" id="L72">      Account account = existing.get(row.username());</span>
+<span class="fc bfc" id="L73" title="All 2 branches covered.">      boolean fresh = account == null;</span>
+<span class="fc bfc" id="L74" title="All 2 branches covered.">      if (fresh) {</span>
+<span class="fc" id="L75">        account = Account.unprovisioned(row.username());</span>
+<span class="fc" id="L76">        existing.put(row.username(), account);</span>
+      }
+<span class="fc" id="L78">      boolean modified =</span>
+<span class="fc" id="L79">          account.syncSource(</span>
+<span class="fc" id="L80">              row.name(),</span>
+<span class="fc" id="L81">              departmentIds.get(departmentKey(row)),</span>
+<span class="fc" id="L82">              row.company(),</span>
+<span class="fc" id="L83">              row.department(),</span>
+<span class="fc" id="L84">              row.job(),</span>
+<span class="fc" id="L85">              row.phone());</span>
+<span class="fc bfc" id="L86" title="All 2 branches covered.">      if (fresh) usersCreated++;</span>
+<span class="fc bfc" id="L87" title="All 2 branches covered.">      else if (modified) usersUpdated++;</span>
+<span class="fc" id="L88">      else usersUnchanged++;</span>
+<span class="fc bfc" id="L89" title="All 4 branches covered.">      if (fresh || modified) changed.add(account);</span>
+<span class="fc" id="L90">    }</span>
+<span class="fc" id="L91">    return changed;</span>
+  }
+
+  /**
+   * 按分公司选择角色、只增不减的补授清单；已持有的不重复授予，尚未保存的新人员一定需要。
+   *
+   * @param accounts 用户名 → 账号（确认时为已保存的账号）
+   * @param roleIds 角色编码 → 标识
+   * @param holders 角色标识 → 已持有该角色的用户标识
+   */
+  public List&lt;Grant&gt; grants(
+      Map&lt;String, Account&gt; accounts, Map&lt;String, Long&gt; roleIds, Map&lt;Long, Set&lt;Long&gt;&gt; holders) {
+<span class="fc" id="L103">    List&lt;Grant&gt; result = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L104" title="All 2 branches covered.">    for (DirectoryData.Row row : rows) {</span>
+<span class="fc" id="L105">      String code = rule.roleFor(row.company());</span>
+<span class="fc bfc" id="L106" title="All 2 branches covered.">      if (code == null) continue;</span>
+<span class="fc" id="L107">      Long role = roleIds.get(code);</span>
+<span class="fc" id="L108">      Long user = accounts.get(row.username()).getId();</span>
+<span class="fc bfc" id="L109" title="All 4 branches covered.">      if (user == null || !holders.getOrDefault(role, Set.of()).contains(user))</span>
+<span class="fc" id="L110">        result.add(new Grant(row.username(), role));</span>
+<span class="fc" id="L111">    }</span>
+<span class="fc" id="L112">    roleGrants = result.size();</span>
+<span class="fc" id="L113">    return result;</span>
+  }
+
+  /** 汇总本次同步的变化。 */
+  public DirectoryData.Summary summary(String digest, boolean applied) {
+<span class="fc" id="L118">    return new DirectoryData.Summary(</span>
+<span class="fc" id="L119">        rows.size(),</span>
+<span class="fc" id="L120">        (int) rows.stream().map(DirectoryData.Row::company).distinct().count(),</span>
+        departmentsCreated,
+        departmentsKept,
+        usersCreated,
+        usersUpdated,
+        usersUnchanged,
+        roleGrants,
+        digest,
+        applied);
+  }
+
+  private static String departmentKey(DirectoryData.Row row) {
+<span class="fc" id="L132">    return row.company() + &quot;\u0000&quot; + row.department();</span>
+  }
+
+  private static String key(Long parent, String name) {
+<span class="fc" id="L136">    return parent + &quot;\u0000&quot; + name;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

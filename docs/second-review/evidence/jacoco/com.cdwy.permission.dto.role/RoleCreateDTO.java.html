@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RoleCreateDTO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.dto.role</a> &gt; <span class="el_source">RoleCreateDTO.java</span></div><h1>RoleCreateDTO.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.dto.role;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+
+/**
+ * 新建角色的请求；编码全局唯一由服务层检查。
+ *
+ * @param code 角色编码，接入应用按它识别身份，例如 teacher
+ * @param name 名称
+ * @param description 说明
+ */
+<span class="fc" id="L14">public record RoleCreateDTO(</span>
+    @NotBlank @Pattern(regexp = &quot;[a-z][a-z0-9_-]{0,63}&quot;) String code,
+    @NotBlank @Size(max = 128) String name,
+    @Size(max = 255) String description) {}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DddDirectorySyncService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.service.ddd.application.directory</a> &gt; <span class="el_source">DddDirectorySyncService.java</span></div><h1>DddDirectorySyncService.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.service.ddd.application.directory;
+
+import com.cdwy.permission.service.ddd.domain.model.Account;
+import com.cdwy.permission.service.ddd.domain.model.AccessRole;
+import com.cdwy.permission.service.ddd.domain.model.DepartmentNode;
+import com.cdwy.permission.service.ddd.domain.model.EmployeeDirectory;
+import com.cdwy.permission.service.ddd.domain.repository.AccountRepository;
+import com.cdwy.permission.service.ddd.domain.repository.AssignmentRepository;
+import com.cdwy.permission.service.ddd.domain.repository.AssignmentRepository.Link;
+import com.cdwy.permission.service.ddd.domain.repository.DepartmentDirectory;
+import com.cdwy.permission.service.ddd.domain.repository.RoleCatalog;
+import com.cdwy.permission.service.port.data.DirectoryData;
+import com.cdwy.permission.service.port.directory.DirectorySyncUseCase;
+import com.cdwy.permission.service.port.directory.EmployeeSheetReader;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicLong;
+import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import com.cdwy.permission.service.port.error.InvalidDataException;
+
+/**
+ * DDD 应用服务：加载部门、账号与角色分配，交给 {@link EmployeeDirectory} 决定变化，再经仓储端口写入。
+ *
+ * &lt;p&gt;预览时新部门只分配临时标识、账号不保存；确认在一个事务内完成，任何一行冲突都整批回滚。
+ */
+@Service
+@RequiredArgsConstructor
+@ConditionalOnProperty(name = &quot;app.backend-strategy&quot;, havingValue = &quot;ddd&quot;)
+public class DddDirectorySyncService implements DirectorySyncUseCase {
+<span class="fc" id="L34">  private static final Logger log = LoggerFactory.getLogger(DddDirectorySyncService.class);</span>
+
+  private final EmployeeSheetReader reader;
+  private final DepartmentDirectory departments;
+  private final AccountRepository accounts;
+  private final RoleCatalog roles;
+  private final AssignmentRepository assignments;
+
+  /** 返回实际装载模式。 */
+  @Override
+  public String strategy() {
+<span class="fc" id="L45">    return &quot;ddd&quot;;</span>
+  }
+
+  /**
+   * 在只读事务内计算变化，不写入。规则中的角色不存在抛 {@code SYNC_ROLE_NOT_FOUND}（400），表中用户名属于管理员账号抛
+   * {@code SYNC_ADMINISTRATOR_CONFLICT}（409）；文件不合法时由读取器抛 {@code EXCEL_INVALID} 或 {@code EMPLOYEE_SHEET_INVALID}（400）。
+   */
+  @Override
+  @Transactional(readOnly = true)
+  public DirectoryData.Summary preview(byte[] workbook, DirectoryData.Rule rule) {
+<span class="fc" id="L55">    DirectoryData.Sheet sheet = reader.read(workbook);</span>
+<span class="fc" id="L56">    return run(sheet, rule, DirectoryData.digest(sheet, rule), false);</span>
+  }
+
+  /** 重新读取文件并计算摘要，与预览返回的不一致抛 {@code SYNC_PREVIEW_MISMATCH}（400）；其余校验同预览，任何失败都整批回滚。 */
+  @Override
+  @Transactional
+  public DirectoryData.Summary commit(byte[] workbook, DirectoryData.Rule rule, String digest) {
+<span class="fc" id="L63">    DirectoryData.Sheet sheet = reader.read(workbook);</span>
+<span class="fc" id="L64">    String expected = DirectoryData.digest(sheet, rule);</span>
+<span class="fc" id="L65">    DirectoryData.requireConfirmed(expected, digest);</span>
+<span class="fc" id="L66">    return run(sheet, rule, expected, true);</span>
+  }
+
+  /**
+   * 预览与确认共用的编排：角色 → 部门 → 人员 → 角色补授，变化由 {@link EmployeeDirectory} 决定。write 为 false 时新部门只取负数临时标识，
+   * 账号与角色分配都不保存。
+   */
+  private DirectoryData.Summary run(
+      DirectoryData.Sheet sheet, DirectoryData.Rule rule, String digest, boolean write) {
+<span class="fc" id="L75">    Map&lt;String, Long&gt; roleIds = roleIds(rule);</span>
+<span class="fc" id="L76">    EmployeeDirectory directory = new EmployeeDirectory(rule, sheet.rows());</span>
+
+<span class="fc" id="L78">    AtomicLong temporary = new AtomicLong();</span>
+<span class="fc" id="L79">    directory.placeDepartments(</span>
+<span class="fc" id="L80">        departments.all(),</span>
+<span class="fc bfc" id="L81" title="All 2 branches covered.">        write</span>
+<span class="fc" id="L82">            ? this::create</span>
+<span class="fc" id="L83">            : node -&gt; {</span>
+<span class="fc" id="L84">              node.setId(-temporary.incrementAndGet());</span>
+<span class="fc" id="L85">              return node;</span>
+            });
+
+<span class="fc" id="L88">    Map&lt;String, Account&gt; byUsername = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L89">    accounts.all().forEach(account -&gt; byUsername.put(account.getUsername(), account));</span>
+<span class="fc" id="L90">    List&lt;Account&gt; changed = directory.reconcile(byUsername);</span>
+<span class="fc bfc" id="L91" title="All 2 branches covered.">    if (write)</span>
+<span class="fc" id="L92">      accounts.saveAll(changed).forEach(saved -&gt; byUsername.put(saved.getUsername(), saved));</span>
+
+<span class="fc" id="L94">    Map&lt;Long, Set&lt;Long&gt;&gt; holders = new HashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L95" title="All 2 branches covered.">    for (Link link : assignments.userRoles())</span>
+<span class="fc bfc" id="L96" title="All 2 branches covered.">      if (roleIds.containsValue(link.right()))</span>
+<span class="fc" id="L97">        holders.computeIfAbsent(link.right(), ignored -&gt; new HashSet&lt;&gt;()).add(link.left());</span>
+<span class="fc" id="L98">    List&lt;EmployeeDirectory.Grant&gt; grants = directory.grants(byUsername, roleIds, holders);</span>
+<span class="fc bfc" id="L99" title="All 2 branches covered.">    if (write) {</span>
+<span class="fc" id="L100">      assignments.addUserRoles(</span>
+<span class="fc" id="L101">          grants.stream()</span>
+<span class="fc" id="L102">              .map(g -&gt; new Link(byUsername.get(g.username()).getId(), g.roleId()))</span>
+<span class="fc" id="L103">              .toList());</span>
+<span class="fc" id="L104">      log.info(&quot;员工信息同步完成：{}&quot;, directory.summary(digest, true));</span>
+    }
+<span class="fc" id="L106">    return directory.summary(digest, write);</span>
+  }
+
+  /** 保存新部门，没有编码时取默认编码。 */
+  private DepartmentNode create(DepartmentNode node) {
+<span class="fc" id="L111">    DepartmentNode saved = departments.save(node);</span>
+<span class="pc bpc" id="L112" title="1 of 2 branches missed.">    return saved.assignDefaultCode() ? departments.save(saved) : saved;</span>
+  }
+
+  /** 规则中的角色必须存在。 */
+  private Map&lt;String, Long&gt; roleIds(DirectoryData.Rule rule) {
+<span class="fc" id="L117">    Map&lt;String, Long&gt; ids = new HashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L118" title="All 2 branches covered.">    for (String code : Arrays.asList(rule.headOfficeRole(), rule.branchRole()))</span>
+<span class="pc bpc" id="L119" title="1 of 4 branches missed.">      if (code != null &amp;&amp; !ids.containsKey(code))</span>
+<span class="fc" id="L120">        ids.put(</span>
+            code,
+<span class="fc" id="L122">            roles.all().stream()</span>
+<span class="fc" id="L123">                .filter(role -&gt; role.getCode().equals(code))</span>
+<span class="fc" id="L124">                .map(AccessRole::getId)</span>
+<span class="fc" id="L125">                .findFirst()</span>
+<span class="fc" id="L126">                .orElseThrow(() -&gt; new InvalidDataException(&quot;SYNC_ROLE_NOT_FOUND&quot;, &quot;角色不存在：&quot; + code)));</span>
+<span class="fc" id="L127">    return ids;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

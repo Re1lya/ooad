@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>XlsxEmployeeSheetReader.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.infrastructure.excel</a> &gt; <span class="el_source">XlsxEmployeeSheetReader.java</span></div><h1>XlsxEmployeeSheetReader.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.infrastructure.excel;
+
+import com.cdwy.permission.service.port.data.DirectoryData;
+import com.cdwy.permission.service.port.directory.EmployeeSheetReader;
+import java.security.MessageDigest;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.HexFormat;
+import java.util.List;
+import java.util.Set;
+import org.springframework.stereotype.Component;
+import com.cdwy.permission.service.port.error.InvalidDataException;
+
+/**
+ * 员工信息表（.xlsx）读取：表头必须是“姓名、用户名、分公司、部门、岗位、电话号码”，与课程管理系统提供的《市政公司员工信息表》一致。
+ *
+ * &lt;p&gt;逐行校验必填、长度、用户名格式与表内重复；错误信息带 Excel 行号。文件只在请求内存中处理。
+ */
+@Component
+<span class="fc" id="L20">public class XlsxEmployeeSheetReader implements EmployeeSheetReader {</span>
+  /** 期望的表头，列名与顺序都须一致。 */
+<span class="fc" id="L22">  static final List&lt;String&gt; HEADER = List.of(&quot;姓名&quot;, &quot;用户名&quot;, &quot;分公司&quot;, &quot;部门&quot;, &quot;岗位&quot;, &quot;电话号码&quot;);</span>
+
+  /**
+   * 首行须与 {@code HEADER} 完全一致，其后至少一行数据；任一行不合法即整表拒绝，抛出业务码 {@code EMPLOYEE_SHEET_INVALID}
+   * 的 {@link InvalidDataException}（文件无法解析时为 {@code EXCEL_INVALID}）。返回的数据附带整个文件的 SHA-256 摘要。
+   */
+  @Override
+  public DirectoryData.Sheet read(byte[] workbook) {
+<span class="fc" id="L30">    List&lt;List&lt;String&gt;&gt; table = XlsxReader.rows(workbook);</span>
+<span class="pc bpc" id="L31" title="1 of 4 branches missed.">    if (table.isEmpty() || !table.getFirst().equals(HEADER))</span>
+<span class="fc" id="L32">      throw new InvalidDataException(&quot;EMPLOYEE_SHEET_INVALID&quot;, &quot;表头须为：&quot; + String.join(&quot;、&quot;, HEADER));</span>
+<span class="fc bfc" id="L33" title="All 2 branches covered.">    if (table.size() == 1) throw new InvalidDataException(&quot;EMPLOYEE_SHEET_INVALID&quot;, &quot;员工信息表没有数据行&quot;);</span>
+<span class="fc" id="L34">    List&lt;DirectoryData.Row&gt; rows = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L35">    Set&lt;String&gt; usernames = new HashSet&lt;&gt;();</span>
+<span class="fc bfc" id="L36" title="All 2 branches covered.">    for (int i = 1; i &lt; table.size(); i++) {</span>
+<span class="fc" id="L37">      List&lt;String&gt; cells = table.get(i);</span>
+<span class="fc" id="L38">      int line = i + 1;</span>
+<span class="fc" id="L39">      String username = required(cells, 1, 64, line, &quot;用户名&quot;);</span>
+<span class="fc bfc" id="L40" title="All 2 branches covered.">      if (!username.matches(&quot;[A-Za-z0-9_.-]{1,64}&quot;))</span>
+<span class="fc" id="L41">        throw new InvalidDataException(&quot;EMPLOYEE_SHEET_INVALID&quot;, &quot;第 &quot; + line + &quot; 行：用户名只能包含字母、数字和 _.-&quot;);</span>
+<span class="fc bfc" id="L42" title="All 2 branches covered.">      if (!usernames.add(username))</span>
+<span class="fc" id="L43">        throw new InvalidDataException(&quot;EMPLOYEE_SHEET_INVALID&quot;, &quot;第 &quot; + line + &quot; 行：用户名 &quot; + username + &quot; 重复&quot;);</span>
+<span class="fc" id="L44">      rows.add(</span>
+          new DirectoryData.Row(
+<span class="fc" id="L46">              required(cells, 0, 128, line, &quot;姓名&quot;),</span>
+              username,
+<span class="fc" id="L48">              required(cells, 2, 128, line, &quot;分公司&quot;),</span>
+<span class="fc" id="L49">              required(cells, 3, 128, line, &quot;部门&quot;),</span>
+<span class="fc" id="L50">              optional(cells, 4, 128, line, &quot;岗位&quot;),</span>
+<span class="fc" id="L51">              optional(cells, 5, 32, line, &quot;电话号码&quot;)));</span>
+    }
+<span class="fc" id="L53">    return new DirectoryData.Sheet(rows, sha256(workbook));</span>
+  }
+
+  /** 读取必填单元格：规则同 {@code optional}，为空时报“第 N 行：列名不能为空”。 */
+  private static String required(List&lt;String&gt; cells, int column, int max, int line, String name) {
+<span class="fc" id="L58">    String value = optional(cells, column, max, line, name);</span>
+<span class="fc bfc" id="L59" title="All 2 branches covered.">    if (value == null) throw new InvalidDataException(&quot;EMPLOYEE_SHEET_INVALID&quot;, &quot;第 &quot; + line + &quot; 行：&quot; + name + &quot;不能为空&quot;);</span>
+<span class="fc" id="L60">    return value;</span>
+  }
+
+  /** 读取可空单元格：缺列或空串返回 {@code null}，超过 {@code max} 个字符时报错。 */
+  private static String optional(List&lt;String&gt; cells, int column, int max, int line, String name) {
+<span class="fc bfc" id="L65" title="All 2 branches covered.">    String value = column &lt; cells.size() ? cells.get(column) : &quot;&quot;;</span>
+<span class="fc bfc" id="L66" title="All 2 branches covered.">    if (value.length() &gt; max)</span>
+<span class="fc" id="L67">      throw new InvalidDataException(&quot;EMPLOYEE_SHEET_INVALID&quot;, &quot;第 &quot; + line + &quot; 行：&quot; + name + &quot;超过 &quot; + max + &quot; 个字符&quot;);</span>
+<span class="fc bfc" id="L68" title="All 2 branches covered.">    return value.isEmpty() ? null : value;</span>
+  }
+
+  /** 整个文件的 SHA-256 十六进制摘要；同步服务再与同步规则一起算出预览摘要，确认时比对。 */
+  private static String sha256(byte[] bytes) {
+    try {
+<span class="fc" id="L74">      return HexFormat.of().formatHex(MessageDigest.getInstance(&quot;SHA-256&quot;).digest(bytes));</span>
+<span class="nc" id="L75">    } catch (java.security.NoSuchAlgorithmException ex) {</span>
+<span class="nc" id="L76">      throw new IllegalStateException(ex);</span>
+    }
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

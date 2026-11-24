@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AuthService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.service.auth</a> &gt; <span class="el_source">AuthService.java</span></div><h1>AuthService.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.service.auth;
+
+import com.cdwy.permission.entity.user.UserAccount;
+import com.cdwy.permission.repository.system.BusinessSystemRepository;
+import com.cdwy.permission.repository.user.UserAccountRepository;
+import com.cdwy.permission.service.port.auth.AuthenticationUseCase;
+import com.cdwy.permission.service.port.data.*;
+import com.cdwy.permission.service.port.error.AuthenticationFailedException;
+import com.cdwy.permission.service.port.error.InvalidDataException;
+import com.cdwy.permission.service.user.*;
+import java.time.Instant;
+import java.util.List;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+/** 结构化事务脚本：按查询、业务校验、写入和结果转换组织处理步骤。 */
+@Service
+@RequiredArgsConstructor
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(
+    name = &quot;app.backend-strategy&quot;,
+    havingValue = &quot;structured&quot;,
+    matchIfMissing = true)
+@Transactional(readOnly = true)
+public class AuthService implements AuthenticationUseCase {
+  /** 返回事务脚本实现标识。 */
+  @Override
+  public String strategy() {
+<span class="fc" id="L30">    return &quot;structured&quot;;</span>
+  }
+
+  private final UserAccountRepository users;
+  private final PasswordEncoder encoder;
+  private final JwtTokenService tokens;
+  private final UserService userService;
+  private final BusinessSystemRepository systems;
+
+  /** 控制台登录：校验账号密码，签发目标系统为权限系统自身的令牌。 */
+  public AuthData.Token login(AuthData.Login input) {
+<span class="fc" id="L41">    UserAccount user = authenticate(input.username(), input.password());</span>
+<span class="fc" id="L42">    return new AuthData.Token(</span>
+<span class="fc" id="L43">        tokens.issue(user), &quot;Bearer&quot;, tokens.expiresIn(), UserViews.view(user));</span>
+  }
+
+  /** 接入应用登录：步骤 1 校验目标系统，步骤 2 校验账号密码，步骤 3 按目标系统签发。 */
+  public AuthData.Token loginTo(AuthData.AppLogin input) {
+<span class="fc" id="L48">    List&lt;String&gt; audience = audience(input.systems(), input.target());</span>
+<span class="fc" id="L49">    UserAccount user = authenticate(input.username(), input.password());</span>
+<span class="fc" id="L50">    return new AuthData.Token(</span>
+<span class="fc" id="L51">        tokens.issue(user.getId(), user.getCredentialVersion(), audience),</span>
+        &quot;Bearer&quot;,
+<span class="fc" id="L53">        tokens.expiresIn(),</span>
+<span class="fc" id="L54">        UserViews.view(user));</span>
+  }
+
+  /** systems 必须包含被调用的应用，且每一项都是已登记的应用编码。 */
+  private List&lt;String&gt; audience(List&lt;String&gt; requested, String target) {
+<span class="fc bfc" id="L59" title="All 2 branches covered.">    if (!requested.contains(target))</span>
+<span class="fc" id="L60">      throw new InvalidDataException(&quot;LOGIN_TARGET_NOT_IN_SYSTEMS&quot;, &quot;systems 必须包含当前应用 &quot; + target);</span>
+<span class="fc" id="L61">    List&lt;String&gt; distinct = requested.stream().distinct().toList();</span>
+<span class="fc bfc" id="L62" title="All 2 branches covered.">    for (String code : distinct)</span>
+<span class="fc bfc" id="L63" title="All 2 branches covered.">      if (systems.findByCode(code).isEmpty())</span>
+<span class="fc" id="L64">        throw new InvalidDataException(&quot;LOGIN_SYSTEM_UNKNOWN&quot;, &quot;未登记的目标系统：&quot; + code);</span>
+<span class="fc" id="L65">    return distinct;</span>
+  }
+
+  /** 失败不泄露账号是否存在。 */
+  private UserAccount authenticate(String username, String password) {
+<span class="fc" id="L70">    return users</span>
+<span class="fc" id="L71">        .findByUsername(username)</span>
+<span class="fc" id="L72">        .filter(u -&gt; u.usable(Instant.now()))</span>
+<span class="fc" id="L73">        .filter(u -&gt; encoder.matches(password, u.getPasswordHash()))</span>
+<span class="fc" id="L74">        .orElseThrow(() -&gt; new AuthenticationFailedException(&quot;账号或密码错误，或账号已失效&quot;));</span>
+  }
+
+  /**
+   * 每个请求由访问拦截器调用。验签与有效期由 {@link JwtTokenService#verify} 负责；令牌 {@code aud} 不含 audience 时抛“令牌不适用于当前系统”；
+   * 账号不存在、已停用或已过期，或凭证版本与令牌不一致（退出登录、改密、启停后）时抛“账号或凭证已失效”，均为 401。
+   */
+  public AuthData.Identity resolve(String header, String audience) {
+<span class="fc" id="L82">    JwtTokenService.Identity identity = tokens.verify(header);</span>
+<span class="fc bfc" id="L83" title="All 2 branches covered.">    if (!identity.audience().contains(audience))</span>
+<span class="fc" id="L84">      throw new AuthenticationFailedException(&quot;令牌不适用于当前系统，请重新登录&quot;);</span>
+<span class="fc" id="L85">    return users</span>
+<span class="fc" id="L86">        .findById(identity.userId())</span>
+<span class="fc" id="L87">        .filter(u -&gt; u.usable(Instant.now()))</span>
+<span class="fc bfc" id="L88" title="All 2 branches covered.">        .filter(u -&gt; u.getCredentialVersion() == identity.credentialVersion())</span>
+<span class="fc" id="L89">        .map(u -&gt; new AuthData.Identity(u.getId(), u.getAdministrator()))</span>
+<span class="fc" id="L90">        .orElseThrow(() -&gt; new AuthenticationFailedException(&quot;账号或凭证已失效，请重新登录&quot;));</span>
+  }
+
+  /** 退出登录：递增凭证版本，已签发的令牌在下一次请求时失效。 */
+  @Transactional
+  public void logout(Long id) {
+<span class="fc" id="L96">    UserAccount user =</span>
+<span class="pc" id="L97">        users.lockById(id).orElseThrow(() -&gt; new AuthenticationFailedException(&quot;账号不存在&quot;));</span>
+<span class="fc" id="L98">    user.setCredentialVersion(user.getCredentialVersion() + 1);</span>
+<span class="fc" id="L99">  }</span>
+
+  /**
+   * 修改本人密码：锁定账号后核对原密码，不符抛 401；新密码按项目密码规则校验（{@code PASSWORD_POLICY_VIOLATION}），保存后递增凭证版本，
+   * 已签发的令牌（包括当前令牌）全部失效。
+   */
+  @Transactional
+  public void changePassword(Long id, AuthData.PasswordChange input) {
+<span class="fc" id="L107">    UserAccount user =</span>
+<span class="pc" id="L108">        users.lockById(id).orElseThrow(() -&gt; new AuthenticationFailedException(&quot;账号不存在&quot;));</span>
+<span class="fc bfc" id="L109" title="All 2 branches covered.">    if (!encoder.matches(input.currentPassword(), user.getPasswordHash()))</span>
+<span class="fc" id="L110">      throw new AuthenticationFailedException(&quot;原密码错误&quot;);</span>
+<span class="fc" id="L111">    userService.password(id, input.newPassword());</span>
+<span class="fc" id="L112">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

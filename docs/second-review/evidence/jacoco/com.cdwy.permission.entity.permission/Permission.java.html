@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Permission.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.entity.permission</a> &gt; <span class="el_source">Permission.java</span></div><h1>Permission.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.entity.permission;
+
+import cn.edu.xmu.clonefactory.CopyFrom;
+import cn.edu.xmu.clonefactory.CopyTo;
+import com.cdwy.permission.service.ddd.domain.model.FrontendPermission;
+import com.cdwy.permission.service.port.data.PermissionType;
+import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * 前端权限（表 {@code sys_permission}）：应用的菜单或按钮，按 {@code parent} 组成菜单树；DDD 路线的持久化适配器按 {@code @CopyTo}
+ * /{@code @CopyFrom} 与 {@link FrontendPermission} 互相拷贝。
+ */
+@CopyTo(FrontendPermission.class)
+@CopyFrom(FrontendPermission.class)
+@Entity
+@Table(name = &quot;sys_permission&quot;)
+@Getter
+@Setter
+<span class="fc" id="L22">public class Permission {</span>
+  /** 主键由数据库生成：不提供 setter，从领域对象拷回实体时也不覆盖。 */
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  @Setter(AccessLevel.NONE)
+  @CopyFrom.Exclude(FrontendPermission.class)
+  private Long id;
+
+  /** 权限编码，全局唯一。 */
+  @Column(nullable = false, unique = true, length = 128)
+  private String code;
+
+  @Column(nullable = false, length = 128)
+  private String name;
+
+  /** 菜单或按钮；按钮必须隶属同一应用的菜单。 */
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false, length = 16)
+  private PermissionType type;
+
+  /** 菜单地址（前端路由）；按钮不设置。 */
+  @Column(length = 255)
+  private String menuPath;
+
+  /** 上级菜单；为空表示顶层菜单，按钮必须有上级。 */
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = &quot;parent_id&quot;)
+  private Permission parent;
+
+  /** 所属应用。 */
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(name = &quot;system_id&quot;, nullable = false)
+  private com.cdwy.permission.entity.system.BusinessSystem system;
+
+  /** 启用状态：自身、任一上级或所属应用停用时，该权限不计入有效权限。 */
+<span class="fc" id="L57">  @Column(nullable = false)</span>
+  private boolean active = true;
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JwtSettings.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.config</a> &gt; <span class="el_source">JwtSettings.java</span></div><h1>JwtSettings.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.config;
+
+import org.springframework.boot.context.properties.ConfigurationProperties;
+
+/**
+ * JWT 签发配置，绑定配置前缀 {@code permission.jwt}，由 {@code JwtTokenService} 使用。
+ *
+ * @param secret HMAC 签名密钥（{@code permission.jwt.secret}），非空时至少 32 字节；为空时每次启动随机生成，重启后已签发的令牌全部失效
+ * @param expirationSeconds 令牌有效期（秒），须大于零
+ */
+@ConfigurationProperties(&quot;permission.jwt&quot;)
+public record JwtSettings(String secret, long expirationSeconds) {
+  /** 校验有效期为正数；不合法时应用启动失败。 */
+<span class="fc" id="L14">  public JwtSettings {</span>
+<span class="pc bpc" id="L15" title="1 of 2 branches missed.">    if (expirationSeconds &lt; 1) throw new IllegalArgumentException(&quot;Token 有效期必须大于零&quot;);</span>
+<span class="fc" id="L16">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

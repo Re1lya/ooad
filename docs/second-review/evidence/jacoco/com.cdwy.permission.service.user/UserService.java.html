@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UserService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.service.user</a> &gt; <span class="el_source">UserService.java</span></div><h1>UserService.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.service.user;
+
+import cn.edu.xmu.clonefactory.util.CloneFactory;
+import com.cdwy.permission.config.AccessPolicy;
+import com.cdwy.permission.entity.user.*;
+import com.cdwy.permission.repository.organization.DepartmentRepository;
+import com.cdwy.permission.repository.rbac.UserRoleRepository;
+import com.cdwy.permission.repository.user.UserAccountRepository;
+import com.cdwy.permission.service.port.data.*;
+import com.cdwy.permission.service.port.data.PersonType;
+import com.cdwy.permission.service.port.error.*;
+import com.cdwy.permission.service.port.user.UserUseCase;
+import java.time.*;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+/** 用户资料、人员身份属性、凭证及账号状态；不管理角色授权。 */
+@Service
+@RequiredArgsConstructor
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(
+    name = &quot;app.backend-strategy&quot;,
+    havingValue = &quot;structured&quot;,
+    matchIfMissing = true)
+@Transactional(readOnly = true)
+public class UserService implements UserUseCase {
+  /** 返回事务脚本实现标识。 */
+  @Override
+  public String strategy() {
+<span class="fc" id="L33">    return &quot;structured&quot;;</span>
+  }
+
+  private final UserAccountRepository users;
+  private final DepartmentRepository departments;
+  private final UserRoleRepository grants;
+  private final PasswordEncoder encoder;
+  private final AccessPolicy policy;
+
+  /** 按标识读取账号（不加锁），不存在抛 {@code USER_NOT_FOUND}；授权服务也用它确认用户存在。 */
+  public UserAccount require(Long id) {
+<span class="fc" id="L44">    return users.findById(id).orElseThrow(() -&gt; new ResourceNotFoundException(&quot;USER_NOT_FOUND&quot;, &quot;用户不存在&quot;));</span>
+  }
+
+  /**
+   * 以悲观写锁读取账号并持有到事务结束：同一账号的并发写入因此串行，凭证版本递增不会丢失；
+   * 不存在抛 {@code USER_NOT_FOUND}。
+   */
+  private UserAccount lock(Long id) {
+<span class="fc" id="L52">    return users.lockById(id).orElseThrow(() -&gt; new ResourceNotFoundException(&quot;USER_NOT_FOUND&quot;, &quot;用户不存在&quot;));</span>
+  }
+
+  /** 人员详情；不存在抛 {@code USER_NOT_FOUND}，结果不含密码散列和凭证版本。 */
+  public UserResult get(Long id) {
+<span class="fc" id="L57">    return UserViews.view(require(id));</span>
+  }
+
+  /** 步骤：数据库按关键字分页查询 → 转为结果。分页参数由 API 层校验。 */
+  public UserData.Page&lt;UserResult&gt; list(int page, int pageSize, String keyword) {
+<span class="fc" id="L62">    org.springframework.data.domain.Page&lt;UserAccount&gt; result =</span>
+<span class="fc" id="L63">        users.search(</span>
+<span class="fc" id="L64">            com.cdwy.permission.repository.LikePattern.of(keyword),</span>
+<span class="fc" id="L65">            PageRequest.of(page - 1, pageSize, Sort.by(&quot;id&quot;)));</span>
+<span class="fc" id="L66">    return new UserData.Page&lt;&gt;(</span>
+<span class="fc" id="L67">        page, pageSize, result.getTotalElements(), result.map(UserViews::view).getContent());</span>
+  }
+
+  /**
+   * 新建人员：登录名唯一（冲突 {@code USERNAME_EXISTS}），密码须符合 {@link PasswordPolicy}
+   * （{@code PASSWORD_POLICY_VIOLATION}），部门与有效期规则见 {@code attributes}。新账号启用、非管理员、
+   * 凭证版本为 0 且没有角色，角色由授权用例另行分配；不写审计日志。
+   */
+  @Transactional
+  public UserResult create(CreateUserCommand input) {
+<span class="fc bfc" id="L77" title="All 2 branches covered.">    if (users.existsByUsername(input.getUsername())) throw new ConflictException(&quot;USERNAME_EXISTS&quot;, &quot;登录名已存在&quot;);</span>
+<span class="fc" id="L78">    PasswordPolicy.validate(input.getPassword());</span>
+<span class="fc" id="L79">    UserAccount user = CloneFactory.copy(new UserAccount(), input);</span>
+<span class="fc" id="L80">    user.setPasswordHash(encoder.encode(input.getPassword()));</span>
+<span class="fc" id="L81">    attributes(</span>
+<span class="fc" id="L82">        user, input.getDepartmentId(), PersonType.valueOf(input.getKind()), input.getExpiresOn());</span>
+<span class="fc" id="L83">    return UserViews.view(users.save(user));</span>
+  }
+
+  /**
+   * 修改姓名、部门、人员类型与有效期，不改登录名、密码、启用状态和导入来源字段；账号加写锁
+   * （{@code USER_NOT_FOUND}）。管理员只能是不设有效期的正式员工，否则抛 {@link ForbiddenException}；
+   * 部门与有效期规则见 {@code attributes}。凭证版本不变：鉴权每次请求都检查有效期，新期限对已签发令牌立即生效。
+   * 事务提交时写回，不写审计日志。
+   */
+  @Transactional
+  public UserResult update(Long id, UserData.Update input) {
+<span class="fc" id="L94">    UserAccount user = lock(id);</span>
+<span class="fc bfc" id="L95" title="All 2 branches covered.">    if (user.getAdministrator()</span>
+<span class="pc bpc" id="L96" title="1 of 4 branches missed.">        &amp;&amp; (!input.personType().equals(PersonType.EMPLOYEE.name()) || input.expiresOn() != null))</span>
+<span class="fc" id="L97">      throw new ForbiddenException(&quot;管理员不能改为有期限的人员身份&quot;);</span>
+<span class="fc" id="L98">    user.setDisplayName(input.displayName());</span>
+<span class="fc" id="L99">    attributes(</span>
+<span class="fc" id="L100">        user, input.departmentId(), PersonType.valueOf(input.personType()), input.expiresOn());</span>
+<span class="fc" id="L101">    return UserViews.view(user);</span>
+  }
+
+  /**
+   * 写入部门与人员期限：部门为空即清除，非空须存在（{@code DEPARTMENT_NOT_FOUND}）。正式员工不能设有效期；
+   * 外部、临时人员必须设，且在项目时区的今天至今天加各自上限天数之间（{@code permission.policy} 配置），
+   * 违反均抛 {@code ACCESS_WINDOW_INVALID}。截止日当天仍可用，到期时刻存为次日零点。
+   */
+  private void attributes(UserAccount user, Long departmentId, PersonType type, LocalDate day) {
+<span class="fc" id="L110">    user.setDepartment(</span>
+<span class="fc bfc" id="L111" title="All 2 branches covered.">        departmentId == null</span>
+<span class="fc" id="L112">            ? null</span>
+            : departments
+<span class="fc" id="L114">                .findById(departmentId)</span>
+<span class="fc" id="L115">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;DEPARTMENT_NOT_FOUND&quot;, &quot;部门不存在&quot;)));</span>
+<span class="fc bfc" id="L116" title="All 2 branches covered.">    if (type == PersonType.EMPLOYEE) {</span>
+<span class="fc bfc" id="L117" title="All 2 branches covered.">      if (day != null) throw new InvalidDataException(&quot;ACCESS_WINDOW_INVALID&quot;, &quot;正式员工不设置临时有效期&quot;);</span>
+<span class="fc" id="L118">      user.setExpiresAt(null);</span>
+    } else {
+<span class="fc bfc" id="L120" title="All 2 branches covered.">      if (day == null) throw new InvalidDataException(&quot;ACCESS_WINDOW_INVALID&quot;, &quot;外部或临时人员必须设置有效期&quot;);</span>
+<span class="fc" id="L121">      LocalDate today = LocalDate.now(policy.zoneId());</span>
+      int maximum =
+<span class="fc bfc" id="L123" title="All 2 branches covered.">          type == PersonType.EXTERNAL ? policy.externalMaxDays() : policy.temporaryMaxDays();</span>
+<span class="pc bpc" id="L124" title="1 of 4 branches missed.">      if (day.isBefore(today) || day.isAfter(today.plusDays(maximum)))</span>
+<span class="fc" id="L125">        throw new InvalidDataException(&quot;ACCESS_WINDOW_INVALID&quot;, &quot;有效期须在今天至 &quot; + maximum + &quot; 天以内&quot;);</span>
+<span class="fc" id="L126">      user.setExpiresAt(day.plusDays(1).atStartOfDay(policy.zoneId()).toInstant());</span>
+    }
+<span class="fc" id="L128">    user.setPersonType(type);</span>
+<span class="fc" id="L129">  }</span>
+
+  /**
+   * 启用或停用账号，{@code actor} 为当前操作人：不能停用本人或管理员（{@link ForbiddenException}），启用不受此限；
+   * 账号加写锁（{@code USER_NOT_FOUND}）。状态确有变化时凭证版本加一，此前签发的令牌全部失效，重新启用也不会
+   * 让旧令牌恢复；重复提交同一状态不改版本。事务提交时写回，不写审计日志。
+   */
+  @Transactional
+  public UserResult status(Long actor, Long id, boolean enabled) {
+<span class="fc" id="L138">    UserAccount user = lock(id);</span>
+<span class="pc bpc" id="L139" title="1 of 6 branches missed.">    if (!enabled &amp;&amp; (actor.equals(id) || user.getAdministrator()))</span>
+<span class="fc" id="L140">      throw new ForbiddenException(&quot;不能停用本人或管理员&quot;);</span>
+<span class="pc bpc" id="L141" title="1 of 2 branches missed.">    if (user.getEnabled() != enabled) {</span>
+<span class="fc" id="L142">      user.setEnabled(enabled);</span>
+<span class="fc" id="L143">      user.setCredentialVersion(user.getCredentialVersion() + 1);</span>
+    }
+<span class="fc" id="L145">    return UserViews.view(user);</span>
+  }
+
+  /**
+   * 设置新密码，管理员重置与本人改密共用（本人改密由认证服务先核对原密码）。先校验密码策略
+   * （{@code PASSWORD_POLICY_VIOLATION}），再加写锁读取账号（{@code USER_NOT_FOUND}）；凭证版本加一，
+   * 该账号已签发的令牌全部失效，包括发起请求的令牌。不改启用状态，事务提交时写回，不写审计日志。
+   */
+  @Transactional
+  public void password(Long id, String password) {
+<span class="fc" id="L155">    PasswordPolicy.validate(password);</span>
+<span class="fc" id="L156">    UserAccount user = lock(id);</span>
+<span class="fc" id="L157">    user.setPasswordHash(encoder.encode(password));</span>
+<span class="fc" id="L158">    user.setCredentialVersion(user.getCredentialVersion() + 1);</span>
+<span class="fc" id="L159">  }</span>
+
+  /**
+   * 删除账号，{@code actor} 为当前操作人：账号加写锁（{@code USER_NOT_FOUND}），不能删除本人或管理员
+   * （{@link ForbiddenException}）；同一事务内先删其全部角色分配再删账号。删除后其令牌在下一次请求时失效；
+   * 不写审计日志。
+   */
+  @Transactional
+  public void delete(Long actor, Long id) {
+<span class="fc" id="L168">    UserAccount user = lock(id);</span>
+<span class="pc bpc" id="L169" title="1 of 4 branches missed.">    if (actor.equals(id) || user.getAdministrator()) throw new ForbiddenException(&quot;不能删除本人或管理员&quot;);</span>
+<span class="fc" id="L170">    grants.deleteAllByUser_Id(id);</span>
+<span class="fc" id="L171">    users.delete(user);</span>
+<span class="fc" id="L172">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>XlsxReader.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.infrastructure.excel</a> &gt; <span class="el_source">XlsxReader.java</span></div><h1>XlsxReader.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.infrastructure.excel;
+
+import java.io.*;
+import java.util.*;
+import java.util.zip.*;
+import javax.xml.XMLConstants;
+import javax.xml.parsers.DocumentBuilderFactory;
+import org.w3c.dom.*;
+import com.cdwy.permission.service.port.error.InvalidDataException;
+
+/** 读取 OOXML 工作簿首张工作表；不信任 dimension，不执行公式或外部链接。 */
+public final class XlsxReader {
+  private XlsxReader() {}
+
+  /** 有界展开 ZIP 并读取第一张工作表和共享字符串，保留空列位置。 */
+  public static List&lt;List&lt;String&gt;&gt; rows(byte[] bytes) {
+<span class="fc bfc" id="L17" title="All 2 branches covered.">    if (bytes.length &gt; 8_000_000) throw new InvalidDataException(&quot;EXCEL_INVALID&quot;, &quot;单个Excel不能超过8MB&quot;);</span>
+<span class="fc" id="L18">    Map&lt;String, byte[]&gt; entries = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L19">    int expanded = 0;</span>
+<span class="fc" id="L20">    try (ZipInputStream zip = new ZipInputStream(new ByteArrayInputStream(bytes))) {</span>
+      ZipEntry entry;
+<span class="fc bfc" id="L22" title="All 2 branches covered.">      while ((entry = zip.getNextEntry()) != null) {</span>
+<span class="pc bpc" id="L23" title="1 of 2 branches missed.">        if (entry.isDirectory()) continue;</span>
+<span class="fc" id="L24">        ByteArrayOutputStream data = new ByteArrayOutputStream();</span>
+<span class="fc" id="L25">        byte[] buffer = new byte[8192];</span>
+        int read;
+<span class="fc bfc" id="L27" title="All 2 branches covered.">        while ((read = zip.read(buffer)) != -1) {</span>
+<span class="fc" id="L28">          expanded += read;</span>
+<span class="fc bfc" id="L29" title="All 2 branches covered.">          if (expanded &gt; 40_000_000) throw new InvalidDataException(&quot;EXCEL_INVALID&quot;, &quot;Excel展开内容过大&quot;);</span>
+<span class="fc" id="L30">          data.write(buffer, 0, read);</span>
+        }
+<span class="fc" id="L32">        entries.put(entry.getName(), data.toByteArray());</span>
+<span class="fc" id="L33">      }</span>
+<span class="fc" id="L34">      List&lt;String&gt; shared = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L35" title="All 2 branches covered.">      if (entries.containsKey(&quot;xl/sharedStrings.xml&quot;)) {</span>
+<span class="fc" id="L36">        NodeList values =</span>
+<span class="fc" id="L37">            parse(entries.get(&quot;xl/sharedStrings.xml&quot;)).getElementsByTagNameNS(&quot;*&quot;, &quot;si&quot;);</span>
+<span class="fc bfc" id="L38" title="All 2 branches covered.">        for (int i = 0; i &lt; values.getLength(); i++) shared.add(text((Element) values.item(i)));</span>
+      }
+<span class="fc" id="L40">      byte[] sheet = entries.get(firstWorksheet(entries));</span>
+<span class="fc bfc" id="L41" title="All 2 branches covered.">      if (sheet == null) throw new InvalidDataException(&quot;EXCEL_INVALID&quot;, &quot;Excel缺少第一张工作表&quot;);</span>
+<span class="fc" id="L42">      NodeList rows = parse(sheet).getElementsByTagNameNS(&quot;*&quot;, &quot;row&quot;);</span>
+<span class="fc bfc" id="L43" title="All 2 branches covered.">      if (rows.getLength() &gt; 20002) throw new InvalidDataException(&quot;EXCEL_INVALID&quot;, &quot;Excel最多20000条数据&quot;);</span>
+<span class="fc" id="L44">      List&lt;List&lt;String&gt;&gt; result = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L45" title="All 2 branches covered.">      for (int i = 0; i &lt; rows.getLength(); i++) {</span>
+<span class="fc" id="L46">        Element row = (Element) rows.item(i);</span>
+<span class="fc" id="L47">        NodeList cells = row.getElementsByTagNameNS(&quot;*&quot;, &quot;c&quot;);</span>
+<span class="fc" id="L48">        List&lt;String&gt; values = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L49" title="All 2 branches covered.">        for (int j = 0; j &lt; cells.getLength(); j++) {</span>
+<span class="fc" id="L50">          Element cell = (Element) cells.item(j);</span>
+<span class="fc" id="L51">          String address = cell.getAttribute(&quot;r&quot;);</span>
+<span class="fc" id="L52">          int column = 0;</span>
+<span class="pc bpc" id="L53" title="1 of 2 branches missed.">          for (char letter : address.toCharArray()) {</span>
+<span class="pc bpc" id="L54" title="1 of 4 branches missed.">            if (letter &lt; 'A' || letter &gt; 'Z') break;</span>
+<span class="fc" id="L55">            column = column * 26 + (letter - 'A' + 1);</span>
+          }
+<span class="pc bpc" id="L57" title="1 of 4 branches missed.">          if (column &lt; 1 || column &gt; 64) throw new InvalidDataException(&quot;EXCEL_INVALID&quot;, &quot;Excel列位置不合法&quot;);</span>
+<span class="fc bfc" id="L58" title="All 2 branches covered.">          while (values.size() &lt; column) values.add(&quot;&quot;);</span>
+<span class="fc" id="L59">          String type = cell.getAttribute(&quot;t&quot;);</span>
+<span class="fc" id="L60">          NodeList v = cell.getElementsByTagNameNS(&quot;*&quot;, &quot;v&quot;);</span>
+<span class="fc bfc" id="L61" title="All 2 branches covered.">          String value = v.getLength() == 0 ? &quot;&quot; : v.item(0).getTextContent();</span>
+<span class="fc bfc" id="L62" title="All 2 branches covered.">          if (&quot;s&quot;.equals(type)) value = shared.get(Integer.parseInt(value));</span>
+<span class="pc bpc" id="L63" title="1 of 2 branches missed.">          else if (&quot;inlineStr&quot;.equals(type)) value = text(cell);</span>
+<span class="fc" id="L64">          values.set(column - 1, value.strip());</span>
+        }
+<span class="fc bfc" id="L66" title="All 4 branches covered.">        if (values.stream().anyMatch(v -&gt; !v.isBlank())) result.add(List.copyOf(values));</span>
+      }
+<span class="fc" id="L68">      return List.copyOf(result);</span>
+<span class="fc" id="L69">    } catch (InvalidDataException ex) {</span>
+<span class="fc" id="L70">      throw ex;</span>
+<span class="fc" id="L71">    } catch (Exception ex) {</span>
+<span class="fc" id="L72">      throw new InvalidDataException(&quot;EXCEL_INVALID&quot;, &quot;无法读取Excel，请检查文件格式与内容&quot;);</span>
+    }
+  }
+
+  /** 依据工作簿首个 sheet 的 relationship 定位 ZIP 项，拒绝外链与越界目标。 */
+  private static String firstWorksheet(Map&lt;String, byte[]&gt; entries) throws Exception {
+<span class="fc bfc" id="L78" title="All 2 branches covered.">    if (!entries.containsKey(&quot;xl/workbook.xml&quot;)) return &quot;xl/worksheets/sheet1.xml&quot;;</span>
+<span class="fc" id="L79">    NodeList sheets = parse(entries.get(&quot;xl/workbook.xml&quot;)).getElementsByTagNameNS(&quot;*&quot;, &quot;sheet&quot;);</span>
+<span class="pc bpc" id="L80" title="1 of 4 branches missed.">    if (sheets.getLength() == 0 || !entries.containsKey(&quot;xl/_rels/workbook.xml.rels&quot;))</span>
+<span class="fc" id="L81">      throw new InvalidDataException(&quot;EXCEL_INVALID&quot;, &quot;Excel工作簿缺少工作表关系&quot;);</span>
+<span class="fc" id="L82">    Element first = (Element) sheets.item(0);</span>
+<span class="fc" id="L83">    String id =</span>
+<span class="fc" id="L84">        first.getAttributeNS(</span>
+            &quot;http://schemas.openxmlformats.org/officeDocument/2006/relationships&quot;, &quot;id&quot;);
+<span class="fc" id="L86">    NodeList relationships =</span>
+<span class="fc" id="L87">        parse(entries.get(&quot;xl/_rels/workbook.xml.rels&quot;))</span>
+<span class="fc" id="L88">            .getElementsByTagNameNS(&quot;*&quot;, &quot;Relationship&quot;);</span>
+<span class="fc bfc" id="L89" title="All 2 branches covered.">    for (int i = 0; i &lt; relationships.getLength(); i++) {</span>
+<span class="fc" id="L90">      Element relation = (Element) relationships.item(i);</span>
+<span class="fc bfc" id="L91" title="All 2 branches covered.">      if (!relation.getAttribute(&quot;Id&quot;).equals(id)) continue;</span>
+<span class="fc bfc" id="L92" title="All 2 branches covered.">      if (relation.getAttribute(&quot;TargetMode&quot;).equals(&quot;External&quot;)</span>
+<span class="fc bfc" id="L93" title="All 2 branches covered.">          || !relation.getAttribute(&quot;Type&quot;).endsWith(&quot;/worksheet&quot;))</span>
+<span class="fc" id="L94">        throw new InvalidDataException(&quot;EXCEL_INVALID&quot;, &quot;Excel首张表关系不合法&quot;);</span>
+<span class="fc" id="L95">      String target = relation.getAttribute(&quot;Target&quot;);</span>
+      java.nio.file.Path resolved =
+<span class="pc bpc" id="L97" title="1 of 2 branches missed.">          java.nio.file.Path.of(target.startsWith(&quot;/&quot;) ? target.substring(1) : &quot;xl/&quot; + target)</span>
+<span class="fc" id="L98">              .normalize();</span>
+<span class="fc" id="L99">      String name = resolved.toString().replace('\\', '/');</span>
+<span class="pc bpc" id="L100" title="1 of 4 branches missed.">      if (!name.startsWith(&quot;xl/worksheets/&quot;) || name.contains(&quot;:&quot;))</span>
+<span class="fc" id="L101">        throw new InvalidDataException(&quot;EXCEL_INVALID&quot;, &quot;Excel工作表位置不合法&quot;);</span>
+<span class="fc" id="L102">      return name;</span>
+    }
+<span class="fc" id="L104">    throw new InvalidDataException(&quot;EXCEL_INVALID&quot;, &quot;Excel未找到首张工作表&quot;);</span>
+  }
+
+  /** 禁止 DTD、实体与网络解析。 */
+  private static Document parse(byte[] bytes) throws Exception {
+<span class="fc" id="L109">    DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();</span>
+<span class="fc" id="L110">    factory.setNamespaceAware(true);</span>
+<span class="fc" id="L111">    factory.setFeature(&quot;http://apache.org/xml/features/disallow-doctype-decl&quot;, true);</span>
+<span class="fc" id="L112">    factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, &quot;&quot;);</span>
+<span class="fc" id="L113">    factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, &quot;&quot;);</span>
+<span class="fc" id="L114">    return factory.newDocumentBuilder().parse(new ByteArrayInputStream(bytes));</span>
+  }
+
+  /** 富文本与普通文本均按原顺序组合。 */
+  private static String text(Element element) {
+<span class="fc" id="L119">    NodeList nodes = element.getElementsByTagNameNS(&quot;*&quot;, &quot;t&quot;);</span>
+<span class="fc" id="L120">    StringBuilder result = new StringBuilder();</span>
+<span class="fc bfc" id="L121" title="All 2 branches covered.">    for (int i = 0; i &lt; nodes.getLength(); i++) result.append(nodes.item(i).getTextContent());</span>
+<span class="fc" id="L122">    return result.toString();</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

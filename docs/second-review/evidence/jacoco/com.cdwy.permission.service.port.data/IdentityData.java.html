@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>IdentityData.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.service.port.data</a> &gt; <span class="el_source">IdentityData.java</span></div><h1>IdentityData.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.service.port.data;
+
+import java.util.List;
+
+/** 接入应用身份用例的不可变结果：与 HTTP 表现及数据库技术无关。 */
+public final class IdentityData {
+  private IdentityData() {}
+
+  /**
+   * 某接入应用看到的当前用户。
+   *
+   * @param subject 统一身份用户标识（登录名，即工号或学号）
+   * @param roles 有效角色编码：直接分配角色及沿继承链可达的启用角色
+   * @param permissions 该应用内的有效菜单、按钮权限码与其绑定的后端 API 权限码
+   * @param name 姓名
+   * @param no 工号或学号（取登录名）
+   */
+<span class="fc" id="L18">  public record Current(</span>
+      String subject, List&lt;String&gt; roles, List&lt;String&gt; permissions, String name, String no) {}
+
+  /** 按统一身份用户标识查询到的人员；no 为工号或学号，本系统取登录名。 */
+<span class="fc" id="L22">  public record User(String userId, String no, String name) {}</span>
+
+  /** 统一身份部门；hasChildren 表示是否有直接子部门。 */
+<span class="fc" id="L25">  public record Department(Long id, String code, String name, Long parentId, boolean hasChildren) {}</span>
+
+  /** 部门下的统一身份用户，不含电话等联系方式。 */
+<span class="fc" id="L28">  public record DepartmentUser(</span>
+      String userId, String no, String name, Long departmentId, String departmentName) {}
+
+  /** 页码从 1 开始的分页结果。 */
+<span class="fc" id="L32">  public record Page&lt;T&gt;(int page, int pageSize, long total, List&lt;T&gt; items) {}</span>
+
+  /** 能否调用指定 operationId 的接口；不返回权限码。 */
+<span class="fc" id="L35">  public record ApiCheck(String operationId, boolean allowed) {}</span>
+
+  /**
+   * 分页查询条件；取值范围由 API 层校验。
+   *
+   * @param keyword 关键字，可空
+   * @param page 页码，从 1 开始
+   * @param pageSize 每页条数
+   */
+<span class="fc" id="L44">  public record Query(String keyword, int page, int pageSize) {}</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

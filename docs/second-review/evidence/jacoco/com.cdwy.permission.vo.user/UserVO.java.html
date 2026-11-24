@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UserVO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.vo.user</a> &gt; <span class="el_source">UserVO.java</span></div><h1>UserVO.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.vo.user;
+
+import cn.edu.xmu.clonefactory.CopyFrom;
+import com.cdwy.permission.service.port.data.PersonType;
+import com.cdwy.permission.service.port.data.UserResult;
+import java.time.Instant;
+import lombok.Getter;
+import lombok.Setter;
+
+/** 人员资料，不含密码散列和凭证版本。同名字段由 CloneFactory 从 {@link UserResult} 复制，人员类型由映射器转换。 */
+@Getter
+@Setter
+@CopyFrom(UserResult.class)
+<span class="fc" id="L14">public class UserVO {</span>
+  /** 标识。 */
+  private Long id;
+
+  /** 登录名（工号或学号）。 */
+  private String username;
+
+  /** 姓名。 */
+  private String displayName;
+
+  /** 是否启用。 */
+  private boolean enabled;
+
+  /** 是否为权限系统的首次管理员。 */
+  private boolean administrator;
+
+  /** 所属部门。 */
+  private Long departmentId;
+
+  /** 人员类型。 */
+  private PersonType personType;
+
+  /** 外部与临时人员的有效期截止时刻。 */
+  private Instant expiresAt;
+
+  /** 员工信息同步带来的分公司名称。 */
+  private String companyName;
+
+  /** 员工信息同步带来的岗位。 */
+  private String jobTitle;
+
+  /** 员工信息同步带来的电话。 */
+  private String phone;
+
+  /** 员工信息表中的部门名称。 */
+  private String sourceDepartment;
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

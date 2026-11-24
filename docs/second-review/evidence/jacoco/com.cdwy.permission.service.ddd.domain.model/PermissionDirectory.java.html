@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PermissionDirectory.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.service.ddd.domain.model</a> &gt; <span class="el_source">PermissionDirectory.java</span></div><h1>PermissionDirectory.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.service.ddd.domain.model;
+
+import com.cdwy.permission.service.port.data.PermissionData;
+import java.util.*;
+
+/** 权限目录领域快照：祖先只为导航补全，不自动获得授权。 */
+public final class PermissionDirectory {
+  private final Map&lt;Long, FrontendPermission&gt; nodes;
+  private final Map&lt;Long, ManagedSystem&gt; systems;
+
+  /** 读取请求内稳定快照。 */
+  public PermissionDirectory(
+<span class="fc" id="L13">      List&lt;FrontendPermission&gt; permissions, List&lt;ManagedSystem&gt; applications) {</span>
+<span class="fc" id="L14">    nodes = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L15">    permissions.forEach(n -&gt; nodes.put(n.getId(), n));</span>
+<span class="fc" id="L16">    systems = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L17">    applications.forEach(n -&gt; systems.put(n.getId(), n));</span>
+<span class="fc" id="L18">  }</span>
+
+  /** 子节点、祖先及应用都启用才有效。 */
+  public boolean usable(Long id) {
+<span class="fc" id="L22">    Set&lt;Long&gt; seen = new HashSet&lt;&gt;();</span>
+<span class="fc bfc" id="L23" title="All 2 branches covered.">    for (FrontendPermission n = nodes.get(id); n != null; n = nodes.get(n.getParentId())) {</span>
+<span class="fc" id="L24">      ManagedSystem app = systems.get(n.getSystemId());</span>
+<span class="pc bpc" id="L25" title="2 of 8 branches missed.">      if (!seen.add(n.getId()) || !n.getActive() || app == null || !app.getEnabled()) return false;</span>
+    }
+<span class="fc" id="L27">    return nodes.containsKey(id);</span>
+  }
+
+  /** 将当前节点转换为不可变结果。 */
+  public PermissionData.View view(Long id) {
+<span class="fc" id="L32">    FrontendPermission n = nodes.get(id);</span>
+<span class="fc" id="L33">    return new PermissionData.View(</span>
+<span class="fc" id="L34">        n.getId(),</span>
+<span class="fc" id="L35">        n.getSystemId(),</span>
+<span class="fc" id="L36">        n.getCode(),</span>
+<span class="fc" id="L37">        n.getName(),</span>
+<span class="fc" id="L38">        n.getKind(),</span>
+<span class="fc" id="L39">        n.getMenuPath(),</span>
+<span class="fc" id="L40">        n.getParentId(),</span>
+<span class="fc" id="L41">        n.getActive());</span>
+  }
+
+  /** 返回有效授权列表。 */
+  public List&lt;PermissionData.View&gt; views(Collection&lt;Long&gt; ids) {
+<span class="nc" id="L46">    return ids.stream().map(this::view).toList();</span>
+  }
+
+  /** 补全祖先容器，granted 仅由直接或继承授权集合决定。 */
+  public List&lt;PermissionData.Tree&gt; tree(Collection&lt;Long&gt; exact) {
+    // 按标识排序，导航顺序与菜单的登记顺序一致，不随授权来源的遍历顺序变化。
+<span class="fc" id="L52">    Set&lt;Long&gt; included = new TreeSet&lt;&gt;();</span>
+<span class="fc bfc" id="L53" title="All 2 branches covered.">    for (Long id : exact) {</span>
+<span class="fc" id="L54">      Set&lt;Long&gt; seen = new HashSet&lt;&gt;();</span>
+<span class="fc" id="L55">      for (FrontendPermission n = nodes.get(id);</span>
+<span class="pc bpc" id="L56" title="1 of 4 branches missed.">          n != null &amp;&amp; seen.add(n.getId());</span>
+<span class="fc" id="L57">          n = nodes.get(n.getParentId())) included.add(n.getId());</span>
+<span class="fc" id="L58">    }</span>
+<span class="fc" id="L59">    return included.stream()</span>
+<span class="fc bfc" id="L60" title="All 2 branches covered.">        .filter(id -&gt; nodes.get(id).getParentId() == null)</span>
+<span class="fc" id="L61">        .map(id -&gt; branch(id, included, new HashSet&lt;&gt;(exact)))</span>
+<span class="fc" id="L62">        .toList();</span>
+  }
+
+  /** 构造单个导航分支。 */
+  private PermissionData.Tree branch(Long id, Set&lt;Long&gt; included, Set&lt;Long&gt; exact) {
+<span class="fc" id="L67">    return new PermissionData.Tree(</span>
+<span class="fc" id="L68">        view(id),</span>
+<span class="fc" id="L69">        exact.contains(id),</span>
+<span class="fc" id="L70">        included.stream()</span>
+<span class="fc" id="L71">            .filter(child -&gt; Objects.equals(nodes.get(child).getParentId(), id))</span>
+<span class="fc" id="L72">            .map(child -&gt; branch(child, included, exact))</span>
+<span class="fc" id="L73">            .toList());</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

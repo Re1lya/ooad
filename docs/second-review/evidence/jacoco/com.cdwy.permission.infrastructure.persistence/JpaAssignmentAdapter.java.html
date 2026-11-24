@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JpaAssignmentAdapter.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.infrastructure.persistence</a> &gt; <span class="el_source">JpaAssignmentAdapter.java</span></div><h1>JpaAssignmentAdapter.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.infrastructure.persistence;
+
+import com.cdwy.permission.entity.rbac.*;
+import com.cdwy.permission.repository.permission.PermissionRepository;
+import com.cdwy.permission.repository.rbac.*;
+import com.cdwy.permission.repository.resource.ApiResourceRepository;
+import com.cdwy.permission.repository.role.RoleRepository;
+import com.cdwy.permission.repository.user.UserAccountRepository;
+import com.cdwy.permission.service.ddd.domain.repository.AssignmentRepository;
+import java.util.*;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Repository;
+
+/** 授权关联适配器：只返回两端标识，保存时还原实体关联。 */
+@Repository
+@RequiredArgsConstructor
+public class JpaAssignmentAdapter implements AssignmentRepository {
+  private final UserRoleRepository users;
+  private final RolePermissionRepository roles;
+  private final PermissionApiRepository apis;
+  private final RoleHierarchyRepository graph;
+  private final UserAccountRepository accounts;
+  private final RoleRepository roleData;
+  private final PermissionRepository permissions;
+  private final ApiResourceRepository resources;
+
+  /** 全部用户到角色关系快照。 */
+  public List&lt;Link&gt; userRoles() {
+<span class="fc" id="L29">    return users.findAll(org.springframework.data.domain.Sort.by(&quot;id&quot;)).stream()</span>
+<span class="fc" id="L30">        .map(e -&gt; new Link(e.getUser().getId(), e.getRole().getId()))</span>
+<span class="fc" id="L31">        .toList();</span>
+  }
+
+  /** 单个用户的直接角色，按用户索引查询。 */
+  public List&lt;Long&gt; rolesOf(Long userId) {
+<span class="fc" id="L36">    return users.findAllByUser_Id(userId).stream().map(e -&gt; e.getRole().getId()).toList();</span>
+  }
+
+  /** 全部角色到权限关系快照。 */
+  public List&lt;Link&gt; rolePermissions() {
+<span class="fc" id="L41">    return roles.findAll(org.springframework.data.domain.Sort.by(&quot;id&quot;)).stream()</span>
+<span class="fc" id="L42">        .map(e -&gt; new Link(e.getRole().getId(), e.getPermission().getId()))</span>
+<span class="fc" id="L43">        .toList();</span>
+  }
+
+  /** 全部前端权限到 API 关系快照。 */
+  public List&lt;Link&gt; bindings() {
+<span class="fc" id="L48">    return apis.findAll(org.springframework.data.domain.Sort.by(&quot;id&quot;)).stream()</span>
+<span class="fc" id="L49">        .map(e -&gt; new Link(e.getPermission().getId(), e.getResource().getId()))</span>
+<span class="fc" id="L50">        .toList();</span>
+  }
+
+  /** 显式继承边，不展开传递闭包。 */
+  public List&lt;Link&gt; hierarchy() {
+<span class="fc" id="L55">    return graph.findAll(org.springframework.data.domain.Sort.by(&quot;id&quot;)).stream()</span>
+<span class="fc" id="L56">        .map(e -&gt; new Link(e.getSeniorRole().getId(), e.getInheritedRole().getId()))</span>
+<span class="fc" id="L57">        .toList();</span>
+  }
+
+  /** 唯一约束处转译，保持稳定错误契约。 */
+  private void write(Runnable action) {
+    try {
+<span class="fc" id="L63">      action.run();</span>
+<span class="nc" id="L64">    } catch (org.springframework.dao.DataIntegrityViolationException ex) {</span>
+<span class="nc" id="L65">      throw new com.cdwy.permission.service.port.error.ConflictException(&quot;DATA_CONFLICT&quot;, &quot;数据重复或关联约束冲突，请刷新后重试&quot;);</span>
+<span class="fc" id="L66">    }</span>
+<span class="fc" id="L67">  }</span>
+
+  /** 幂等授权用户角色。 */
+  public void addUserRole(Long user, Long role) {
+<span class="fc bfc" id="L71" title="All 2 branches covered.">    if (!users.existsByUser_IdAndRole_Id(user, role))</span>
+<span class="fc" id="L72">      write(</span>
+          () -&gt;
+<span class="fc" id="L74">              users.saveAndFlush(</span>
+<span class="fc" id="L75">                  new UserRole(accounts.getReferenceById(user), roleData.getReferenceById(role))));</span>
+<span class="fc" id="L76">  }</span>
+
+  /** 一次保存并刷新一批用户角色。 */
+  public void addUserRoles(java.util.Collection&lt;Link&gt; links) {
+<span class="fc bfc" id="L80" title="All 2 branches covered.">    if (links.isEmpty()) return;</span>
+<span class="fc" id="L81">    write(</span>
+        () -&gt;
+<span class="fc" id="L83">            users.saveAllAndFlush(</span>
+<span class="fc" id="L84">                links.stream()</span>
+<span class="fc" id="L85">                    .map(</span>
+                        l -&gt;
+<span class="fc" id="L87">                            new UserRole(</span>
+<span class="fc" id="L88">                                accounts.getReferenceById(l.left()),</span>
+<span class="fc" id="L89">                                roleData.getReferenceById(l.right())))</span>
+<span class="fc" id="L90">                    .toList()));</span>
+<span class="fc" id="L91">  }</span>
+
+  /** 幂等撤销用户角色。 */
+  public void removeUserRole(Long user, Long role) {
+<span class="fc" id="L95">    users.deleteByUser_IdAndRole_Id(user, role);</span>
+<span class="fc" id="L96">  }</span>
+
+  /** 删除账号时解除其角色。 */
+  public void removeUserRoles(Long user) {
+<span class="fc" id="L100">    users.deleteAllByUser_Id(user);</span>
+<span class="fc" id="L101">  }</span>
+
+  /** 幂等授予角色权限。 */
+  public void addRolePermission(Long role, Long permission) {
+<span class="fc bfc" id="L105" title="All 2 branches covered.">    if (!roles.existsByRole_IdAndPermission_Id(role, permission))</span>
+<span class="fc" id="L106">      write(</span>
+          () -&gt;
+<span class="fc" id="L108">              roles.saveAndFlush(</span>
+                  new RolePermission(
+<span class="fc" id="L110">                      roleData.getReferenceById(role), permissions.getReferenceById(permission))));</span>
+<span class="fc" id="L111">  }</span>
+
+  /** 撤回当前显式授权。 */
+  public void removeRolePermission(Long role, Long permission) {
+<span class="fc" id="L115">    roles.deleteByRole_IdAndPermission_Id(role, permission);</span>
+<span class="fc" id="L116">  }</span>
+
+  /** 幂等绑定同应用资源。 */
+  public void bind(Long permission, Long resource) {
+<span class="fc bfc" id="L120" title="All 2 branches covered.">    if (!apis.existsByPermission_IdAndResource_Id(permission, resource))</span>
+<span class="fc" id="L121">      write(</span>
+          () -&gt;
+<span class="fc" id="L123">              apis.saveAndFlush(</span>
+                  new PermissionApi(
+<span class="fc" id="L125">                      permissions.getReferenceById(permission),</span>
+<span class="fc" id="L126">                      resources.getReferenceById(resource))));</span>
+<span class="fc" id="L127">  }</span>
+
+  /** 解除显式 API 绑定。 */
+  public void unbind(Long permission, Long resource) {
+<span class="fc" id="L131">    apis.deleteByPermission_IdAndResource_Id(permission, resource);</span>
+<span class="fc" id="L132">  }</span>
+
+  /** 领域无环验证后保存显式边。 */
+  public void inherit(Long senior, Long inherited) {
+<span class="pc bpc" id="L136" title="1 of 2 branches missed.">    if (!graph.existsBySeniorRole_IdAndInheritedRole_Id(senior, inherited))</span>
+<span class="fc" id="L137">      write(</span>
+          () -&gt;
+<span class="fc" id="L139">              graph.saveAndFlush(</span>
+                  new RoleHierarchy(
+<span class="fc" id="L141">                      roleData.getReferenceById(senior), roleData.getReferenceById(inherited))));</span>
+<span class="fc" id="L142">  }</span>
+
+  /** 解除单条继承边。 */
+  public void removeInheritance(Long senior, Long inherited) {
+<span class="fc" id="L146">    graph.deleteBySeniorRole_IdAndInheritedRole_Id(senior, inherited);</span>
+<span class="fc" id="L147">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

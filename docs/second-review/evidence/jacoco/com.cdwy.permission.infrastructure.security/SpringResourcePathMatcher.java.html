@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SpringResourcePathMatcher.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.infrastructure.security</a> &gt; <span class="el_source">SpringResourcePathMatcher.java</span></div><h1>SpringResourcePathMatcher.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.infrastructure.security;
+
+import com.cdwy.permission.service.port.rbac.ResourcePathMatcher;
+import org.springframework.http.server.PathContainer;
+import org.springframework.stereotype.Component;
+import org.springframework.web.util.pattern.*;
+
+/** 隔离 Spring 路径语法与特异性比较。 */
+@Component
+<span class="fc" id="L10">public class SpringResourcePathMatcher implements ResourcePathMatcher {</span>
+  /** 语法错误按统一400返回。 */
+  public void validate(String pattern) {
+<span class="fc" id="L13">    PathPatternParser.defaultInstance.parse(pattern);</span>
+<span class="fc" id="L14">  }</span>
+
+  /** 使用框架的路径解析而非字符串前缀。 */
+  public boolean matches(String pattern, String path) {
+<span class="fc" id="L18">    return PathPatternParser.defaultInstance.parse(pattern).matches(PathContainer.parsePath(path));</span>
+  }
+
+  /** 越具体的路径排在前面。 */
+  public int compare(String a, String b) {
+<span class="fc" id="L23">    return PathPattern.SPECIFICITY_COMPARATOR.compare(</span>
+<span class="fc" id="L24">        PathPatternParser.defaultInstance.parse(a), PathPatternParser.defaultInstance.parse(b));</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

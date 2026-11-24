@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GrantController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.controller.rbac</a> &gt; <span class="el_source">GrantController.java</span></div><h1>GrantController.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.controller.rbac;
+
+import com.cdwy.permission.config.BusinessAccess;
+import com.cdwy.permission.controller.permission.PermissionVoMapper;
+import com.cdwy.permission.controller.role.RoleVoMapper;
+import com.cdwy.permission.service.port.rbac.AuthorizationUseCase;
+import com.cdwy.permission.vo.permission.PermissionVO;
+import com.cdwy.permission.vo.role.RoleVO;
+import java.util.List;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+
+/** 授权：给用户分配角色、给角色授予菜单与按钮；重复授权与重复撤销都幂等。 */
+@RestController
+@BusinessAccess(BusinessAccess.CONSOLE)
+@RequiredArgsConstructor
+@RequestMapping(&quot;/api&quot;)
+public class GrantController {
+  private final AuthorizationUseCase service;
+  private final RoleVoMapper roleMapper;
+  private final PermissionVoMapper permissionMapper;
+
+  /** 用户直接分配的角色。 */
+  @GetMapping(&quot;/users/{userId}/roles&quot;)
+  public List&lt;RoleVO&gt; roles(@PathVariable Long userId) {
+<span class="fc" id="L33">    return service.roles(userId).stream().map(roleMapper::toVO).toList();</span>
+  }
+
+  /** 给用户分配角色。 */
+  @PutMapping(&quot;/users/{userId}/roles/{roleId}&quot;)
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void grantRole(@PathVariable Long userId, @PathVariable Long roleId) {
+<span class="fc" id="L40">    service.grantRole(userId, roleId);</span>
+<span class="fc" id="L41">  }</span>
+
+  /** 取消用户的角色。 */
+  @DeleteMapping(&quot;/users/{userId}/roles/{roleId}&quot;)
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void revokeRole(@PathVariable Long userId, @PathVariable Long roleId) {
+<span class="fc" id="L47">    service.revokeRole(userId, roleId);</span>
+<span class="fc" id="L48">  }</span>
+
+  /** 角色直接拥有的菜单与按钮。 */
+  @GetMapping(&quot;/roles/{roleId}/permissions&quot;)
+  public List&lt;PermissionVO&gt; permissions(@PathVariable Long roleId) {
+<span class="fc" id="L53">    return service.rolePermissions(roleId).stream().map(permissionMapper::toVO).toList();</span>
+  }
+
+  /** 给角色授予菜单或按钮。 */
+  @PutMapping(&quot;/roles/{roleId}/permissions/{permissionId}&quot;)
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void grantPermission(@PathVariable Long roleId, @PathVariable Long permissionId) {
+<span class="fc" id="L60">    service.grantPermission(roleId, permissionId);</span>
+<span class="fc" id="L61">  }</span>
+
+  /** 撤销角色的菜单或按钮。 */
+  @DeleteMapping(&quot;/roles/{roleId}/permissions/{permissionId}&quot;)
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void revokePermission(@PathVariable Long roleId, @PathVariable Long permissionId) {
+<span class="fc" id="L67">    service.revokePermission(roleId, permissionId);</span>
+<span class="fc" id="L68">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AuthData.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.service.port.data</a> &gt; <span class="el_source">AuthData.java</span></div><h1>AuthData.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.service.port.data;
+
+/** 认证用例（{@code AuthenticationUseCase}）的输入与结果：登录、令牌解析和修改本人密码。 */
+public final class AuthData {
+  private AuthData() {}
+
+  /**
+   * 控制台登录（{@code AuthenticationUseCase#login}）的输入。
+   *
+   * @param username 登录名（工号或学号），精确匹配
+   * @param password 明文密码，只与散列比对，不落日志
+   */
+<span class="fc" id="L13">  public record Login(String username, String password) {}</span>
+
+  /**
+   * 控制台登录与接入应用登录的结果。
+   *
+   * @param accessToken 签发的 JWT，只携带用户标识、凭证版本与目标系统（{@code aud}），不含角色和权限
+   * @param tokenType 令牌类型，固定为 {@code Bearer}
+   * @param expiresIn 有效时长（秒），取配置 {@code permission.jwt.expiration-seconds}
+   * @param user 登录用户的资料，不含密码散列与凭证版本
+   */
+<span class="fc" id="L23">  public record Token(String accessToken, String tokenType, long expiresIn, UserResult user) {}</span>
+
+  /**
+   * 修改本人密码（{@code AuthenticationUseCase#changePassword}）的输入。
+   *
+   * @param currentPassword 原密码，与当前散列不符时认证失败（401）
+   * @param newPassword 新密码，须符合项目密码规则
+   */
+<span class="fc" id="L31">  public record PasswordChange(String currentPassword, String newPassword) {}</span>
+
+  /**
+   * 令牌解析（{@code AuthenticationUseCase#resolve}）的结果，由 API 拦截器作为当前登录用户写入请求。
+   *
+   * @param id 用户标识
+   * @param administrator 是否为首次管理员账号；接口授权仍按 RBAC，个别规则（如查看接入应用的审计日志）参考此标志
+   */
+<span class="fc" id="L39">  public record Identity(Long id, boolean administrator) {}</span>
+
+  /**
+   * 接入应用登录：{@code target} 是被调用的应用编码（统一身份基地址中的编码），{@code systems} 是请求声明的令牌目标系统，
+   * 必须包含 target，且都是已登记的应用。
+   */
+<span class="fc" id="L45">  public record AppLogin(String username, String password, java.util.List&lt;String&gt; systems, String target) {}</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

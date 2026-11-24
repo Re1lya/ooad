@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DddAuthenticationService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.service.ddd.application.auth</a> &gt; <span class="el_source">DddAuthenticationService.java</span></div><h1>DddAuthenticationService.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.service.ddd.application.auth;
+
+import com.cdwy.permission.service.ddd.domain.model.*;
+import com.cdwy.permission.service.ddd.domain.repository.*;
+import com.cdwy.permission.service.port.auth.AuthenticationUseCase;
+import com.cdwy.permission.service.port.data.*;
+import com.cdwy.permission.service.port.error.*;
+import java.util.*;
+import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+/** DddAuthenticationService 应用服务：编排领域对象与仓储端口，禁止依赖 JPA。 */
+@Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+@ConditionalOnProperty(name = &quot;app.backend-strategy&quot;, havingValue = &quot;ddd&quot;)
+public class DddAuthenticationService implements AuthenticationUseCase {
+  /** 返回实际装载模式。 */
+  @Override
+  public String strategy() {
+<span class="fc" id="L23">    return &quot;ddd&quot;;</span>
+  }
+
+  private final AccountRepository accounts;
+  private final SystemCatalog systems;
+  private final com.cdwy.permission.service.port.auth.CredentialGateway credentials;
+
+  /** 控制台登录：令牌目标系统为权限系统自身。 */
+  public AuthData.Token login(AuthData.Login input) {
+<span class="fc" id="L32">    return token(</span>
+<span class="fc" id="L33">        authenticate(input.username(), input.password()),</span>
+<span class="fc" id="L34">        java.util.List.of(com.cdwy.permission.service.auth.JwtTokenService.CONSOLE_AUDIENCE));</span>
+  }
+
+  /** 接入应用登录：由 {@link ManagedSystem#audience} 校验目标系统，账号对象校验可用状态。 */
+  public AuthData.Token loginTo(AuthData.AppLogin input) {
+<span class="fc" id="L39">    java.util.List&lt;String&gt; audience =</span>
+<span class="fc" id="L40">        ManagedSystem.audience(input.systems(), input.target(), systems.all());</span>
+<span class="fc" id="L41">    return token(authenticate(input.username(), input.password()), audience);</span>
+  }
+
+  /** 登录同时检查可用状态，失败不泄露账号是否存在。 */
+  private Account authenticate(String username, String password) {
+<span class="fc" id="L46">    return accounts</span>
+<span class="fc" id="L47">        .username(username)</span>
+<span class="fc" id="L48">        .filter(a -&gt; a.usable(credentials.now()))</span>
+<span class="fc" id="L49">        .filter(a -&gt; credentials.matches(password, a.getPasswordHash()))</span>
+<span class="fc" id="L50">        .orElseThrow(() -&gt; new AuthenticationFailedException(&quot;账号或密码错误，或账号已失效&quot;));</span>
+  }
+
+  /** 按账号当前凭证版本与目标系统签发令牌，并把账号按同名字段复制为登录结果中的用户信息（不含密码散列与凭证版本）。 */
+  private AuthData.Token token(Account account, java.util.Collection&lt;String&gt; audience) {
+<span class="fc" id="L55">    UserResult result = cn.edu.xmu.clonefactory.util.CloneFactory.copy(new UserResult(), account);</span>
+<span class="fc" id="L56">    result.setKind(account.getKind());</span>
+<span class="fc" id="L57">    return new AuthData.Token(</span>
+<span class="fc" id="L58">        credentials.issue(account.getId(), account.getCredentialVersion(), audience),</span>
+        &quot;Bearer&quot;,
+<span class="fc" id="L60">        credentials.expiresIn(),</span>
+        result);
+  }
+
+  /** 每次请求重新读取账号状态和凭证版本，并核对令牌目标系统。 */
+  public AuthData.Identity resolve(String header, String audience) {
+<span class="fc" id="L66">    com.cdwy.permission.service.port.auth.CredentialGateway.Claims claims =</span>
+<span class="fc" id="L67">        credentials.verify(header);</span>
+<span class="fc bfc" id="L68" title="All 2 branches covered.">    if (!claims.audience().contains(audience))</span>
+<span class="fc" id="L69">      throw new AuthenticationFailedException(&quot;令牌不适用于当前系统，请重新登录&quot;);</span>
+<span class="fc" id="L70">    Account a =</span>
+        accounts
+<span class="fc" id="L72">            .find(claims.id())</span>
+<span class="fc" id="L73">            .filter(n -&gt; n.usable(credentials.now()))</span>
+<span class="fc bfc" id="L74" title="All 2 branches covered.">            .filter(n -&gt; n.getCredentialVersion() == claims.version())</span>
+<span class="fc" id="L75">            .orElseThrow(() -&gt; new AuthenticationFailedException(&quot;账号或凭证已失效，请重新登录&quot;));</span>
+<span class="fc" id="L76">    return new AuthData.Identity(a.getId(), a.getAdministrator());</span>
+  }
+
+  /** 退出登录由账号对象递增凭证版本，已签发的令牌随即失效。 */
+  @Transactional
+  public void logout(Long id) {
+<span class="pc" id="L82">    Account a = accounts.lock(id).orElseThrow(() -&gt; new AuthenticationFailedException(&quot;账号不存在&quot;));</span>
+<span class="fc" id="L83">    a.logout();</span>
+<span class="fc" id="L84">    accounts.save(a);</span>
+<span class="fc" id="L85">  }</span>
+
+  /** 原密码验证及新密码保存处于同一账号写锁事务。 */
+  @Transactional
+  public void changePassword(Long id, AuthData.PasswordChange input) {
+<span class="pc" id="L90">    Account a = accounts.lock(id).orElseThrow(() -&gt; new AuthenticationFailedException(&quot;账号不存在&quot;));</span>
+<span class="fc bfc" id="L91" title="All 2 branches covered.">    if (!credentials.matches(input.currentPassword(), a.getPasswordHash()))</span>
+<span class="fc" id="L92">      throw new AuthenticationFailedException(&quot;原密码错误&quot;);</span>
+<span class="fc" id="L93">    credentials.validatePassword(input.newPassword());</span>
+<span class="fc" id="L94">    a.resetPassword(credentials.encode(input.newPassword()));</span>
+<span class="fc" id="L95">    accounts.save(a);</span>
+<span class="fc" id="L96">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JwtTokenService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.service.auth</a> &gt; <span class="el_source">JwtTokenService.java</span></div><h1>JwtTokenService.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.service.auth;
+
+import com.cdwy.permission.config.JwtSettings;
+import com.cdwy.permission.entity.user.UserAccount;
+import com.cdwy.permission.service.port.error.AuthenticationFailedException;
+import io.jsonwebtoken.*;
+import io.jsonwebtoken.security.Keys;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.util.Collection;
+import java.util.Date;
+import java.util.Set;
+import javax.crypto.SecretKey;
+import org.springframework.stereotype.Service;
+
+/**
+ * 无登录会话存储。签发与验签只处理 JWT，自身不访问数据库。
+ *
+ * &lt;p&gt;{@code aud} 记录令牌的目标系统：控制台登录签发 {@value #CONSOLE_AUDIENCE}，接入应用登录签发请求中的 {@code
+ * systems}。令牌不携带角色与权限。
+ */
+@Service
+public class JwtTokenService {
+  /** 权限系统自身（管理控制台）的系统标识。 */
+  public static final String CONSOLE_AUDIENCE = com.cdwy.permission.config.BusinessAccess.CONSOLE;
+
+  private final SecretKey signingKey;
+  private final long expirationSeconds;
+
+  /**
+   * 密钥取 {@code permission.jwt.secret}：非空时至少 32 字节（UTF-8），否则启动失败；为空时每次启动随机生成，重启后已签发的令牌全部失效。
+   * 有效期取 {@code permission.jwt.expiration-seconds}。
+   */
+<span class="fc" id="L34">  public JwtTokenService(JwtSettings settings) {</span>
+<span class="fc" id="L35">    byte[] bytes = settings.secret().getBytes(StandardCharsets.UTF_8);</span>
+<span class="pc bpc" id="L36" title="1 of 4 branches missed.">    if (bytes.length &gt; 0 &amp;&amp; bytes.length &lt; 32) throw new IllegalArgumentException(&quot;JWT 密钥至少 32 字节&quot;);</span>
+<span class="fc bfc" id="L37" title="All 2 branches covered.">    signingKey = bytes.length == 0 ? Jwts.SIG.HS256.key().build() : Keys.hmacShaKeyFor(bytes);</span>
+<span class="fc" id="L38">    expirationSeconds = settings.expirationSeconds();</span>
+<span class="fc" id="L39">  }</span>
+
+  /** 令牌有效时长（秒），即登录结果中的 {@code expiresIn}。 */
+  public long expiresIn() {
+<span class="fc" id="L43">    return expirationSeconds;</span>
+  }
+
+  /** 控制台令牌。 */
+  public String issue(UserAccount user) {
+<span class="fc" id="L48">    return issue(user.getId(), user.getCredentialVersion(), Set.of(CONSOLE_AUDIENCE));</span>
+  }
+
+  /** 按身份、凭证版本和目标系统签发，供领域端口适配器使用。 */
+  public String issue(Long id, long version, Collection&lt;String&gt; audience) {
+<span class="fc" id="L53">    Instant now = Instant.now();</span>
+<span class="fc" id="L54">    return Jwts.builder()</span>
+<span class="fc" id="L55">        .subject(id.toString())</span>
+<span class="fc" id="L56">        .audience()</span>
+<span class="fc" id="L57">        .add(audience)</span>
+<span class="fc" id="L58">        .and()</span>
+<span class="fc" id="L59">        .issuedAt(Date.from(now))</span>
+<span class="fc" id="L60">        .expiration(Date.from(now.plusSeconds(expirationSeconds)))</span>
+<span class="fc" id="L61">        .claim(&quot;cv&quot;, version)</span>
+<span class="fc" id="L62">        .signWith(signingKey)</span>
+<span class="fc" id="L63">        .compact();</span>
+  }
+
+  /** 验签后的身份：用户、凭证版本与令牌目标系统。 */
+<span class="fc" id="L67">  public record Identity(Long userId, long credentialVersion, Set&lt;String&gt; audience) {}</span>
+
+  /**
+   * 解析 {@code Authorization} 请求头：须以 {@code Bearer} 加空格开头（不区分大小写），签名有效且未过期，并带有正整数用户标识、凭证版本
+   * {@code cv}、非空 {@code aud} 和不晚于当前时间的签发时间。只校验令牌本身，账号状态与目标系统由调用方检查；任何不符都抛同一个 401 提示。
+   */
+  public Identity verify(String header) {
+<span class="pc bpc" id="L74" title="1 of 4 branches missed.">    if (header == null || !header.regionMatches(true, 0, &quot;Bearer &quot;, 0, 7)) throw invalid();</span>
+    try {
+      Claims claims =
+<span class="fc" id="L77">          Jwts.parser()</span>
+<span class="fc" id="L78">              .verifyWith(signingKey)</span>
+<span class="fc" id="L79">              .build()</span>
+<span class="fc" id="L80">              .parseSignedClaims(header.substring(7).trim())</span>
+<span class="fc" id="L81">              .getPayload();</span>
+<span class="fc" id="L82">      long id = Long.parseLong(claims.getSubject());</span>
+<span class="fc" id="L83">      Number version = claims.get(&quot;cv&quot;, Number.class);</span>
+<span class="fc" id="L84">      Set&lt;String&gt; audience = claims.getAudience();</span>
+<span class="fc bfc" id="L85" title="All 6 branches covered.">      if (id &lt; 1</span>
+          || version == null
+          || audience == null
+<span class="pc bpc" id="L88" title="1 of 2 branches missed.">          || audience.isEmpty()</span>
+<span class="fc bfc" id="L89" title="All 2 branches covered.">          || claims.getIssuedAt() == null</span>
+<span class="pc bpc" id="L90" title="1 of 2 branches missed.">          || claims.getExpiration() == null</span>
+<span class="fc bfc" id="L91" title="All 2 branches covered.">          || claims.getIssuedAt().after(new Date())</span>
+<span class="pc bpc" id="L92" title="1 of 2 branches missed.">          || !claims.getExpiration().after(claims.getIssuedAt())) throw invalid();</span>
+<span class="fc" id="L93">      return new Identity(id, version.longValue(), Set.copyOf(audience));</span>
+<span class="fc" id="L94">    } catch (JwtException | IllegalArgumentException e) {</span>
+<span class="fc" id="L95">      throw invalid();</span>
+    }
+  }
+
+  /** 统一的令牌失败结果，不向调用方透露具体原因。 */
+  private static AuthenticationFailedException invalid() {
+<span class="fc" id="L101">    return new AuthenticationFailedException(&quot;Token 无效或已过期，请重新登录&quot;);</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

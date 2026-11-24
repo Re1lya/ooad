@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SystemInfoController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.controller.rbac</a> &gt; <span class="el_source">SystemInfoController.java</span></div><h1>SystemInfoController.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.controller.rbac;
+
+import com.cdwy.permission.service.port.rbac.RoleGraphUseCase;
+import com.cdwy.permission.vo.rbac.SystemInfoVO;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
+
+/** 实际装载模式与业务覆盖清单。 */
+@RestController
+@com.cdwy.permission.config.BusinessAccess(com.cdwy.permission.config.BusinessAccess.CONSOLE)
+@RequiredArgsConstructor
+public class SystemInfoController {
+  private final RoleGraphUseCase graph;
+  private final com.cdwy.permission.service.port.user.UserUseCase users;
+  private final com.cdwy.permission.service.port.organization.DepartmentUseCase departments;
+  private final com.cdwy.permission.service.port.system.SystemUseCase systems;
+  private final com.cdwy.permission.service.port.role.RoleUseCase roles;
+  private final com.cdwy.permission.service.port.resource.ResourceUseCase resources;
+  private final com.cdwy.permission.service.port.permission.PermissionUseCase permissions;
+  private final com.cdwy.permission.service.port.rbac.AuthorizationUseCase authorization;
+  private final com.cdwy.permission.service.port.rbac.HierarchyUseCase hierarchy;
+  private final com.cdwy.permission.service.port.auth.AuthenticationUseCase authentication;
+  private final com.cdwy.permission.service.port.directory.DirectorySyncUseCase directorySync;
+  private final com.cdwy.permission.service.port.identity.ApplicationIdentityUseCase identity;
+
+  /** 来源为当前实际注入的端口实现。 */
+  @GetMapping(&quot;/api/system-info&quot;)
+  public SystemInfoVO info() {
+<span class="fc" id="L29">    return new SystemInfoVO(</span>
+<span class="fc" id="L30">        graph.strategy(),</span>
+        &quot;RBAC1&quot;,
+<span class="fc" id="L32">        java.util.Map.ofEntries(</span>
+<span class="fc" id="L33">            java.util.Map.entry(&quot;users&quot;, users.strategy()),</span>
+<span class="fc" id="L34">            java.util.Map.entry(&quot;departments&quot;, departments.strategy()),</span>
+<span class="fc" id="L35">            java.util.Map.entry(&quot;systems&quot;, systems.strategy()),</span>
+<span class="fc" id="L36">            java.util.Map.entry(&quot;roles&quot;, roles.strategy()),</span>
+<span class="fc" id="L37">            java.util.Map.entry(&quot;resources&quot;, resources.strategy()),</span>
+<span class="fc" id="L38">            java.util.Map.entry(&quot;permissions&quot;, permissions.strategy()),</span>
+<span class="fc" id="L39">            java.util.Map.entry(&quot;authorization&quot;, authorization.strategy()),</span>
+<span class="fc" id="L40">            java.util.Map.entry(&quot;hierarchy&quot;, hierarchy.strategy()),</span>
+<span class="fc" id="L41">            java.util.Map.entry(&quot;authentication&quot;, authentication.strategy()),</span>
+<span class="fc" id="L42">            java.util.Map.entry(&quot;directorySync&quot;, directorySync.strategy()),</span>
+<span class="fc" id="L43">            java.util.Map.entry(&quot;identity&quot;, identity.strategy())));</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

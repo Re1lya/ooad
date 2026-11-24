@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CloneFactory.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">cn.edu.xmu.clonefactory.util</a> &gt; <span class="el_source">CloneFactory.java</span></div><h1>CloneFactory.java</h1><pre class="source lang-java linenums">package cn.edu.xmu.clonefactory.util;
+
+import com.cdwy.permission.dto.user.UserCreateDTO;
+import com.cdwy.permission.entity.organization.Department;
+import com.cdwy.permission.entity.permission.Permission;
+import com.cdwy.permission.entity.resource.ApiResource;
+import com.cdwy.permission.entity.role.Role;
+import com.cdwy.permission.entity.system.BusinessSystem;
+import com.cdwy.permission.entity.user.UserAccount;
+import com.cdwy.permission.service.ddd.domain.model.AccessRole;
+import com.cdwy.permission.service.ddd.domain.model.Account;
+import com.cdwy.permission.service.ddd.domain.model.DepartmentNode;
+import com.cdwy.permission.service.ddd.domain.model.FrontendPermission;
+import com.cdwy.permission.service.ddd.domain.model.ManagedSystem;
+import com.cdwy.permission.service.ddd.domain.model.ProtectedResource;
+import com.cdwy.permission.service.port.data.CreateUserCommand;
+import com.cdwy.permission.service.port.data.UserResult;
+import com.cdwy.permission.vo.user.UserVO;
+
+public final class CloneFactory {
+  private CloneFactory() {
+  }
+
+  /**
+   * Copy matching properties from DepartmentNode to Department.
+   * Generated from @CopyFrom on Department.
+   */
+  public static Department copy(Department target, DepartmentNode source) {
+<span class="fc" id="L29">    target.setName(source.getName());</span>
+<span class="fc" id="L30">    target.setCode(source.getCode());</span>
+<span class="fc" id="L31">    return target;</span>
+  }
+
+  /**
+   * Copy matching properties from FrontendPermission to Permission.
+   * Generated from @CopyFrom on Permission.
+   */
+  public static Permission copy(Permission target, FrontendPermission source) {
+<span class="fc" id="L39">    target.setCode(source.getCode());</span>
+<span class="fc" id="L40">    target.setName(source.getName());</span>
+<span class="fc" id="L41">    target.setMenuPath(source.getMenuPath());</span>
+<span class="fc" id="L42">    target.setActive(source.getActive());</span>
+<span class="fc" id="L43">    return target;</span>
+  }
+
+  /**
+   * Copy matching properties from ProtectedResource to ApiResource.
+   * Generated from @CopyFrom on ApiResource.
+   */
+  public static ApiResource copy(ApiResource target, ProtectedResource source) {
+<span class="fc" id="L51">    target.setName(source.getName());</span>
+<span class="fc" id="L52">    target.setCode(source.getCode());</span>
+<span class="fc" id="L53">    target.setOperationId(source.getOperationId());</span>
+<span class="fc" id="L54">    target.setMethod(source.getMethod());</span>
+<span class="fc" id="L55">    target.setPath(source.getPath());</span>
+<span class="fc" id="L56">    target.setActive(source.getActive());</span>
+<span class="fc" id="L57">    return target;</span>
+  }
+
+  /**
+   * Copy matching properties from AccessRole to Role.
+   * Generated from @CopyFrom on Role.
+   */
+  public static Role copy(Role target, AccessRole source) {
+<span class="fc" id="L65">    target.setCode(source.getCode());</span>
+<span class="fc" id="L66">    target.setName(source.getName());</span>
+<span class="fc" id="L67">    target.setDescription(source.getDescription());</span>
+<span class="fc" id="L68">    target.setEnabled(source.getEnabled());</span>
+<span class="fc" id="L69">    return target;</span>
+  }
+
+  /**
+   * Copy matching properties from ManagedSystem to BusinessSystem.
+   * Generated from @CopyFrom on BusinessSystem.
+   */
+  public static BusinessSystem copy(BusinessSystem target, ManagedSystem source) {
+<span class="fc" id="L77">    target.setCode(source.getCode());</span>
+<span class="fc" id="L78">    target.setName(source.getName());</span>
+<span class="fc" id="L79">    target.setBaseUrl(source.getBaseUrl());</span>
+<span class="fc" id="L80">    target.setEnabled(source.getEnabled());</span>
+<span class="fc" id="L81">    return target;</span>
+  }
+
+  /**
+   * Copy matching properties from Account to UserAccount.
+   * Generated from @CopyFrom on UserAccount.
+   */
+  public static UserAccount copy(UserAccount target, Account source) {
+<span class="fc" id="L89">    target.setUsername(source.getUsername());</span>
+<span class="fc" id="L90">    target.setPasswordHash(source.getPasswordHash());</span>
+<span class="fc" id="L91">    target.setDisplayName(source.getDisplayName());</span>
+<span class="fc" id="L92">    target.setEnabled(source.getEnabled());</span>
+<span class="fc" id="L93">    target.setAdministrator(source.getAdministrator());</span>
+<span class="fc" id="L94">    target.setCredentialVersion(source.getCredentialVersion());</span>
+<span class="fc" id="L95">    target.setExpiresAt(source.getExpiresAt());</span>
+<span class="fc" id="L96">    target.setCompanyName(source.getCompanyName());</span>
+<span class="fc" id="L97">    target.setJobTitle(source.getJobTitle());</span>
+<span class="fc" id="L98">    target.setPhone(source.getPhone());</span>
+<span class="fc" id="L99">    target.setSourceDepartment(source.getSourceDepartment());</span>
+<span class="fc" id="L100">    return target;</span>
+  }
+
+  /**
+   * Copy matching properties from CreateUserCommand to UserAccount.
+   * Generated from @CopyFrom on UserAccount.
+   */
+  public static UserAccount copy(UserAccount target, CreateUserCommand source) {
+<span class="fc" id="L108">    target.setUsername(source.getUsername());</span>
+<span class="fc" id="L109">    target.setDisplayName(source.getDisplayName());</span>
+<span class="fc" id="L110">    return target;</span>
+  }
+
+  /**
+   * Copy matching properties from UserResult to UserVO.
+   * Generated from @CopyFrom on UserVO.
+   */
+  public static UserVO copy(UserVO target, UserResult source) {
+<span class="fc" id="L118">    target.setId(source.getId());</span>
+<span class="fc" id="L119">    target.setUsername(source.getUsername());</span>
+<span class="fc" id="L120">    target.setDisplayName(source.getDisplayName());</span>
+<span class="fc" id="L121">    target.setEnabled(source.getEnabled());</span>
+<span class="fc" id="L122">    target.setAdministrator(source.getAdministrator());</span>
+<span class="fc" id="L123">    target.setDepartmentId(source.getDepartmentId());</span>
+<span class="fc" id="L124">    target.setExpiresAt(source.getExpiresAt());</span>
+<span class="fc" id="L125">    target.setCompanyName(source.getCompanyName());</span>
+<span class="fc" id="L126">    target.setJobTitle(source.getJobTitle());</span>
+<span class="fc" id="L127">    target.setPhone(source.getPhone());</span>
+<span class="fc" id="L128">    target.setSourceDepartment(source.getSourceDepartment());</span>
+<span class="fc" id="L129">    return target;</span>
+  }
+
+  /**
+   * Copy matching properties from UserCreateDTO to CreateUserCommand.
+   * Generated from @CopyTo on CreateUserCommand.
+   */
+  public static CreateUserCommand copy(CreateUserCommand target, UserCreateDTO source) {
+<span class="fc" id="L137">    target.setUsername(source.getUsername());</span>
+<span class="fc" id="L138">    target.setDisplayName(source.getDisplayName());</span>
+<span class="fc" id="L139">    target.setPassword(source.getPassword());</span>
+<span class="fc" id="L140">    target.setDepartmentId(source.getDepartmentId());</span>
+<span class="fc" id="L141">    target.setExpiresOn(source.getExpiresOn());</span>
+<span class="fc" id="L142">    return target;</span>
+  }
+
+  /**
+   * Copy matching properties from Department to DepartmentNode.
+   * Generated from @CopyTo on DepartmentNode.
+   */
+  public static DepartmentNode copy(DepartmentNode target, Department source) {
+<span class="fc" id="L150">    target.setId(source.getId());</span>
+<span class="fc" id="L151">    target.setName(source.getName());</span>
+<span class="fc" id="L152">    target.setCode(source.getCode());</span>
+<span class="fc" id="L153">    return target;</span>
+  }
+
+  /**
+   * Copy matching properties from Permission to FrontendPermission.
+   * Generated from @CopyTo on FrontendPermission.
+   */
+  public static FrontendPermission copy(FrontendPermission target, Permission source) {
+<span class="fc" id="L161">    target.setId(source.getId());</span>
+<span class="fc" id="L162">    target.setCode(source.getCode());</span>
+<span class="fc" id="L163">    target.setName(source.getName());</span>
+<span class="fc" id="L164">    target.setMenuPath(source.getMenuPath());</span>
+<span class="fc" id="L165">    target.setActive(source.getActive());</span>
+<span class="fc" id="L166">    return target;</span>
+  }
+
+  /**
+   * Copy matching properties from ApiResource to ProtectedResource.
+   * Generated from @CopyTo on ProtectedResource.
+   */
+  public static ProtectedResource copy(ProtectedResource target, ApiResource source) {
+<span class="fc" id="L174">    target.setId(source.getId());</span>
+<span class="fc" id="L175">    target.setName(source.getName());</span>
+<span class="fc" id="L176">    target.setCode(source.getCode());</span>
+<span class="fc" id="L177">    target.setOperationId(source.getOperationId());</span>
+<span class="fc" id="L178">    target.setMethod(source.getMethod());</span>
+<span class="fc" id="L179">    target.setPath(source.getPath());</span>
+<span class="fc" id="L180">    target.setActive(source.getActive());</span>
+<span class="fc" id="L181">    return target;</span>
+  }
+
+  /**
+   * Copy matching properties from Role to AccessRole.
+   * Generated from @CopyTo on AccessRole.
+   */
+  public static AccessRole copy(AccessRole target, Role source) {
+<span class="fc" id="L189">    target.setId(source.getId());</span>
+<span class="fc" id="L190">    target.setCode(source.getCode());</span>
+<span class="fc" id="L191">    target.setName(source.getName());</span>
+<span class="fc" id="L192">    target.setDescription(source.getDescription());</span>
+<span class="fc" id="L193">    target.setEnabled(source.getEnabled());</span>
+<span class="fc" id="L194">    return target;</span>
+  }
+
+  /**
+   * Copy matching properties from BusinessSystem to ManagedSystem.
+   * Generated from @CopyTo on ManagedSystem.
+   */
+  public static ManagedSystem copy(ManagedSystem target, BusinessSystem source) {
+<span class="fc" id="L202">    target.setId(source.getId());</span>
+<span class="fc" id="L203">    target.setCode(source.getCode());</span>
+<span class="fc" id="L204">    target.setName(source.getName());</span>
+<span class="fc" id="L205">    target.setBaseUrl(source.getBaseUrl());</span>
+<span class="fc" id="L206">    target.setEnabled(source.getEnabled());</span>
+<span class="fc" id="L207">    return target;</span>
+  }
+
+  /**
+   * Copy matching properties from UserAccount to Account.
+   * Generated from @CopyTo on Account.
+   */
+  public static Account copy(Account target, UserAccount source) {
+<span class="fc" id="L215">    target.setId(source.getId());</span>
+<span class="fc" id="L216">    target.setUsername(source.getUsername());</span>
+<span class="fc" id="L217">    target.setPasswordHash(source.getPasswordHash());</span>
+<span class="fc" id="L218">    target.setDisplayName(source.getDisplayName());</span>
+<span class="fc" id="L219">    target.setEnabled(source.getEnabled());</span>
+<span class="fc" id="L220">    target.setAdministrator(source.getAdministrator());</span>
+<span class="fc" id="L221">    target.setCredentialVersion(source.getCredentialVersion());</span>
+<span class="fc" id="L222">    target.setExpiresAt(source.getExpiresAt());</span>
+<span class="fc" id="L223">    target.setDepartmentId(source.getDepartmentId());</span>
+<span class="fc" id="L224">    target.setCompanyName(source.getCompanyName());</span>
+<span class="fc" id="L225">    target.setJobTitle(source.getJobTitle());</span>
+<span class="fc" id="L226">    target.setPhone(source.getPhone());</span>
+<span class="fc" id="L227">    target.setSourceDepartment(source.getSourceDepartment());</span>
+<span class="fc" id="L228">    return target;</span>
+  }
+
+  /**
+   * Copy matching properties from UserAccount to UserResult.
+   * Generated from @CopyTo on UserResult.
+   */
+  public static UserResult copy(UserResult target, UserAccount source) {
+<span class="fc" id="L236">    target.setId(source.getId());</span>
+<span class="fc" id="L237">    target.setUsername(source.getUsername());</span>
+<span class="fc" id="L238">    target.setDisplayName(source.getDisplayName());</span>
+<span class="fc" id="L239">    target.setEnabled(source.getEnabled());</span>
+<span class="fc" id="L240">    target.setAdministrator(source.getAdministrator());</span>
+<span class="fc" id="L241">    target.setDepartmentId(source.getDepartmentId());</span>
+<span class="fc" id="L242">    target.setExpiresAt(source.getExpiresAt());</span>
+<span class="fc" id="L243">    target.setCompanyName(source.getCompanyName());</span>
+<span class="fc" id="L244">    target.setJobTitle(source.getJobTitle());</span>
+<span class="fc" id="L245">    target.setPhone(source.getPhone());</span>
+<span class="fc" id="L246">    target.setSourceDepartment(source.getSourceDepartment());</span>
+<span class="fc" id="L247">    return target;</span>
+  }
+
+  /**
+   * Copy matching properties from Account to UserResult.
+   * Generated from @CopyTo on UserResult.
+   */
+  public static UserResult copy(UserResult target, Account source) {
+<span class="fc" id="L255">    target.setId(source.getId());</span>
+<span class="fc" id="L256">    target.setUsername(source.getUsername());</span>
+<span class="fc" id="L257">    target.setDisplayName(source.getDisplayName());</span>
+<span class="fc" id="L258">    target.setEnabled(source.getEnabled());</span>
+<span class="fc" id="L259">    target.setAdministrator(source.getAdministrator());</span>
+<span class="fc" id="L260">    target.setDepartmentId(source.getDepartmentId());</span>
+<span class="fc" id="L261">    target.setKind(source.getKind());</span>
+<span class="fc" id="L262">    target.setExpiresAt(source.getExpiresAt());</span>
+<span class="fc" id="L263">    target.setCompanyName(source.getCompanyName());</span>
+<span class="fc" id="L264">    target.setJobTitle(source.getJobTitle());</span>
+<span class="fc" id="L265">    target.setPhone(source.getPhone());</span>
+<span class="fc" id="L266">    target.setSourceDepartment(source.getSourceDepartment());</span>
+<span class="fc" id="L267">    return target;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

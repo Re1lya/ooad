@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AdminBootstrapService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.service.auth</a> &gt; <span class="el_source">AdminBootstrapService.java</span></div><h1>AdminBootstrapService.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.service.auth;
+
+import com.cdwy.permission.entity.role.Role;
+import com.cdwy.permission.entity.user.UserAccount;
+import com.cdwy.permission.repository.user.UserAccountRepository;
+import com.cdwy.permission.service.user.PasswordPolicy;
+import java.util.Optional;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+/**
+ * 首次管理员是部署启动配置，不提供初始化 HTTP API。
+ *
+ * &lt;p&gt;每次启动先补齐权限系统自身的内置授权数据（{@link ConsoleRegistrationService}），再确保启动管理员存在并拥有内置管理员角色：
+ * 控制台的菜单和管理接口都按 RBAC 授权，管理员也不例外。
+ */
+@Service
+@RequiredArgsConstructor
+public class AdminBootstrapService {
+  private final UserAccountRepository users;
+  private final PasswordEncoder encoder;
+  private final ConsoleRegistrationService console;
+
+  /**
+   * 启动时由 {@code AdminBootstrap} 调用，参数取 {@code permission.bootstrap.username/password}；整个过程在一个事务内，可重复执行：
+   * 先补齐 rbac 应用的内置授权数据，再创建或确认首次管理员，并分配内置管理员角色。
+   *
+   * &lt;p&gt;两项都为空时只补齐内置数据。登录名须为 1～64 位字母、数字或 {@code _.-}，否则抛 {@code IllegalArgumentException}；
+   * 密码按项目密码规则校验（{@code PASSWORD_POLICY_VIOLATION}）。同名账号已存在但不是管理员、或已有其他首次管理员时抛
+   * {@code IllegalStateException}，宁可启动失败也不提升普通账号；已存在的管理员不会被改密码。
+   */
+  @Transactional
+  public void initialize(String username, String password) {
+<span class="fc" id="L36">    Role admin = console.ensure();</span>
+<span class="pc bpc" id="L37" title="1 of 4 branches missed.">    if (username.isBlank() &amp;&amp; password.isBlank()) return;</span>
+<span class="pc bpc" id="L38" title="1 of 2 branches missed.">    if (!username.matches(&quot;[A-Za-z0-9_.-]{1,64}&quot;))</span>
+<span class="nc" id="L39">      throw new IllegalArgumentException(&quot;管理员登录名格式不合法&quot;);</span>
+<span class="fc" id="L40">    PasswordPolicy.validate(password);</span>
+<span class="fc" id="L41">    Optional&lt;UserAccount&gt; existing = users.findByUsername(username);</span>
+    UserAccount user;
+<span class="fc bfc" id="L43" title="All 2 branches covered.">    if (existing.isPresent()) {</span>
+<span class="fc bfc" id="L44" title="All 2 branches covered.">      if (!existing.get().getAdministrator()) throw new IllegalStateException(&quot;禁止将普通账号自动提升为管理员&quot;);</span>
+<span class="fc" id="L45">      user = existing.get();</span>
+    } else {
+<span class="pc bpc" id="L47" title="1 of 2 branches missed.">      if (users.existsByAdministratorTrue()) throw new IllegalStateException(&quot;已存在首次管理员&quot;);</span>
+<span class="fc" id="L48">      user = new UserAccount();</span>
+<span class="fc" id="L49">      user.setUsername(username);</span>
+<span class="fc" id="L50">      user.setDisplayName(&quot;系统管理员&quot;);</span>
+<span class="fc" id="L51">      user.setAdministrator(true);</span>
+<span class="fc" id="L52">      user.setPasswordHash(encoder.encode(password));</span>
+<span class="fc" id="L53">      user = users.save(user);</span>
+    }
+<span class="fc" id="L55">    console.assignAdministrator(user, admin);</span>
+<span class="fc" id="L56">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

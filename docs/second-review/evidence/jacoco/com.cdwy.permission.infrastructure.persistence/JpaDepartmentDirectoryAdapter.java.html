@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JpaDepartmentDirectoryAdapter.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.infrastructure.persistence</a> &gt; <span class="el_source">JpaDepartmentDirectoryAdapter.java</span></div><h1>JpaDepartmentDirectoryAdapter.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.infrastructure.persistence;
+
+import cn.edu.xmu.clonefactory.util.CloneFactory;
+import com.cdwy.permission.entity.organization.Department;
+import com.cdwy.permission.repository.organization.DepartmentRepository;
+import com.cdwy.permission.service.ddd.domain.model.DepartmentNode;
+import com.cdwy.permission.service.ddd.domain.repository.DepartmentDirectory;
+import com.cdwy.permission.service.port.error.ConflictException;
+import java.util.*;
+import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.stereotype.Repository;
+
+/** DepartmentDirectory 的 JPA 适配器：实体不离开基础设施边界。 */
+@Repository
+@RequiredArgsConstructor
+public class JpaDepartmentDirectoryAdapter implements DepartmentDirectory {
+  private final DepartmentRepository data;
+
+  /** 按主键读取并拷贝为领域对象，不加锁；不存在时返回空 Optional。 */
+  public Optional&lt;DepartmentNode&gt; find(Long id) {
+<span class="fc" id="L22">    return data.findById(id).map(this::model);</span>
+  }
+
+  /** 按主键升序读取全部部门并逐个拷贝，不分页；整树防环和唯一性校验都需要完整的部门树。 */
+  public List&lt;DepartmentNode&gt; all() {
+<span class="fc" id="L27">    return data.findAll(org.springframework.data.domain.Sort.by(&quot;id&quot;)).stream()</span>
+<span class="fc" id="L28">        .map(this::model)</span>
+<span class="fc" id="L29">        .toList();</span>
+  }
+
+  /** 实体转领域对象：标识、名称和编码由 CloneFactory 拷贝，上级部门只保留标识，根部门为 {@code null}。 */
+  private DepartmentNode model(Department e) {
+<span class="fc" id="L34">    DepartmentNode v = CloneFactory.copy(new DepartmentNode(), e);</span>
+<span class="fc bfc" id="L35" title="All 2 branches covered.">    v.setParentId(e.getParent() == null ? null : e.getParent().getId());</span>
+<span class="fc" id="L36">    return v;</span>
+  }
+
+  /**
+   * 标识为空时新建实体，否则读出已有实体（不存在抛 {@code DEPARTMENT_NOT_FOUND}），再由 CloneFactory
+   * 覆盖名称和编码，主键不参与拷贝；上级只取引用、不额外查询。{@code saveAndFlush} 让同级名称、编码唯一约束
+   * 和上级外键冲突当场暴露并翻译为 {@code DATA_CONFLICT}，当前事务随之标记为回滚。
+   */
+  public DepartmentNode save(DepartmentNode v) {
+    Department e =
+<span class="fc bfc" id="L46" title="All 2 branches covered.">        v.getId() == null</span>
+<span class="fc" id="L47">            ? new Department()</span>
+<span class="fc" id="L48">            : data.findById(v.getId())</span>
+<span class="fc" id="L49">                .orElseThrow(</span>
+                    () -&gt;
+<span class="nc" id="L51">                        new com.cdwy.permission.service.port.error.ResourceNotFoundException(</span>
+                            &quot;DEPARTMENT_NOT_FOUND&quot;, &quot;部门不存在&quot;));
+<span class="fc" id="L53">    CloneFactory.copy(e, v);</span>
+<span class="fc bfc" id="L54" title="All 2 branches covered.">    e.setParent(v.getParentId() == null ? null : data.getReferenceById(v.getParentId()));</span>
+    try {
+<span class="fc" id="L56">      return model(data.saveAndFlush(e));</span>
+<span class="nc" id="L57">    } catch (DataIntegrityViolationException ex) {</span>
+<span class="nc" id="L58">      throw new ConflictException(&quot;DATA_CONFLICT&quot;, &quot;数据重复或关联约束冲突，请刷新后重试&quot;);</span>
+    }
+  }
+
+  /**
+   * {@code deleteById} 先查后删，记录不存在时静默返回；不立即刷新，子部门或账号引用造成的外键冲突
+   * 要到后续刷新（通常是事务提交）时才抛出，不经本适配器翻译。
+   */
+  public void delete(Long id) {
+<span class="fc" id="L67">    data.deleteById(id);</span>
+<span class="fc" id="L68">  }</span>
+
+  /** 组织树引用检查。 */
+  public boolean hasChildren(Long id) {
+<span class="fc" id="L72">    return data.existsByParent_Id(id);</span>
+  }
+
+  /** 数据库分页，按编码排序。 */
+  public com.cdwy.permission.service.port.data.UserData.Page&lt;DepartmentNode&gt; level(
+      Long parentId, String keyword, int page, int pageSize) {
+<span class="fc" id="L78">    org.springframework.data.domain.Page&lt;Department&gt; rows =</span>
+<span class="fc" id="L79">        data.level(</span>
+            parentId,
+<span class="fc" id="L81">            com.cdwy.permission.repository.LikePattern.of(keyword),</span>
+<span class="fc" id="L82">            org.springframework.data.domain.PageRequest.of(</span>
+<span class="fc" id="L83">                page - 1, pageSize, org.springframework.data.domain.Sort.by(&quot;code&quot;, &quot;id&quot;)));</span>
+<span class="fc" id="L84">    return new com.cdwy.permission.service.port.data.UserData.Page&lt;&gt;(</span>
+<span class="fc" id="L85">        page, pageSize, rows.getTotalElements(), rows.map(this::model).getContent());</span>
+  }
+
+  /** 一次查询判断一页部门是否有子部门。 */
+  public java.util.Set&lt;Long&gt; withChildren(java.util.Collection&lt;Long&gt; ids) {
+<span class="fc bfc" id="L90" title="All 2 branches covered.">    return ids.isEmpty() ? java.util.Set.of() : new java.util.HashSet&lt;&gt;(data.parentsAmong(ids));</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

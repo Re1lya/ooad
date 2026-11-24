@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ApiExceptionHandler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.controller.common</a> &gt; <span class="el_source">ApiExceptionHandler.java</span></div><h1>ApiExceptionHandler.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.controller.common;
+
+import com.cdwy.permission.service.port.error.AuthenticationFailedException;
+import com.cdwy.permission.service.port.error.ConflictException;
+import com.cdwy.permission.service.port.error.ForbiddenException;
+import com.cdwy.permission.service.port.error.InvalidDataException;
+import com.cdwy.permission.service.port.error.ResourceNotFoundException;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
+
+/**
+ * 把异常翻译成统一错误体 {@code {code, message}}：{@code code} 是稳定的业务错误码，{@code message} 可直接展示。
+ *
+ * &lt;p&gt;业务异常在服务层抛出时已带业务码，这里只按异常类型确定 HTTP 状态，不按表名或消息内容分支。请求格式问题统一为
+ * {@code BAD_REQUEST}，认证与授权失败为 {@code UNAUTHORIZED}、{@code FORBIDDEN}，与统一身份接口契约一致。
+ */
+@RestControllerAdvice
+<span class="fc" id="L29">public class ApiExceptionHandler {</span>
+  private static final String BAD_REQUEST = &quot;BAD_REQUEST&quot;;
+
+  /** 对象不存在：沿用服务层给出的业务码。 */
+  @ExceptionHandler(ResourceNotFoundException.class)
+  public ResponseEntity&lt;Map&lt;String, String&gt;&gt; notFound(ResourceNotFoundException exception) {
+<span class="fc" id="L35">    return response(HttpStatus.NOT_FOUND, exception.getCode(), exception.getMessage());</span>
+  }
+
+  /** 与已有数据或当前状态冲突。 */
+  @ExceptionHandler(ConflictException.class)
+  public ResponseEntity&lt;Map&lt;String, String&gt;&gt; conflict(ConflictException exception) {
+<span class="fc" id="L41">    return response(HttpStatus.CONFLICT, exception.getCode(), exception.getMessage());</span>
+  }
+
+  /** 业务数据不满足业务规则。 */
+  @ExceptionHandler(InvalidDataException.class)
+  public ResponseEntity&lt;Map&lt;String, String&gt;&gt; invalidData(InvalidDataException exception) {
+<span class="fc" id="L47">    return response(HttpStatus.BAD_REQUEST, exception.getCode(), exception.getMessage());</span>
+  }
+
+  /** 已登录但没有权限。 */
+  @ExceptionHandler(ForbiddenException.class)
+  public ResponseEntity&lt;Map&lt;String, String&gt;&gt; forbidden(ForbiddenException exception) {
+<span class="fc" id="L53">    return response(HttpStatus.FORBIDDEN, &quot;FORBIDDEN&quot;, exception.getMessage());</span>
+  }
+
+  /** 未登录或凭证失效。 */
+  @ExceptionHandler(AuthenticationFailedException.class)
+  public ResponseEntity&lt;Map&lt;String, String&gt;&gt; unauthorized(AuthenticationFailedException exception) {
+<span class="fc" id="L59">    return response(HttpStatus.UNAUTHORIZED, &quot;UNAUTHORIZED&quot;, exception.getMessage());</span>
+  }
+
+  /** 请求体 DTO 的 Bean Validation 失败：返回第一个字段错误。 */
+  @ExceptionHandler(MethodArgumentNotValidException.class)
+  public ResponseEntity&lt;Map&lt;String, String&gt;&gt; invalidBody(MethodArgumentNotValidException exception) {
+<span class="fc" id="L65">    String message =</span>
+<span class="fc" id="L66">        exception.getBindingResult().getFieldErrors().stream()</span>
+<span class="fc" id="L67">            .findFirst()</span>
+<span class="fc" id="L68">            .map(error -&gt; error.getField() + &quot;：&quot; + error.getDefaultMessage())</span>
+<span class="fc" id="L69">            .orElse(&quot;请求参数不合法&quot;);</span>
+<span class="fc" id="L70">    return response(HttpStatus.BAD_REQUEST, BAD_REQUEST, message);</span>
+  }
+
+  /** 查询参数、路径参数或表单字段的 Bean Validation 失败：返回第一个参数错误。 */
+  @ExceptionHandler(HandlerMethodValidationException.class)
+  public ResponseEntity&lt;Map&lt;String, String&gt;&gt; invalidParameter(
+      HandlerMethodValidationException exception) {
+<span class="fc" id="L77">    String message =</span>
+<span class="fc" id="L78">        exception.getParameterValidationResults().stream()</span>
+<span class="fc" id="L79">            .flatMap(</span>
+                result -&gt;
+<span class="fc" id="L81">                    result.getResolvableErrors().stream()</span>
+<span class="fc" id="L82">                        .map(</span>
+                            error -&gt;
+<span class="fc" id="L84">                                result.getMethodParameter().getParameterName()</span>
+                                    + &quot;：&quot;
+<span class="fc" id="L86">                                    + error.getDefaultMessage()))</span>
+<span class="fc" id="L87">            .findFirst()</span>
+<span class="fc" id="L88">            .orElse(&quot;请求参数不合法&quot;);</span>
+<span class="fc" id="L89">    return response(HttpStatus.BAD_REQUEST, BAD_REQUEST, message);</span>
+  }
+
+  /** API 层发现的请求问题。 */
+  @ExceptionHandler(BadRequestException.class)
+  public ResponseEntity&lt;Map&lt;String, String&gt;&gt; badRequest(BadRequestException exception) {
+<span class="fc" id="L95">    return response(HttpStatus.BAD_REQUEST, BAD_REQUEST, exception.getMessage());</span>
+  }
+
+  /** JSON 无法解析、参数类型不符或缺少必填参数。 */
+  @ExceptionHandler({
+    HttpMessageNotReadableException.class,
+    MethodArgumentTypeMismatchException.class,
+    MissingServletRequestParameterException.class,
+    MissingServletRequestPartException.class
+  })
+  public ResponseEntity&lt;Map&lt;String, String&gt;&gt; unreadable(Exception exception) {
+<span class="fc" id="L106">    return response(HttpStatus.BAD_REQUEST, BAD_REQUEST, &quot;请求格式不正确，请检查字段类型、必填参数和 JSON&quot;);</span>
+  }
+
+  /** 框架或第三方库抛出的参数异常。 */
+  @ExceptionHandler(IllegalArgumentException.class)
+  public ResponseEntity&lt;Map&lt;String, String&gt;&gt; illegalArgument(IllegalArgumentException exception) {
+<span class="nc" id="L112">    return response(HttpStatus.BAD_REQUEST, BAD_REQUEST, exception.getMessage());</span>
+  }
+
+  /** 并发写入时数据库唯一约束或外键兜底；业务上的重复与引用已在服务层先行检查并给出具体业务码。 */
+  @ExceptionHandler(DataIntegrityViolationException.class)
+  public ResponseEntity&lt;Map&lt;String, String&gt;&gt; constraint(DataIntegrityViolationException exception) {
+<span class="fc" id="L118">    return response(HttpStatus.CONFLICT, &quot;DATA_CONFLICT&quot;, &quot;数据重复或关联约束冲突，请刷新后重试&quot;);</span>
+  }
+
+  /** 组装统一错误体，键依次为 {@code code}、{@code message}。 */
+  private ResponseEntity&lt;Map&lt;String, String&gt;&gt; response(
+      HttpStatus status, String code, String message) {
+<span class="fc" id="L124">    Map&lt;String, String&gt; body = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L125">    body.put(&quot;code&quot;, code);</span>
+<span class="fc" id="L126">    body.put(&quot;message&quot;, message);</span>
+<span class="fc" id="L127">    return ResponseEntity.status(status).body(body);</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

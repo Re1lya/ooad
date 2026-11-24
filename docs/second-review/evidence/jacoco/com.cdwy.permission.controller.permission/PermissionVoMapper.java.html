@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PermissionVoMapper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.controller.permission</a> &gt; <span class="el_source">PermissionVoMapper.java</span></div><h1>PermissionVoMapper.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.controller.permission;
+
+import com.cdwy.permission.dto.permission.PermissionCreateDTO;
+import com.cdwy.permission.dto.permission.PermissionUpdateDTO;
+import com.cdwy.permission.service.port.data.PermissionData;
+import com.cdwy.permission.vo.permission.PermissionTreeVO;
+import com.cdwy.permission.vo.permission.PermissionVO;
+import org.springframework.stereotype.Component;
+
+/** 菜单与按钮的 DTO → 命令、结果 → VO 映射。 */
+@Component
+<span class="fc" id="L12">public class PermissionVoMapper {</span>
+  /** 新建菜单或按钮请求转为命令；类型以枚举名传给用例。 */
+  public PermissionData.Input toCommand(PermissionCreateDTO dto) {
+<span class="fc" id="L15">    return new PermissionData.Input(</span>
+<span class="fc" id="L16">        dto.systemId(), dto.code(), dto.name(), dto.type().name(), dto.menuPath(), dto.parentId());</span>
+  }
+
+  /** 修改菜单或按钮请求转为命令。 */
+  public PermissionData.Update toCommand(PermissionUpdateDTO dto) {
+<span class="fc" id="L21">    return new PermissionData.Update(dto.name(), dto.type().name(), dto.menuPath(), dto.parentId());</span>
+  }
+
+  /** 菜单或按钮结果转为 VO。 */
+  public PermissionVO toVO(PermissionData.View view) {
+<span class="fc" id="L26">    return new PermissionVO(</span>
+<span class="fc" id="L27">        view.id(),</span>
+<span class="fc" id="L28">        view.systemId(),</span>
+<span class="fc" id="L29">        view.code(),</span>
+<span class="fc" id="L30">        view.name(),</span>
+<span class="fc" id="L31">        view.type(),</span>
+<span class="fc" id="L32">        view.menuPath(),</span>
+<span class="fc" id="L33">        view.parentId(),</span>
+<span class="fc" id="L34">        view.active());</span>
+  }
+
+  /** 递归转换菜单树。 */
+  public PermissionTreeVO toVO(PermissionData.Tree tree) {
+<span class="fc" id="L39">    return new PermissionTreeVO(</span>
+<span class="fc" id="L40">        toVO(tree.permission()),</span>
+<span class="fc" id="L41">        tree.granted(),</span>
+<span class="fc" id="L42">        tree.children().stream().map(this::toVO).toList());</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

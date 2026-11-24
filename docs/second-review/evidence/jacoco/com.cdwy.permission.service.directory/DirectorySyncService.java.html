@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DirectorySyncService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.service.directory</a> &gt; <span class="el_source">DirectorySyncService.java</span></div><h1>DirectorySyncService.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.service.directory;
+
+import com.cdwy.permission.entity.organization.Department;
+import com.cdwy.permission.entity.rbac.UserRole;
+import com.cdwy.permission.entity.role.Role;
+import com.cdwy.permission.entity.user.UserAccount;
+import com.cdwy.permission.repository.organization.DepartmentRepository;
+import com.cdwy.permission.repository.rbac.UserRoleRepository;
+import com.cdwy.permission.repository.role.RoleRepository;
+import com.cdwy.permission.repository.user.UserAccountRepository;
+import com.cdwy.permission.service.port.data.DepartmentData;
+import com.cdwy.permission.service.port.data.DirectoryData;
+import com.cdwy.permission.service.port.data.PersonType;
+import com.cdwy.permission.service.port.directory.DirectorySyncUseCase;
+import com.cdwy.permission.service.port.directory.EmployeeSheetReader;
+import com.cdwy.permission.service.port.error.ConflictException;
+import java.util.*;
+import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import com.cdwy.permission.service.port.error.InvalidDataException;
+
+/**
+ * 结构化事务脚本：员工信息同步按“读表 → 角色 → 部门 → 人员 → 角色补授”的固定步骤处理，直接使用 Spring Data Repository。
+ *
+ * &lt;p&gt;预览与确认走同一段步骤，预览只计数不写入；确认在一个事务内完成，任何一行冲突都整批回滚。
+ */
+@Service
+@ConditionalOnProperty(
+    name = &quot;app.backend-strategy&quot;,
+    havingValue = &quot;structured&quot;,
+    matchIfMissing = true)
+@RequiredArgsConstructor
+public class DirectorySyncService implements DirectorySyncUseCase {
+<span class="fc" id="L38">  private static final Logger log = LoggerFactory.getLogger(DirectorySyncService.class);</span>
+
+  /** 新人员的密码散列占位值：不是 BCrypt 格式，任何密码都无法匹配。 */
+  static final String UNPROVISIONED = &quot;!UNPROVISIONED:&quot;;
+
+  private final EmployeeSheetReader reader;
+  private final DepartmentRepository departments;
+  private final UserAccountRepository users;
+  private final RoleRepository roles;
+  private final UserRoleRepository userRoles;
+
+  /** 返回事务脚本实现标识。 */
+  @Override
+  public String strategy() {
+<span class="fc" id="L52">    return &quot;structured&quot;;</span>
+  }
+
+  /**
+   * 在只读事务内走与确认相同的步骤，只计数不写入。规则中的角色不存在抛 {@code SYNC_ROLE_NOT_FOUND}（400），表中用户名属于管理员账号抛
+   * {@code SYNC_ADMINISTRATOR_CONFLICT}（409）；文件不合法时由读取器抛 {@code EXCEL_INVALID} 或 {@code EMPLOYEE_SHEET_INVALID}（400）。
+   */
+  @Override
+  @Transactional(readOnly = true)
+  public DirectoryData.Summary preview(byte[] workbook, DirectoryData.Rule rule) {
+<span class="fc" id="L62">    DirectoryData.Sheet sheet = reader.read(workbook);</span>
+<span class="fc" id="L63">    return run(sheet, rule, DirectoryData.digest(sheet, rule), false);</span>
+  }
+
+  /** 重新读取文件并计算摘要，与预览返回的不一致抛 {@code SYNC_PREVIEW_MISMATCH}（400）；其余校验同预览，任何失败都整批回滚。 */
+  @Override
+  @Transactional
+  public DirectoryData.Summary commit(byte[] workbook, DirectoryData.Rule rule, String digest) {
+<span class="fc" id="L70">    DirectoryData.Sheet sheet = reader.read(workbook);</span>
+<span class="fc" id="L71">    String expected = DirectoryData.digest(sheet, rule);</span>
+<span class="fc" id="L72">    DirectoryData.requireConfirmed(expected, digest);</span>
+<span class="fc" id="L73">    return run(sheet, rule, expected, true);</span>
+  }
+
+  /** 步骤 1～4；write 为 false 时只计数，不改动任何实体。 */
+  private DirectoryData.Summary run(
+      DirectoryData.Sheet sheet, DirectoryData.Rule rule, String digest, boolean write) {
+<span class="fc" id="L79">    List&lt;DirectoryData.Row&gt; rows = sheet.rows();</span>
+
+    // 步骤 1：规则中的角色必须存在。
+<span class="fc" id="L82">    Map&lt;String, Role&gt; roleByCode = new HashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L83" title="All 2 branches covered.">    for (String code : Arrays.asList(rule.headOfficeRole(), rule.branchRole()))</span>
+<span class="pc bpc" id="L84" title="1 of 4 branches missed.">      if (code != null &amp;&amp; !roleByCode.containsKey(code))</span>
+<span class="fc" id="L85">        roleByCode.put(</span>
+            code,
+            roles
+<span class="fc" id="L88">                .findByCode(code)</span>
+<span class="fc" id="L89">                .orElseThrow(() -&gt; new InvalidDataException(&quot;SYNC_ROLE_NOT_FOUND&quot;, &quot;角色不存在：&quot; + code)));</span>
+
+    // 步骤 2：分公司为根部门、部门为其子部门，按“上级 + 名称”复用已有部门。
+<span class="fc" id="L92">    Map&lt;String, Department&gt; existing = new HashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L93" title="All 2 branches covered.">    for (Department d : departments.findAll())</span>
+<span class="fc bfc" id="L94" title="All 2 branches covered.">      existing.put(key(d.getParent() == null ? null : d.getParent().getId(), d.getName()), d);</span>
+<span class="fc" id="L95">    Map&lt;String, Department&gt; placed = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L96">    int departmentsCreated = 0, departmentsKept = 0;</span>
+<span class="fc bfc" id="L97" title="All 2 branches covered.">    for (DirectoryData.Row row : rows) {</span>
+<span class="fc" id="L98">      String companyKey = row.company();</span>
+<span class="fc bfc" id="L99" title="All 2 branches covered.">      if (!placed.containsKey(companyKey)) {</span>
+<span class="fc" id="L100">        Department company = existing.get(key(null, row.company()));</span>
+<span class="fc bfc" id="L101" title="All 2 branches covered.">        if (company == null) {</span>
+<span class="fc" id="L102">          company = create(row.company(), null, write);</span>
+<span class="fc" id="L103">          departmentsCreated++;</span>
+<span class="fc" id="L104">        } else departmentsKept++;</span>
+<span class="fc" id="L105">        placed.put(companyKey, company);</span>
+      }
+<span class="fc" id="L107">      String departmentKey = row.company() + &quot;\u0000&quot; + row.department();</span>
+<span class="fc bfc" id="L108" title="All 2 branches covered.">      if (!placed.containsKey(departmentKey)) {</span>
+<span class="fc" id="L109">        Department company = placed.get(companyKey);</span>
+        Department department =
+<span class="fc bfc" id="L111" title="All 2 branches covered.">            company.getId() == null ? null : existing.get(key(company.getId(), row.department()));</span>
+<span class="fc bfc" id="L112" title="All 2 branches covered.">        if (department == null) {</span>
+<span class="fc" id="L113">          department = create(row.department(), company, write);</span>
+<span class="fc" id="L114">          departmentsCreated++;</span>
+<span class="fc" id="L115">        } else departmentsKept++;</span>
+<span class="fc" id="L116">        placed.put(departmentKey, department);</span>
+      }
+<span class="fc" id="L118">    }</span>
+
+    // 步骤 3：按用户名新建或更新人员；只更新来源字段，保留凭证、状态、期限与授权。
+<span class="fc" id="L121">    Map&lt;String, UserAccount&gt; people = new HashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L122" title="All 2 branches covered.">    for (UserAccount user : users.findAll()) people.put(user.getUsername(), user);</span>
+<span class="fc" id="L123">    List&lt;UserAccount&gt; created = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L124">    int usersUpdated = 0, usersUnchanged = 0;</span>
+<span class="fc bfc" id="L125" title="All 2 branches covered.">    for (DirectoryData.Row row : rows) {</span>
+<span class="fc" id="L126">      Department department = placed.get(row.company() + &quot;\u0000&quot; + row.department());</span>
+<span class="fc" id="L127">      UserAccount user = people.get(row.username());</span>
+<span class="fc bfc" id="L128" title="All 2 branches covered.">      if (user == null) {</span>
+<span class="fc" id="L129">        user = new UserAccount();</span>
+<span class="fc" id="L130">        user.setUsername(row.username());</span>
+<span class="fc" id="L131">        user.setPasswordHash(UNPROVISIONED + UUID.randomUUID());</span>
+<span class="fc" id="L132">        user.setEnabled(false);</span>
+<span class="fc" id="L133">        user.setPersonType(PersonType.EMPLOYEE);</span>
+<span class="fc" id="L134">        apply(user, row, department);</span>
+<span class="fc" id="L135">        people.put(row.username(), user);</span>
+<span class="fc" id="L136">        created.add(user);</span>
+<span class="fc bfc" id="L137" title="All 2 branches covered.">      } else if (user.getAdministrator())</span>
+<span class="fc" id="L138">        throw new ConflictException(</span>
+<span class="fc" id="L139">            &quot;SYNC_ADMINISTRATOR_CONFLICT&quot;, &quot;用户名 &quot; + row.username() + &quot; 是管理员账号，员工信息不能覆盖它&quot;);</span>
+<span class="fc bfc" id="L140" title="All 2 branches covered.">      else if (differs(user, row, department)) {</span>
+<span class="fc bfc" id="L141" title="All 2 branches covered.">        if (write) apply(user, row, department);</span>
+<span class="fc" id="L142">        usersUpdated++;</span>
+<span class="fc" id="L143">      } else usersUnchanged++;</span>
+<span class="fc" id="L144">    }</span>
+<span class="fc bfc" id="L145" title="All 2 branches covered.">    if (write) users.saveAll(created);</span>
+
+    // 步骤 4：按分公司补授角色，只增不减。
+<span class="fc" id="L148">    Map&lt;Long, Set&lt;Long&gt;&gt; holders = new HashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L149" title="All 2 branches covered.">    for (Role role : roleByCode.values())</span>
+<span class="fc" id="L150">      holders.put(role.getId(), new HashSet&lt;&gt;(userRoles.holders(role.getId())));</span>
+<span class="fc" id="L151">    List&lt;UserRole&gt; grants = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L152" title="All 2 branches covered.">    for (DirectoryData.Row row : rows) {</span>
+<span class="fc" id="L153">      String code = rule.roleFor(row.company());</span>
+<span class="fc bfc" id="L154" title="All 2 branches covered.">      if (code == null) continue;</span>
+<span class="fc" id="L155">      Role role = roleByCode.get(code);</span>
+<span class="fc" id="L156">      UserAccount user = people.get(row.username());</span>
+<span class="fc bfc" id="L157" title="All 4 branches covered.">      if (user.getId() == null || !holders.get(role.getId()).contains(user.getId()))</span>
+<span class="fc" id="L158">        grants.add(new UserRole(user, role));</span>
+<span class="fc" id="L159">    }</span>
+<span class="fc bfc" id="L160" title="All 2 branches covered.">    if (write) userRoles.saveAll(grants);</span>
+
+<span class="fc" id="L162">    long companies = rows.stream().map(DirectoryData.Row::company).distinct().count();</span>
+<span class="fc bfc" id="L163" title="All 2 branches covered.">    if (write)</span>
+<span class="fc" id="L164">      log.info(</span>
+          &quot;员工信息同步完成：{} 行，新建部门 {}、人员 {}，更新人员 {}，补授角色 {}&quot;,
+<span class="fc" id="L166">          rows.size(),</span>
+<span class="fc" id="L167">          departmentsCreated,</span>
+<span class="fc" id="L168">          created.size(),</span>
+<span class="fc" id="L169">          usersUpdated,</span>
+<span class="fc" id="L170">          grants.size());</span>
+<span class="fc" id="L171">    return new DirectoryData.Summary(</span>
+<span class="fc" id="L172">        rows.size(),</span>
+        (int) companies,
+        departmentsCreated,
+        departmentsKept,
+<span class="fc" id="L176">        created.size(),</span>
+        usersUpdated,
+        usersUnchanged,
+<span class="fc" id="L179">        grants.size(),</span>
+        digest,
+        write);
+  }
+
+  /** 新部门：写入时立即保存并取默认编码；预览时只构造对象。 */
+  private Department create(String name, Department parent, boolean write) {
+<span class="fc" id="L186">    Department value = new Department();</span>
+<span class="fc" id="L187">    value.setName(name);</span>
+<span class="fc" id="L188">    value.setParent(parent);</span>
+<span class="fc bfc" id="L189" title="All 2 branches covered.">    if (!write) return value;</span>
+<span class="fc" id="L190">    departments.save(value);</span>
+<span class="fc" id="L191">    value.setCode(DepartmentData.defaultCode(value.getId()));</span>
+<span class="fc" id="L192">    return value;</span>
+  }
+
+  /** 来源字段（姓名、部门、分公司、来源部门、岗位、电话）是否与员工表不同，决定计入“更新”还是“未变化”。 */
+  private static boolean differs(UserAccount user, DirectoryData.Row row, Department department) {
+<span class="fc bfc" id="L197" title="All 2 branches covered.">    return !Objects.equals(user.getDisplayName(), row.name())</span>
+<span class="fc bfc" id="L198" title="All 2 branches covered.">        || !Objects.equals(user.getDepartmentId(), department.getId())</span>
+<span class="pc bpc" id="L199" title="1 of 2 branches missed.">        || !Objects.equals(user.getCompanyName(), row.company())</span>
+<span class="pc bpc" id="L200" title="1 of 2 branches missed.">        || !Objects.equals(user.getSourceDepartment(), row.department())</span>
+<span class="pc bpc" id="L201" title="1 of 2 branches missed.">        || !Objects.equals(user.getJobTitle(), row.job())</span>
+<span class="pc bpc" id="L202" title="1 of 2 branches missed.">        || !Objects.equals(user.getPhone(), row.phone());</span>
+  }
+
+  /** 只覆盖员工表的来源字段；密码、启用状态、人员类型、有效期和角色授权保持不变。 */
+  private static void apply(UserAccount user, DirectoryData.Row row, Department department) {
+<span class="fc" id="L207">    user.setDisplayName(row.name());</span>
+<span class="fc" id="L208">    user.setDepartment(department);</span>
+<span class="fc" id="L209">    user.setCompanyName(row.company());</span>
+<span class="fc" id="L210">    user.setSourceDepartment(row.department());</span>
+<span class="fc" id="L211">    user.setJobTitle(row.job());</span>
+<span class="fc" id="L212">    user.setPhone(row.phone());</span>
+<span class="fc" id="L213">  }</span>
+
+  private static String key(Long parentId, String name) {
+<span class="fc" id="L216">    return parentId + &quot;\u0000&quot; + name;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

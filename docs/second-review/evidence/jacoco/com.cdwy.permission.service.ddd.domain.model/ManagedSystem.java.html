@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ManagedSystem.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.service.ddd.domain.model</a> &gt; <span class="el_source">ManagedSystem.java</span></div><h1>ManagedSystem.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.service.ddd.domain.model;
+
+import lombok.Getter;
+import lombok.Setter;
+import com.cdwy.permission.service.port.error.InvalidDataException;
+
+/** ManagedSystem 领域对象：只维护业务状态和不变量，不依赖 JPA。 */
+@Getter
+@Setter
+<span class="fc" id="L10">public class ManagedSystem {</span>
+  private Long id;
+  private String code;
+  private String name;
+  private String baseUrl;
+<span class="fc" id="L15">  private boolean enabled = true;</span>
+
+  /** 修改描述信息，编码作为稳定业务标识保持不变。 */
+  public void rename(String value, String url) {
+<span class="fc" id="L19">    name = value;</span>
+<span class="fc" id="L20">    baseUrl = url;</span>
+<span class="fc" id="L21">  }</span>
+
+  /**
+   * 改变应用开关，参与所有资源的有效性判断。内置应用（权限系统自身）不能停用：停用后所有人（包括管理员）都进不了控制台。
+   *
+   * @param value 启用为 true
+   * @param builtIn 是否为内置应用，由应用服务按内置目录判断
+   */
+  public void changeStatus(boolean value, boolean builtIn) {
+<span class="fc bfc" id="L30" title="All 2 branches covered.">    if (!value) assertNotBuiltIn(builtIn);</span>
+<span class="fc" id="L31">    enabled = value;</span>
+<span class="fc" id="L32">  }</span>
+
+  /**
+   * 删除前检查：内置应用抛 {@code CONSOLE_BUILT_IN}，仍有菜单、按钮或 API 资源时抛 {@code SYSTEM_IN_USE}（均 409）。
+   *
+   * @param builtIn 是否为内置应用
+   * @param referenced 是否仍有菜单、按钮或 API 资源
+   */
+  public void assertDeletable(boolean builtIn, boolean referenced) {
+<span class="fc" id="L41">    assertNotBuiltIn(builtIn);</span>
+<span class="fc bfc" id="L42" title="All 2 branches covered.">    if (referenced)</span>
+<span class="fc" id="L43">      throw new com.cdwy.permission.service.port.error.ConflictException(&quot;SYSTEM_IN_USE&quot;, &quot;仍有授权或资源引用，请先解除关联&quot;);</span>
+<span class="fc" id="L44">  }</span>
+
+  private static void assertNotBuiltIn(boolean builtIn) {
+<span class="fc bfc" id="L47" title="All 2 branches covered.">    if (builtIn)</span>
+<span class="fc" id="L48">      throw new com.cdwy.permission.service.port.error.ConflictException(&quot;CONSOLE_BUILT_IN&quot;, &quot;权限管理系统是内置应用，不能停用或删除&quot;);</span>
+<span class="fc" id="L49">  }</span>
+
+  /**
+   * 令牌目标系统：请求声明的 systems 必须包含被调用的应用，且每一项都是已登记的应用；去重并保持顺序。
+   *
+   * @param requested 登录请求中的 systems
+   * @param target 被调用的应用编码
+   * @param known 已登记的全部应用
+   */
+  public static java.util.List&lt;String&gt; audience(
+      java.util.List&lt;String&gt; requested,
+      String target,
+      java.util.Collection&lt;ManagedSystem&gt; known) {
+<span class="fc bfc" id="L62" title="All 2 branches covered.">    if (!requested.contains(target))</span>
+<span class="fc" id="L63">      throw new InvalidDataException(&quot;LOGIN_TARGET_NOT_IN_SYSTEMS&quot;, &quot;systems 必须包含当前应用 &quot; + target);</span>
+<span class="fc" id="L64">    java.util.Set&lt;String&gt; codes = new java.util.HashSet&lt;&gt;();</span>
+<span class="fc" id="L65">    known.forEach(app -&gt; codes.add(app.getCode()));</span>
+<span class="fc" id="L66">    java.util.List&lt;String&gt; distinct = requested.stream().distinct().toList();</span>
+<span class="fc bfc" id="L67" title="All 2 branches covered.">    for (String code : distinct)</span>
+<span class="fc bfc" id="L68" title="All 2 branches covered.">      if (!codes.contains(code)) throw new InvalidDataException(&quot;LOGIN_SYSTEM_UNKNOWN&quot;, &quot;未登记的目标系统：&quot; + code);</span>
+<span class="fc" id="L69">    return distinct;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

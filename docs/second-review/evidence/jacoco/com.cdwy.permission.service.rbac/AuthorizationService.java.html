@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AuthorizationService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.service.rbac</a> &gt; <span class="el_source">AuthorizationService.java</span></div><h1>AuthorizationService.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.service.rbac;
+
+import com.cdwy.permission.entity.permission.Permission;
+import com.cdwy.permission.entity.rbac.*;
+import com.cdwy.permission.entity.resource.ApiResource;
+import com.cdwy.permission.entity.role.Role;
+import com.cdwy.permission.entity.user.UserAccount;
+import com.cdwy.permission.repository.rbac.*;
+import com.cdwy.permission.repository.resource.ApiResourceRepository;
+import com.cdwy.permission.service.permission.PermissionService;
+import com.cdwy.permission.service.port.data.*;
+import com.cdwy.permission.service.port.error.*;
+import com.cdwy.permission.service.port.rbac.AuthorizationUseCase;
+import com.cdwy.permission.service.role.RoleService;
+import com.cdwy.permission.service.user.UserService;
+import java.time.Instant;
+import java.util.*;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.server.PathContainer;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.util.pattern.*;
+
+/** RBAC1：合并直接及继承角色权限，独立 API 绑定鉴权；导航祖先只作容器。 */
+@Service
+@RequiredArgsConstructor
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(
+    name = &quot;app.backend-strategy&quot;,
+    havingValue = &quot;structured&quot;,
+    matchIfMissing = true)
+@Transactional(readOnly = true)
+public class AuthorizationService implements AuthorizationUseCase {
+  /** 返回事务脚本实现标识。 */
+  @Override
+  public String strategy() {
+<span class="fc" id="L36">    return &quot;structured&quot;;</span>
+  }
+
+  private final RoleHierarchyService hierarchy;
+  private final UserRoleRepository userRoles;
+  private final RolePermissionRepository rolePermissions;
+  private final PermissionApiRepository bindings;
+  private final ApiResourceRepository resources;
+  private final UserService users;
+  private final RoleService roles;
+  private final PermissionService permissions;
+  private final com.cdwy.permission.repository.system.BusinessSystemRepository systems;
+
+  /**
+   * 给用户分配角色：两端须存在（{@code USER_NOT_FOUND}、{@code ROLE_NOT_FOUND}）；账号已停用或已过期、
+   * 角色已停用时抛 {@code GRANT_TARGET_INACTIVE}；已分配时幂等。授权不写入令牌，下一次请求即生效，
+   * 无需重新登录；不写审计日志。
+   */
+  @Transactional
+  public void grantRole(Long userId, Long roleId) {
+<span class="fc" id="L56">    UserAccount user = users.require(userId);</span>
+<span class="fc" id="L57">    Role role = roles.require(roleId);</span>
+<span class="pc bpc" id="L58" title="1 of 4 branches missed.">    if (!user.usable(Instant.now()) || !role.getEnabled())</span>
+<span class="fc" id="L59">      throw new InvalidDataException(&quot;GRANT_TARGET_INACTIVE&quot;, &quot;不能给失效账号或停用角色新增授权&quot;);</span>
+<span class="fc bfc" id="L60" title="All 2 branches covered.">    if (!userRoles.existsByUser_IdAndRole_Id(userId, roleId))</span>
+<span class="fc" id="L61">      userRoles.save(new UserRole(user, role));</span>
+<span class="fc" id="L62">  }</span>
+
+  /**
+   * 撤销用户的一条直接角色分配：两端须存在（{@code USER_NOT_FOUND}、{@code ROLE_NOT_FOUND}），未分配时幂等，
+   * 不看启停状态。经其他角色得到的相同权限仍保留；已签发令牌的下一次请求即按新授权鉴权，不写审计日志。
+   */
+  @Transactional
+  public void revokeRole(Long userId, Long roleId) {
+<span class="fc" id="L70">    users.require(userId);</span>
+<span class="fc" id="L71">    roles.require(roleId);</span>
+<span class="fc" id="L72">    userRoles.deleteByUser_IdAndRole_Id(userId, roleId);</span>
+<span class="fc" id="L73">  }</span>
+
+  /**
+   * 给角色授予菜单或按钮：两端须存在（{@code ROLE_NOT_FOUND}、{@code PERMISSION_NOT_FOUND}）；角色已停用，
+   * 或权限本身、任一上级失效、所属应用停用时抛 {@code GRANT_TARGET_INACTIVE}；已授予时幂等。
+   * 只授予该节点本身，不连带上级或下级；下一次请求即生效，不写审计日志。
+   */
+  @Transactional
+  public void grantPermission(Long roleId, Long permissionId) {
+<span class="fc" id="L82">    Role role = roles.require(roleId);</span>
+<span class="fc" id="L83">    Permission p = permissions.require(permissionId);</span>
+<span class="pc bpc" id="L84" title="1 of 4 branches missed.">    if (!role.getEnabled() || !PermissionService.usable(p))</span>
+<span class="fc" id="L85">      throw new InvalidDataException(&quot;GRANT_TARGET_INACTIVE&quot;, &quot;不能新增失效角色或权限的授权&quot;);</span>
+<span class="fc bfc" id="L86" title="All 2 branches covered.">    if (!rolePermissions.existsByRole_IdAndPermission_Id(roleId, permissionId))</span>
+<span class="fc" id="L87">      rolePermissions.save(new RolePermission(role, p));</span>
+<span class="fc" id="L88">  }</span>
+
+  /**
+   * 撤销角色的一项直接权限：两端须存在（{@code ROLE_NOT_FOUND}、{@code PERMISSION_NOT_FOUND}），未授予时幂等。
+   * 继承该角色的角色同时失去这一来源，下一次请求即生效；不写审计日志。
+   */
+  @Transactional
+  public void revokePermission(Long roleId, Long permissionId) {
+<span class="fc" id="L96">    roles.require(roleId);</span>
+<span class="fc" id="L97">    permissions.require(permissionId);</span>
+<span class="fc" id="L98">    rolePermissions.deleteByRole_IdAndPermission_Id(roleId, permissionId);</span>
+<span class="fc" id="L99">  }</span>
+
+  /** 用户直接分配的角色，不含继承得到的、含已停用的；用户不存在抛 {@code USER_NOT_FOUND}。 */
+  public List&lt;RoleData.View&gt; roles(Long userId) {
+<span class="fc" id="L103">    users.require(userId);</span>
+<span class="fc" id="L104">    return userRoles.findAllByUser_Id(userId).stream()</span>
+<span class="fc" id="L105">        .map(g -&gt; RoleService.view(g.getRole()))</span>
+<span class="fc" id="L106">        .toList();</span>
+  }
+
+  /** 角色直接授予的菜单与按钮，不含继承来的、含已失效的；角色不存在抛 {@code ROLE_NOT_FOUND}。 */
+  public List&lt;PermissionData.View&gt; rolePermissions(Long roleId) {
+<span class="fc" id="L111">    roles.require(roleId);</span>
+<span class="fc" id="L112">    return rolePermissions.findAllByRole_Id(roleId).stream()</span>
+<span class="fc" id="L113">        .map(g -&gt; PermissionService.view(g.getPermission()))</span>
+<span class="fc" id="L114">        .toList();</span>
+  }
+
+  /** RBAC1 有效权限：直接角色与所有有效继承角色的权限并集。 */
+  public List&lt;Permission&gt; effective(Long userId) {
+<span class="pc bpc" id="L119" title="1 of 2 branches missed.">    if (!users.require(userId).usable(Instant.now())) return List.of();</span>
+<span class="fc" id="L120">    Map&lt;Long, Permission&gt; result = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L121">    Map&lt;Long, List&lt;Role&gt;&gt; graph = hierarchy.graph();</span>
+<span class="fc bfc" id="L122" title="All 2 branches covered.">    for (UserRole grant : userRoles.findAllByUser_Id(userId))</span>
+<span class="fc bfc" id="L123" title="All 2 branches covered.">      for (RoleHierarchyService.ResolvedRole resolved : hierarchy.resolve(grant.getRole(), graph))</span>
+<span class="fc" id="L124">        for (RolePermission assignment :</span>
+<span class="fc bfc" id="L125" title="All 2 branches covered.">            rolePermissions.findAllByRole_Id(resolved.role().getId())) {</span>
+<span class="fc" id="L126">          Permission permission = assignment.getPermission();</span>
+<span class="fc bfc" id="L127" title="All 2 branches covered.">          if (PermissionService.usable(permission))</span>
+<span class="fc" id="L128">            result.putIfAbsent(permission.getId(), permission);</span>
+<span class="fc" id="L129">        }</span>
+<span class="fc" id="L130">    return List.copyOf(result.values());</span>
+  }
+
+  /** 用户权限来源；同一权限可保留多个分配角色提供的独立来源。 */
+  public List&lt;HierarchyData.PermissionOrigin&gt; origins(Long userId) {
+<span class="pc bpc" id="L135" title="1 of 2 branches missed.">    if (!users.require(userId).usable(Instant.now())) return List.of();</span>
+<span class="fc" id="L136">    return explain(</span>
+<span class="fc" id="L137">        userRoles.findAllByUser_Id(userId).stream()</span>
+<span class="fc" id="L138">            .map(com.cdwy.permission.entity.rbac.UserRole::getRole)</span>
+<span class="fc" id="L139">            .toList());</span>
+  }
+
+  /** 管理员预览单角色的有效权限，包含多级继承来源。 */
+  public List&lt;HierarchyData.PermissionOrigin&gt; roleOrigins(Long roleId) {
+<span class="fc" id="L144">    return explain(List.of(hierarchy.require(roleId)));</span>
+  }
+
+  /** 汇总来源；同一个分配角色到同一权限角色展示一条最短有效路径。 */
+  private List&lt;HierarchyData.PermissionOrigin&gt; explain(List&lt;Role&gt; assigned) {
+<span class="fc" id="L149">    Map&lt;Long, Permission&gt; values = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L150">    Map&lt;Long, List&lt;HierarchyData.Origin&gt;&gt; sources = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L151">    Map&lt;Long, List&lt;Role&gt;&gt; graph = hierarchy.graph();</span>
+<span class="fc bfc" id="L152" title="All 2 branches covered.">    for (Role root : assigned)</span>
+<span class="fc bfc" id="L153" title="All 2 branches covered.">      for (RoleHierarchyService.ResolvedRole resolved : hierarchy.resolve(root, graph))</span>
+<span class="fc" id="L154">        for (RolePermission assignment :</span>
+<span class="fc bfc" id="L155" title="All 2 branches covered.">            rolePermissions.findAllByRole_Id(resolved.role().getId())) {</span>
+<span class="fc" id="L156">          Permission permission = assignment.getPermission();</span>
+<span class="pc bpc" id="L157" title="1 of 2 branches missed.">          if (!PermissionService.usable(permission)) continue;</span>
+<span class="fc" id="L158">          values.putIfAbsent(permission.getId(), permission);</span>
+<span class="fc" id="L159">          sources</span>
+<span class="fc" id="L160">              .computeIfAbsent(permission.getId(), ignored -&gt; new ArrayList&lt;&gt;())</span>
+<span class="fc" id="L161">              .add(</span>
+                  new HierarchyData.Origin(
+<span class="fc" id="L163">                      root.getId(),</span>
+<span class="fc" id="L164">                      root.getName(),</span>
+<span class="fc" id="L165">                      resolved.role().getId(),</span>
+<span class="fc" id="L166">                      resolved.role().getName(),</span>
+<span class="fc bfc" id="L167" title="All 2 branches covered.">                      !root.getId().equals(resolved.role().getId()),</span>
+<span class="fc" id="L168">                      resolved.path()));</span>
+<span class="fc" id="L169">        }</span>
+<span class="fc" id="L170">    return values.values().stream()</span>
+<span class="fc" id="L171">        .map(</span>
+            value -&gt;
+<span class="fc" id="L173">                new HierarchyData.PermissionOrigin(</span>
+<span class="fc" id="L174">                    PermissionService.view(value), List.copyOf(sources.get(value.getId()))))</span>
+<span class="fc" id="L175">        .toList();</span>
+  }
+
+  /** 有效权限的结果视图，规则同 {@link #effective}：账号不可用时为空，用户不存在抛 {@code USER_NOT_FOUND}。 */
+  public List&lt;PermissionData.View&gt; effectiveViews(Long id) {
+<span class="fc" id="L180">    return effective(id).stream().map(PermissionService::view).toList();</span>
+  }
+
+  /** 用户在全部应用内的有效菜单树（含按钮）：补出的祖先只作导航容器（{@code granted} 为 false），不代表拥有其授权。 */
+  public List&lt;PermissionData.Tree&gt; menu(Long id) {
+<span class="fc" id="L185">    return PermissionService.tree(effective(id));</span>
+  }
+
+  /** 步骤：应用存在 → 有效权限中只保留该应用的 → 组成菜单树。 */
+  public List&lt;PermissionData.Tree&gt; menu(Long id, String systemCode) {
+<span class="fc" id="L190">    com.cdwy.permission.entity.system.BusinessSystem app =</span>
+        systems
+<span class="fc" id="L192">            .findByCode(systemCode)</span>
+<span class="fc" id="L193">            .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;SYSTEM_NOT_FOUND&quot;, &quot;接入应用不存在&quot;));</span>
+<span class="fc" id="L194">    return PermissionService.tree(</span>
+<span class="fc" id="L195">        effective(id).stream()</span>
+<span class="fc" id="L196">            .filter(p -&gt; p.getSystem().getId().equals(app.getId()))</span>
+<span class="fc" id="L197">            .toList());</span>
+  }
+
+  /**
+   * 接口鉴权，API 拦截器对需要按 RBAC 授权的每个请求调用；管理员没有豁免，令牌也不携带授权，每次按当前数据计算。
+   *
+   * &lt;p&gt;在该应用（须启用）同一 HTTP 方法的 API 资源中选路径匹配且最具体的一项：没有匹配时拒绝；该项已停用时直接拒绝，
+   * 不回退到更宽泛的模式；用户有效权限中没有任何一项绑定该资源时拒绝。拒绝均抛 {@link ForbiddenException}
+   * （错误码 {@code FORBIDDEN}），通过时正常返回。
+   */
+  public void requireApi(Long userId, String systemCode, String method, String path) {
+<span class="fc" id="L208">    List&lt;ApiResource&gt; candidates =</span>
+<span class="fc" id="L209">        resources.findAllBySystem_CodeAndMethod(systemCode, method).stream()</span>
+<span class="fc" id="L210">            .filter(r -&gt; r.getSystem().getEnabled())</span>
+<span class="fc" id="L211">            .filter(</span>
+                r -&gt;
+<span class="fc" id="L213">                    PathPatternParser.defaultInstance</span>
+<span class="fc" id="L214">                        .parse(r.getPath())</span>
+<span class="fc" id="L215">                        .matches(PathContainer.parsePath(path)))</span>
+<span class="fc" id="L216">            .sorted(</span>
+                (a, b) -&gt;
+<span class="fc" id="L218">                    PathPattern.SPECIFICITY_COMPARATOR.compare(</span>
+<span class="fc" id="L219">                        PathPatternParser.defaultInstance.parse(a.getPath()),</span>
+<span class="fc" id="L220">                        PathPatternParser.defaultInstance.parse(b.getPath())))</span>
+<span class="fc" id="L221">            .toList();</span>
+<span class="fc bfc" id="L222" title="All 2 branches covered.">    if (candidates.isEmpty()) throw new ForbiddenException(&quot;此接口尚未注册为有效 API 资源&quot;);</span>
+    // Prefer the most specific pattern. A broader grant cannot bypass a more specific resource.
+<span class="fc" id="L224">    ApiResource selected = candidates.getFirst();</span>
+<span class="fc bfc" id="L225" title="All 2 branches covered.">    if (!selected.getActive()) throw new ForbiddenException(&quot;此 API 资源已停用&quot;);</span>
+<span class="fc" id="L226">    Set&lt;Long&gt; effectiveIds = new HashSet&lt;&gt;();</span>
+<span class="fc" id="L227">    effective(userId).forEach(p -&gt; effectiveIds.add(p.getId()));</span>
+<span class="fc" id="L228">    boolean allowed =</span>
+<span class="fc" id="L229">        bindings.findAllByResource_Id(selected.getId()).stream()</span>
+<span class="fc" id="L230">            .anyMatch(b -&gt; effectiveIds.contains(b.getPermission().getId()));</span>
+<span class="fc bfc" id="L231" title="All 2 branches covered.">    if (!allowed) throw new ForbiddenException(&quot;当前用户没有此 API 资源的访问权限&quot;);</span>
+<span class="fc" id="L232">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

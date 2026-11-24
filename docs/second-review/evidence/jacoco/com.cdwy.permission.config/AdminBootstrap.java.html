@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AdminBootstrap.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.config</a> &gt; <span class="el_source">AdminBootstrap.java</span></div><h1>AdminBootstrap.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.config;
+
+import com.cdwy.permission.service.auth.AdminBootstrapService;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.*;
+import org.springframework.stereotype.Component;
+
+/**
+ * 启动初始化：Spring 容器启动完成后补齐权限系统自身的内置授权数据，并按配置确保首次管理员存在。
+ *
+ * &lt;p&gt;管理员取自配置项 {@code permission.bootstrap.username} 与 {@code permission.bootstrap.password}，两项都为空时只补齐内置数据。
+ * 配置不合法、同名账号不是管理员或已存在其他管理员时抛出异常，应用启动失败；已存在的管理员不会按配置修改密码。
+ */
+@Component
+public class AdminBootstrap implements ApplicationRunner {
+  private final AdminBootstrapService service;
+  private final String username;
+  private final String password;
+
+  /** 注入 {@link AdminBootstrapService} 与启动管理员配置；未配置时两项均为空字符串。 */
+  public AdminBootstrap(
+      AdminBootstrapService service,
+      @Value(&quot;${permission.bootstrap.username:}&quot;) String username,
+<span class="fc" id="L24">      @Value(&quot;${permission.bootstrap.password:}&quot;) String password) {</span>
+<span class="fc" id="L25">    this.service = service;</span>
+<span class="fc" id="L26">    this.username = username;</span>
+<span class="fc" id="L27">    this.password = password;</span>
+<span class="fc" id="L28">  }</span>
+
+  @Override
+  public void run(ApplicationArguments args) {
+<span class="fc" id="L32">    service.initialize(username, password);</span>
+<span class="fc" id="L33">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

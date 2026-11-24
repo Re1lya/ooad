@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SystemData.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.service.port.data</a> &gt; <span class="el_source">SystemData.java</span></div><h1>SystemData.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.service.port.data;
+
+/** 接入应用用例（{@code SystemUseCase}）的输入与结果。 */
+public final class SystemData {
+  private SystemData() {}
+
+  /**
+   * 登记接入应用（{@code SystemUseCase#create}）的输入。
+   *
+   * @param code 应用编码，全局唯一，创建后不可改；也是统一身份接口地址中的应用段和令牌 {@code aud} 的取值
+   * @param name 名称
+   * @param baseUrl 应用访问地址，可空
+   */
+<span class="fc" id="L14">  public record Create(String code, String name, String baseUrl) {}</span>
+
+  /**
+   * 修改接入应用（{@code SystemUseCase#update}）的输入；编码不可修改。
+   *
+   * @param name 名称
+   * @param baseUrl 应用访问地址，可空
+   */
+<span class="fc" id="L22">  public record Update(String name, String baseUrl) {}</span>
+
+  /**
+   * 一个接入应用：应用用例的结果。
+   *
+   * @param id 标识
+   * @param code 应用编码
+   * @param name 名称
+   * @param baseUrl 应用访问地址
+   * @param enabled 是否启用；停用后该应用内的菜单、按钮与 API 资源都视为无效
+   */
+<span class="fc" id="L33">  public record View(Long id, String code, String name, String baseUrl, boolean enabled) {}</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

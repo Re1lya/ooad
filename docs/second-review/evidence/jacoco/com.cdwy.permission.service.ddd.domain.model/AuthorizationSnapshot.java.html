@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AuthorizationSnapshot.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.service.ddd.domain.model</a> &gt; <span class="el_source">AuthorizationSnapshot.java</span></div><h1>AuthorizationSnapshot.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.service.ddd.domain.model;
+
+import com.cdwy.permission.service.ddd.domain.repository.AssignmentRepository.Link;
+import com.cdwy.permission.service.port.data.HierarchyData;
+import com.cdwy.permission.service.port.rbac.RoleGraphUseCase.Node;
+import com.cdwy.permission.service.port.rbac.RoleGraphUseCase.Path;
+import java.util.*;
+
+/** RBAC1 授权领域快照：权限并集、来源、有效路径均在此计算。 */
+public final class AuthorizationSnapshot {
+<span class="fc" id="L11">  private final Map&lt;Long, AccessRole&gt; roles = new LinkedHashMap&lt;&gt;();</span>
+  private final PermissionDirectory directory;
+  private final List&lt;Link&gt; grants;
+  private final RoleGraph graph;
+
+  /** 将本次读取的角色与授权形成防御性快照。 */
+  public AuthorizationSnapshot(
+      List&lt;AccessRole&gt; values,
+      List&lt;FrontendPermission&gt; permissions,
+      List&lt;ManagedSystem&gt; systems,
+      List&lt;Link&gt; hierarchy,
+<span class="fc" id="L22">      List&lt;Link&gt; assignments) {</span>
+<span class="fc" id="L23">    values.forEach(r -&gt; roles.put(r.getId(), r));</span>
+<span class="fc" id="L24">    directory = new PermissionDirectory(permissions, systems);</span>
+<span class="fc" id="L25">    grants = List.copyOf(assignments);</span>
+<span class="fc" id="L26">    Map&lt;Long, List&lt;Node&gt;&gt; edges = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L27" title="All 2 branches covered.">    for (Link e : hierarchy) {</span>
+<span class="fc" id="L28">      AccessRole child = roles.get(e.right());</span>
+<span class="pc bpc" id="L29" title="1 of 2 branches missed.">      if (child != null)</span>
+<span class="fc" id="L30">        edges</span>
+<span class="fc" id="L31">            .computeIfAbsent(e.left(), k -&gt; new ArrayList&lt;&gt;())</span>
+<span class="fc" id="L32">            .add(new Node(child.getId(), child.getEnabled()));</span>
+<span class="fc" id="L33">    }</span>
+<span class="fc" id="L34">    graph = new RoleGraph(edges);</span>
+<span class="fc" id="L35">  }</span>
+
+  /** 角色继承必须在整图无环，停用节点也参与防环。 */
+  public void assertCanInherit(Long senior, Long inherited) {
+<span class="nc" id="L39">    graph.assertCanInherit(senior, inherited);</span>
+<span class="nc" id="L40">  }</span>
+
+  /** 有效来源集合，同权限只返回一次。 */
+  public List&lt;HierarchyData.PermissionOrigin&gt; origins(List&lt;Long&gt; assigned) {
+<span class="fc" id="L44">    Map&lt;Long, List&lt;HierarchyData.Origin&gt;&gt; origins = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L45" title="All 2 branches covered.">    for (Long id : assigned) {</span>
+<span class="fc" id="L46">      AccessRole root = roles.get(id);</span>
+<span class="pc bpc" id="L47" title="1 of 2 branches missed.">      if (root == null) continue;</span>
+<span class="fc bfc" id="L48" title="All 2 branches covered.">      for (Path path : graph.effectivePaths(new Node(id, root.getEnabled()))) {</span>
+<span class="fc" id="L49">        AccessRole role = roles.get(path.roleId());</span>
+<span class="fc bfc" id="L50" title="All 2 branches covered.">        for (Link grant : grants) {</span>
+<span class="fc bfc" id="L51" title="All 4 branches covered.">          if (!grant.left().equals(role.getId()) || !directory.usable(grant.right())) continue;</span>
+<span class="fc" id="L52">          origins</span>
+<span class="fc" id="L53">              .computeIfAbsent(grant.right(), key -&gt; new ArrayList&lt;&gt;())</span>
+<span class="fc" id="L54">              .add(</span>
+                  new HierarchyData.Origin(
+                      id,
+<span class="fc" id="L57">                      root.getName(),</span>
+<span class="fc" id="L58">                      role.getId(),</span>
+<span class="fc" id="L59">                      role.getName(),</span>
+<span class="fc bfc" id="L60" title="All 2 branches covered.">                      !id.equals(role.getId()),</span>
+<span class="fc" id="L61">                      path.ids()));</span>
+<span class="fc" id="L62">        }</span>
+<span class="fc" id="L63">      }</span>
+<span class="fc" id="L64">    }</span>
+<span class="fc" id="L65">    return origins.entrySet().stream()</span>
+<span class="fc" id="L66">        .map(</span>
+            e -&gt;
+<span class="fc" id="L68">                new HierarchyData.PermissionOrigin(</span>
+<span class="fc" id="L69">                    directory.view(e.getKey()), List.copyOf(e.getValue())))</span>
+<span class="fc" id="L70">        .toList();</span>
+  }
+
+  /** 有效角色：分配角色及沿继承链可达的启用角色；停用角色阻断路径，菱形只计一次。 */
+  public List&lt;AccessRole&gt; effectiveRoles(List&lt;Long&gt; assigned) {
+<span class="fc" id="L75">    Map&lt;Long, AccessRole&gt; result = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L76" title="All 2 branches covered.">    for (Long id : assigned) {</span>
+<span class="fc" id="L77">      AccessRole root = roles.get(id);</span>
+<span class="pc bpc" id="L78" title="1 of 2 branches missed.">      if (root == null) continue;</span>
+<span class="fc bfc" id="L79" title="All 2 branches covered.">      for (Path path : graph.effectivePaths(new Node(id, root.getEnabled())))</span>
+<span class="fc" id="L80">        result.putIfAbsent(path.roleId(), roles.get(path.roleId()));</span>
+<span class="fc" id="L81">    }</span>
+<span class="fc" id="L82">    return List.copyOf(result.values());</span>
+  }
+
+  /** 指定接入应用内的有效前端权限（菜单、按钮），供接入应用身份接口使用。 */
+  public List&lt;com.cdwy.permission.service.port.data.PermissionData.View&gt; grantedIn(
+      Long systemId, List&lt;Long&gt; assigned) {
+<span class="fc" id="L88">    return origins(assigned).stream()</span>
+<span class="fc" id="L89">        .map(HierarchyData.PermissionOrigin::permission)</span>
+<span class="fc" id="L90">        .filter(view -&gt; systemId.equals(view.systemId()))</span>
+<span class="fc" id="L91">        .toList();</span>
+  }
+
+  /** 权限目录负责导航与授权区分。 */
+  public PermissionDirectory directory() {
+<span class="fc" id="L96">    return directory;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PermissionSourceVO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.vo.role</a> &gt; <span class="el_source">PermissionSourceVO.java</span></div><h1>PermissionSourceVO.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.vo.role;
+
+import java.util.List;
+
+/**
+ * 一项权限的一个来源：从分配给用户的角色出发、经继承到达直接拥有该权限的角色的最短有效路径。
+ *
+ * @param assignedRoleId 分配给用户的角色
+ * @param assignedRoleName 其名称
+ * @param permissionRoleId 直接拥有该权限的角色
+ * @param permissionRoleName 其名称
+ * @param inherited 是否经继承获得
+ * @param path 路径上的角色标识
+ */
+<span class="fc" id="L15">public record PermissionSourceVO(</span>
+    Long assignedRoleId,
+    String assignedRoleName,
+    Long permissionRoleId,
+    String permissionRoleName,
+    boolean inherited,
+    List&lt;Long&gt; path) {}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

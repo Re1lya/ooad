@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DddUserService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.service.ddd.application.user</a> &gt; <span class="el_source">DddUserService.java</span></div><h1>DddUserService.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.service.ddd.application.user;
+
+import com.cdwy.permission.service.ddd.domain.model.*;
+import com.cdwy.permission.service.ddd.domain.repository.*;
+import com.cdwy.permission.service.port.data.*;
+import com.cdwy.permission.service.port.error.*;
+import com.cdwy.permission.service.port.user.UserUseCase;
+import java.util.*;
+import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+/** DddUserService 应用服务：编排领域对象与仓储端口，禁止依赖 JPA。 */
+@Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+@ConditionalOnProperty(name = &quot;app.backend-strategy&quot;, havingValue = &quot;ddd&quot;)
+public class DddUserService implements UserUseCase {
+  /** 返回实际装载模式。 */
+  @Override
+  public String strategy() {
+<span class="fc" id="L23">    return &quot;ddd&quot;;</span>
+  }
+
+  private final AccountRepository accounts;
+  private final DepartmentDirectory departments;
+  private final AssignmentRepository assignments;
+  private final com.cdwy.permission.service.port.auth.CredentialGateway credentials;
+
+  /** 读取账号领域对象。 */
+  private Account require(Long id) {
+<span class="fc" id="L33">    return accounts.find(id).orElseThrow(() -&gt; new ResourceNotFoundException(&quot;USER_NOT_FOUND&quot;, &quot;用户不存在&quot;));</span>
+  }
+
+  /** 写操作锁定账号，保留凭证版本的并发语义。 */
+  private Account lock(Long id) {
+<span class="fc" id="L38">    return accounts.lock(id).orElseThrow(() -&gt; new ResourceNotFoundException(&quot;USER_NOT_FOUND&quot;, &quot;用户不存在&quot;));</span>
+  }
+
+  /** 领域属性到结果的同型字段映射。 */
+  private UserResult view(Account a) {
+<span class="fc" id="L43">    UserResult result = cn.edu.xmu.clonefactory.util.CloneFactory.copy(new UserResult(), a);</span>
+<span class="fc" id="L44">    result.setKind(a.getKind());</span>
+<span class="fc" id="L45">    return result;</span>
+  }
+
+  /** 部门存在性属于跨对象一致性。 */
+  private void department(Long id) {
+<span class="fc bfc" id="L50" title="All 4 branches covered.">    if (id != null &amp;&amp; departments.find(id).isEmpty()) throw new ResourceNotFoundException(&quot;DEPARTMENT_NOT_FOUND&quot;, &quot;部门不存在&quot;);</span>
+<span class="fc" id="L51">  }</span>
+
+  /** 当前人员资料。 */
+  public UserResult get(Long id) {
+<span class="fc" id="L55">    return view(require(id));</span>
+  }
+
+  /** 员工列表与关键字检索都在数据库分页。 */
+  public UserData.Page&lt;UserResult&gt; list(int page, int pageSize, String keyword) {
+<span class="fc" id="L60">    UserData.Page&lt;Account&gt; values = accounts.search(keyword, page, pageSize);</span>
+<span class="fc" id="L61">    return new UserData.Page&lt;&gt;(</span>
+<span class="fc" id="L62">        page, pageSize, values.total(), values.items().stream().map(this::view).toList());</span>
+  }
+
+  /** 新账号默认普通身份，角色授权由独立用例执行。 */
+  @Transactional
+  public UserResult create(CreateUserCommand input) {
+<span class="fc bfc" id="L68" title="All 2 branches covered.">    if (accounts.username(input.getUsername()).isPresent()) throw new ConflictException(&quot;USERNAME_EXISTS&quot;, &quot;登录名已存在&quot;);</span>
+<span class="fc" id="L69">    credentials.validatePassword(input.getPassword());</span>
+<span class="fc" id="L70">    department(input.getDepartmentId());</span>
+<span class="fc" id="L71">    Account account = new Account();</span>
+<span class="fc" id="L72">    account.setUsername(input.getUsername());</span>
+<span class="fc" id="L73">    account.setPasswordHash(credentials.encode(input.getPassword()));</span>
+<span class="fc" id="L74">    account.profile(</span>
+<span class="fc" id="L75">        input.getDisplayName(),</span>
+<span class="fc" id="L76">        input.getDepartmentId(),</span>
+<span class="fc" id="L77">        input.getKind(),</span>
+<span class="fc" id="L78">        input.getExpiresOn(),</span>
+<span class="fc" id="L79">        credentials.window());</span>
+<span class="fc" id="L80">    return view(accounts.save(account));</span>
+  }
+
+  /** 修改身份资料，由对象维护期限规则。 */
+  @Transactional
+  public UserResult update(Long id, UserData.Update input) {
+<span class="fc" id="L86">    Account account = lock(id);</span>
+<span class="fc" id="L87">    department(input.departmentId());</span>
+<span class="fc" id="L88">    account.profile(</span>
+<span class="fc" id="L89">        input.displayName(),</span>
+<span class="fc" id="L90">        input.departmentId(),</span>
+<span class="fc" id="L91">        input.personType(),</span>
+<span class="fc" id="L92">        input.expiresOn(),</span>
+<span class="fc" id="L93">        credentials.window());</span>
+<span class="fc" id="L94">    return view(accounts.save(account));</span>
+  }
+
+  /** 状态切换同步使旧 JWT 失效。 */
+  @Transactional
+  public UserResult status(Long actor, Long id, boolean enabled) {
+<span class="fc" id="L100">    Account account = lock(id);</span>
+<span class="fc" id="L101">    account.changeStatus(actor, enabled);</span>
+<span class="fc" id="L102">    return view(accounts.save(account));</span>
+  }
+
+  /** 设置密码不自动启用账号。 */
+  @Transactional
+  public void password(Long id, String password) {
+<span class="fc" id="L108">    credentials.validatePassword(password);</span>
+<span class="fc" id="L109">    Account account = lock(id);</span>
+<span class="fc" id="L110">    account.resetPassword(credentials.encode(password));</span>
+<span class="fc" id="L111">    accounts.save(account);</span>
+<span class="fc" id="L112">  }</span>
+
+  /** 先解除个人角色再删除非受保护账号，事务原子提交。 */
+  @Transactional
+  public void delete(Long actor, Long id) {
+<span class="fc" id="L117">    Account account = lock(id);</span>
+<span class="fc" id="L118">    account.assertDeletable(actor);</span>
+<span class="fc" id="L119">    assignments.removeUserRoles(id);</span>
+<span class="fc" id="L120">    accounts.delete(id);</span>
+<span class="fc" id="L121">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

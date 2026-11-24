@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DirectoryData.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.service.port.data</a> &gt; <span class="el_source">DirectoryData.java</span></div><h1>DirectoryData.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.service.port.data;
+
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.HexFormat;
+import java.util.List;
+import com.cdwy.permission.service.port.error.InvalidDataException;
+
+/** 员工信息同步的用例数据：与 HTTP 表现、Excel 格式及数据库技术无关。 */
+public final class DirectoryData {
+  private DirectoryData() {}
+
+  /**
+   * 员工信息表的一行。
+   *
+   * @param name 姓名
+   * @param username 用户名，即工号或学号，同时是统一身份用户标识
+   * @param company 分公司（总公司也按分公司看待），作为根部门
+   * @param department 部门，作为分公司的子部门
+   * @param job 岗位，可空
+   * @param phone 电话号码，可空；只保存，不经统一身份接口对外提供
+   */
+<span class="fc" id="L23">  public record Row(</span>
+      String name, String username, String company, String department, String job, String phone) {}
+
+  /** 已校验的员工信息表：数据行与文件内容摘要。 */
+  public record Sheet(List&lt;Row&gt; rows, String fileDigest) {
+    /** 复制数据行，之后对原列表的修改不影响本表。 */
+<span class="fc" id="L29">    public Sheet {</span>
+<span class="fc" id="L30">      rows = List.copyOf(rows);</span>
+<span class="fc" id="L31">    }</span>
+  }
+
+  /**
+   * 同步规则：哪个分公司是总公司，以及总公司员工、其他分公司员工各自补授的角色编码（为空表示不授予角色）。
+   *
+   * &lt;p&gt;课程管理系统的约定是“总公司员工是教师，其余分公司员工是学生”，即 headOfficeRole=teacher、branchRole=student。
+   */
+  public record Rule(String headOffice, String headOfficeRole, String branchRole) {
+    /** 规范化：总公司名称去掉首尾空白（调用方保证非空）；角色编码去掉首尾空白，空白或未填视为不授予（{@code null}）。 */
+<span class="fc" id="L41">    public Rule {</span>
+<span class="fc" id="L42">      headOffice = headOffice.strip();</span>
+<span class="fc" id="L43">      headOfficeRole = blankToNull(headOfficeRole);</span>
+<span class="fc" id="L44">      branchRole = blankToNull(branchRole);</span>
+<span class="fc" id="L45">    }</span>
+
+    /** 某个分公司的员工应补授的角色编码；不授予时为空。 */
+    public String roleFor(String company) {
+<span class="fc bfc" id="L49" title="All 2 branches covered.">      return headOffice.equals(company) ? headOfficeRole : branchRole;</span>
+    }
+
+    private static String blankToNull(String value) {
+<span class="pc bpc" id="L53" title="1 of 4 branches missed.">      return value == null || value.isBlank() ? null : value.strip();</span>
+    }
+  }
+
+  /**
+   * 预览与确认共用的汇总，不含员工个人明细。
+   *
+   * @param rows 员工表数据行数
+   * @param companies 分公司数
+   * @param departmentsCreated 新建的部门（含分公司根部门）
+   * @param departmentsKept 已存在而复用的部门
+   * @param usersCreated 新建的人员（默认停用、没有可用密码）
+   * @param usersUpdated 姓名、部门、岗位或电话有变化而更新的人员
+   * @param usersUnchanged 没有变化的人员
+   * @param roleGrants 补授的角色分配
+   * @param digest 文件与规则的摘要，确认时必须回传
+   * @param applied 是否已写入
+   */
+<span class="fc" id="L71">  public record Summary(</span>
+      int rows,
+      int companies,
+      int departmentsCreated,
+      int departmentsKept,
+      int usersCreated,
+      int usersUpdated,
+      int usersUnchanged,
+      int roleGrants,
+      String digest,
+      boolean applied) {}
+
+  /** 摘要覆盖文件内容与同步规则：预览后换了文件或改了规则都必须重新预览。 */
+  public static String digest(Sheet sheet, Rule rule) {
+    try {
+<span class="fc" id="L86">      MessageDigest hash = MessageDigest.getInstance(&quot;SHA-256&quot;);</span>
+      for (String part :
+<span class="fc bfc" id="L88" title="All 2 branches covered.">          new String[] {</span>
+<span class="fc" id="L89">            sheet.fileDigest(),</span>
+<span class="fc" id="L90">            rule.headOffice(),</span>
+<span class="fc" id="L91">            String.valueOf(rule.headOfficeRole()),</span>
+<span class="fc" id="L92">            String.valueOf(rule.branchRole())</span>
+          }) {
+<span class="fc" id="L94">        hash.update(part.getBytes(StandardCharsets.UTF_8));</span>
+<span class="fc" id="L95">        hash.update((byte) 0);</span>
+      }
+<span class="fc" id="L97">      return HexFormat.of().formatHex(hash.digest());</span>
+<span class="nc" id="L98">    } catch (java.security.NoSuchAlgorithmException ex) {</span>
+<span class="nc" id="L99">      throw new IllegalStateException(ex);</span>
+    }
+  }
+
+  /** 确认时核对摘要。 */
+  public static void requireConfirmed(String expected, String given) {
+<span class="fc bfc" id="L105" title="All 2 branches covered.">    if (!expected.equals(given))</span>
+<span class="fc" id="L106">      throw new InvalidDataException(&quot;SYNC_PREVIEW_MISMATCH&quot;, &quot;员工信息表或同步规则与预览时不一致，请重新预览&quot;);</span>
+<span class="fc" id="L107">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RoleVoMapper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.controller.role</a> &gt; <span class="el_source">RoleVoMapper.java</span></div><h1>RoleVoMapper.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.controller.role;
+
+import com.cdwy.permission.dto.role.RoleCreateDTO;
+import com.cdwy.permission.dto.role.RoleUpdateDTO;
+import com.cdwy.permission.service.port.data.RoleData;
+import com.cdwy.permission.vo.role.RoleVO;
+import org.springframework.stereotype.Component;
+
+/** 角色管理的 DTO → 命令、结果 → VO 映射。 */
+@Component
+<span class="fc" id="L11">public class RoleVoMapper {</span>
+  /** 新建角色请求转为命令。 */
+  public RoleData.Create toCommand(RoleCreateDTO dto) {
+<span class="fc" id="L14">    return new RoleData.Create(dto.code(), dto.name(), dto.description());</span>
+  }
+
+  /** 修改角色请求转为命令。 */
+  public RoleData.Update toCommand(RoleUpdateDTO dto) {
+<span class="fc" id="L19">    return new RoleData.Update(dto.name(), dto.description());</span>
+  }
+
+  /** 角色结果转为 VO。 */
+  public RoleVO toVO(RoleData.View view) {
+<span class="fc" id="L24">    return new RoleVO(view.id(), view.code(), view.name(), view.description(), view.enabled());</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

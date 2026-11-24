@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ConsoleRegistrationService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.service.auth</a> &gt; <span class="el_source">ConsoleRegistrationService.java</span></div><h1>ConsoleRegistrationService.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.service.auth;
+
+import com.cdwy.permission.entity.permission.Permission;
+import com.cdwy.permission.entity.rbac.PermissionApi;
+import com.cdwy.permission.entity.rbac.RolePermission;
+import com.cdwy.permission.entity.rbac.UserRole;
+import com.cdwy.permission.entity.resource.ApiResource;
+import com.cdwy.permission.entity.role.Role;
+import com.cdwy.permission.entity.system.BusinessSystem;
+import com.cdwy.permission.entity.user.UserAccount;
+import com.cdwy.permission.repository.permission.PermissionRepository;
+import com.cdwy.permission.repository.rbac.PermissionApiRepository;
+import com.cdwy.permission.repository.rbac.RolePermissionRepository;
+import com.cdwy.permission.repository.rbac.UserRoleRepository;
+import com.cdwy.permission.repository.resource.ApiResourceRepository;
+import com.cdwy.permission.repository.role.RoleRepository;
+import com.cdwy.permission.repository.system.BusinessSystemRepository;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+/**
+ * 启动时把权限系统自身登记为应用 rbac（{@link ConsoleCatalog}）：幂等地补齐应用、菜单、按钮、管理接口及其绑定，以及拥有全部菜单和按钮的
+ * 内置管理员角色。这是部署时的初始数据，不提供 HTTP 接口；两种设计路线共用同一份数据。
+ *
+ * &lt;p&gt;不覆盖管理员修改过的名称。为防止误操作把所有人锁在控制台之外，每次启动还会：补齐内置管理员角色的授权与内置接口绑定；把被停用的内置应用、
+ * 内置管理员角色、内置菜单按钮与管理接口恢复启用（管理接口本身也拒绝停用它们，这里兜住早先的数据或直接改库的情况）。
+ */
+@Service
+@RequiredArgsConstructor
+public class ConsoleRegistrationService {
+<span class="fc" id="L38">  private static final Logger log = LoggerFactory.getLogger(ConsoleRegistrationService.class);</span>
+
+  private final BusinessSystemRepository systems;
+  private final PermissionRepository permissions;
+  private final ApiResourceRepository resources;
+  private final PermissionApiRepository bindings;
+  private final RoleRepository roles;
+  private final RolePermissionRepository rolePermissions;
+  private final UserRoleRepository userRoles;
+
+  /** 补齐 rbac 应用的全部内置数据并恢复被停用的内置对象，返回内置管理员角色。 */
+  @Transactional
+  public Role ensure() {
+<span class="fc" id="L51">    List&lt;String&gt; restored = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L52">    BusinessSystem app =</span>
+        systems
+<span class="fc" id="L54">            .findByCode(ConsoleCatalog.SYSTEM)</span>
+<span class="fc" id="L55">            .orElseGet(</span>
+                () -&gt; {
+<span class="fc" id="L57">                  BusinessSystem value = new BusinessSystem();</span>
+<span class="fc" id="L58">                  value.setCode(ConsoleCatalog.SYSTEM);</span>
+<span class="fc" id="L59">                  value.setName(ConsoleCatalog.SYSTEM_NAME);</span>
+<span class="fc" id="L60">                  value.setBaseUrl(&quot;/ui/&quot;);</span>
+<span class="fc" id="L61">                  return systems.save(value);</span>
+                });
+<span class="fc bfc" id="L63" title="All 2 branches covered.">    if (!app.getEnabled()) {</span>
+<span class="fc" id="L64">      app.setEnabled(true);</span>
+<span class="fc" id="L65">      restored.add(&quot;应用 &quot; + app.getCode());</span>
+    }
+<span class="fc" id="L67">    Map&lt;String, Permission&gt; entries = new HashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L68" title="All 2 branches covered.">    for (ConsoleCatalog.Entry entry : ConsoleCatalog.ENTRIES) {</span>
+<span class="fc" id="L69">      Permission permission =</span>
+          permissions
+<span class="fc" id="L71">              .findByCode(entry.code())</span>
+<span class="fc" id="L72">              .orElseGet(</span>
+                  () -&gt; {
+<span class="fc" id="L74">                    Permission value = new Permission();</span>
+<span class="fc" id="L75">                    value.setSystem(app);</span>
+<span class="fc" id="L76">                    value.setCode(entry.code());</span>
+<span class="fc" id="L77">                    value.setName(entry.name());</span>
+<span class="fc" id="L78">                    value.setType(entry.type());</span>
+<span class="fc" id="L79">                    value.setMenuPath(entry.menuPath());</span>
+<span class="fc bfc" id="L80" title="All 2 branches covered.">                    value.setParent(entry.parent() == null ? null : entries.get(entry.parent()));</span>
+<span class="fc" id="L81">                    return permissions.save(value);</span>
+                  });
+<span class="fc bfc" id="L83" title="All 2 branches covered.">      if (!permission.getActive()) {</span>
+<span class="fc" id="L84">        permission.setActive(true);</span>
+<span class="fc" id="L85">        restored.add(&quot;菜单或按钮 &quot; + permission.getCode());</span>
+      }
+<span class="fc" id="L87">      entries.put(entry.code(), permission);</span>
+<span class="fc" id="L88">    }</span>
+<span class="fc" id="L89">    int created = 0;</span>
+<span class="fc bfc" id="L90" title="All 2 branches covered.">    for (ConsoleCatalog.Api api : ConsoleCatalog.APIS) {</span>
+<span class="fc" id="L91">      ApiResource resource =</span>
+          resources
+<span class="fc" id="L93">              .findBySystem_IdAndMethodAndPath(app.getId(), api.method(), api.path())</span>
+<span class="fc" id="L94">              .orElse(null);</span>
+<span class="fc bfc" id="L95" title="All 2 branches covered.">      if (resource == null) {</span>
+<span class="fc" id="L96">        resource = new ApiResource();</span>
+<span class="fc" id="L97">        resource.setSystem(app);</span>
+<span class="fc" id="L98">        resource.setName(api.name());</span>
+<span class="fc" id="L99">        resource.setMethod(api.method());</span>
+<span class="fc" id="L100">        resource.setPath(api.path());</span>
+<span class="fc" id="L101">        resource = resources.save(resource);</span>
+<span class="fc" id="L102">        created++;</span>
+<span class="fc bfc" id="L103" title="All 2 branches covered.">      } else if (!resource.getActive()) {</span>
+<span class="fc" id="L104">        resource.setActive(true);</span>
+<span class="fc" id="L105">        restored.add(&quot;接口 &quot; + api.method() + &quot; &quot; + api.path());</span>
+      }
+<span class="fc bfc" id="L107" title="All 2 branches covered.">      for (String code : api.grantedBy()) {</span>
+<span class="fc" id="L108">        Permission permission = entries.get(code);</span>
+<span class="fc bfc" id="L109" title="All 2 branches covered.">        if (!bindings.existsByPermission_IdAndResource_Id(permission.getId(), resource.getId()))</span>
+<span class="fc" id="L110">          bindings.save(new PermissionApi(permission, resource));</span>
+<span class="fc" id="L111">      }</span>
+<span class="fc" id="L112">    }</span>
+<span class="fc" id="L113">    Role admin =</span>
+        roles
+<span class="fc" id="L115">            .findByCode(ConsoleCatalog.ADMIN_ROLE)</span>
+<span class="fc" id="L116">            .orElseGet(</span>
+                () -&gt; {
+<span class="fc" id="L118">                  Role value = new Role();</span>
+<span class="fc" id="L119">                  value.setCode(ConsoleCatalog.ADMIN_ROLE);</span>
+<span class="fc" id="L120">                  value.setName(ConsoleCatalog.ADMIN_ROLE_NAME);</span>
+<span class="fc" id="L121">                  value.setDescription(&quot;内置：拥有权限系统的全部菜单与按钮&quot;);</span>
+<span class="fc" id="L122">                  return roles.save(value);</span>
+                });
+<span class="fc bfc" id="L124" title="All 2 branches covered.">    if (!admin.getEnabled()) {</span>
+<span class="fc" id="L125">      admin.setEnabled(true);</span>
+<span class="fc" id="L126">      restored.add(&quot;角色 &quot; + admin.getCode());</span>
+    }
+<span class="fc bfc" id="L128" title="All 2 branches covered.">    for (Permission permission : entries.values())</span>
+<span class="fc bfc" id="L129" title="All 2 branches covered.">      if (!rolePermissions.existsByRole_IdAndPermission_Id(admin.getId(), permission.getId()))</span>
+<span class="fc" id="L130">        rolePermissions.save(new RolePermission(admin, permission));</span>
+<span class="fc bfc" id="L131" title="All 2 branches covered.">    if (created &gt; 0) log.info(&quot;已登记权限系统自身：{} 个菜单与按钮、{} 个新接口&quot;, entries.size(), created);</span>
+<span class="fc bfc" id="L132" title="All 2 branches covered.">    if (!restored.isEmpty()) log.warn(&quot;内置对象处于停用状态，已在启动时恢复启用：{}&quot;, restored);</span>
+<span class="fc" id="L133">    return admin;</span>
+  }
+
+  /** 把内置管理员角色分配给启动管理员（已分配时不重复）。 */
+  @Transactional
+  public void assignAdministrator(UserAccount user, Role admin) {
+<span class="fc bfc" id="L139" title="All 2 branches covered.">    if (!userRoles.existsByUser_IdAndRole_Id(user.getId(), admin.getId()))</span>
+<span class="fc" id="L140">      userRoles.save(new UserRole(user, admin));</span>
+<span class="fc" id="L141">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

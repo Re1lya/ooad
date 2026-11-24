@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JpaAccountRepositoryAdapter.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.infrastructure.persistence</a> &gt; <span class="el_source">JpaAccountRepositoryAdapter.java</span></div><h1>JpaAccountRepositoryAdapter.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.infrastructure.persistence;
+
+import cn.edu.xmu.clonefactory.util.CloneFactory;
+import com.cdwy.permission.entity.user.UserAccount;
+import com.cdwy.permission.repository.user.UserAccountRepository;
+import com.cdwy.permission.service.ddd.domain.model.Account;
+import com.cdwy.permission.service.ddd.domain.repository.AccountRepository;
+import com.cdwy.permission.service.port.error.ConflictException;
+import java.util.*;
+import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.stereotype.Repository;
+
+/** AccountRepository 的 JPA 适配器：实体不离开基础设施边界。 */
+@Repository
+@RequiredArgsConstructor
+public class JpaAccountRepositoryAdapter implements AccountRepository {
+  private final UserAccountRepository data;
+  private final com.cdwy.permission.repository.organization.DepartmentRepository departments;
+
+  /** 按主键读取并拷贝为领域对象，不加锁；不存在时返回空 Optional。 */
+  public Optional&lt;Account&gt; find(Long id) {
+<span class="fc" id="L23">    return data.findById(id).map(this::model);</span>
+  }
+
+  /** 按主键升序读取整张账号表并逐个拷贝，不分页；列表和检索走数据库分页的 {@link #search}。 */
+  public List&lt;Account&gt; all() {
+<span class="fc" id="L28">    return data.findAll(org.springframework.data.domain.Sort.by(&quot;id&quot;)).stream()</span>
+<span class="fc" id="L29">        .map(this::model)</span>
+<span class="fc" id="L30">        .toList();</span>
+  }
+
+  /** 实体转领域对象：同名同类型字段由 CloneFactory 拷贝，人员身份枚举转为名称字符串，部门关联只保留标识。 */
+  private Account model(UserAccount e) {
+<span class="fc" id="L35">    Account v = CloneFactory.copy(new Account(), e);</span>
+<span class="fc" id="L36">    v.setKind(e.getPersonType().name());</span>
+<span class="fc" id="L37">    v.setDepartmentId(e.getDepartmentId());</span>
+<span class="fc" id="L38">    return v;</span>
+  }
+
+  /**
+   * 标识为空时新建实体，否则读出已有实体（不存在抛 {@code USER_NOT_FOUND}），再由 CloneFactory 覆盖，
+   * 主键不参与拷贝；人员身份按枚举名转换，部门只取引用、不额外查询。{@code saveAndFlush} 让登录名唯一约束
+   * 和部门外键冲突当场暴露并翻译为 {@code DATA_CONFLICT}，当前事务随之标记为回滚。
+   */
+  public Account save(Account v) {
+    UserAccount e =
+<span class="fc bfc" id="L48" title="All 2 branches covered.">        v.getId() == null</span>
+<span class="fc" id="L49">            ? new UserAccount()</span>
+<span class="fc" id="L50">            : data.findById(v.getId())</span>
+<span class="fc" id="L51">                .orElseThrow(</span>
+                    () -&gt;
+<span class="nc" id="L53">                        new com.cdwy.permission.service.port.error.ResourceNotFoundException(</span>
+                            &quot;USER_NOT_FOUND&quot;, &quot;用户不存在&quot;));
+<span class="fc" id="L55">    CloneFactory.copy(e, v);</span>
+<span class="fc" id="L56">    e.setPersonType(com.cdwy.permission.service.port.data.PersonType.valueOf(v.getKind()));</span>
+<span class="fc" id="L57">    e.setDepartment(</span>
+<span class="fc bfc" id="L58" title="All 2 branches covered.">        v.getDepartmentId() == null ? null : departments.getReferenceById(v.getDepartmentId()));</span>
+    try {
+<span class="fc" id="L60">      return model(data.saveAndFlush(e));</span>
+<span class="nc" id="L61">    } catch (DataIntegrityViolationException ex) {</span>
+<span class="nc" id="L62">      throw new ConflictException(&quot;DATA_CONFLICT&quot;, &quot;数据重复或关联约束冲突，请刷新后重试&quot;);</span>
+    }
+  }
+
+  /** 批量保存：已有账号一次读取，全部写入后统一刷新。 */
+  public List&lt;Account&gt; saveAll(List&lt;Account&gt; values) {
+<span class="fc" id="L68">    java.util.Map&lt;Long, UserAccount&gt; current = new java.util.HashMap&lt;&gt;();</span>
+<span class="fc" id="L69">    data.findAllById(</span>
+<span class="fc" id="L70">            values.stream().map(Account::getId).filter(java.util.Objects::nonNull).toList())</span>
+<span class="fc" id="L71">        .forEach(e -&gt; current.put(e.getId(), e));</span>
+<span class="fc" id="L72">    List&lt;UserAccount&gt; entities = new java.util.ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L73" title="All 2 branches covered.">    for (Account v : values) {</span>
+<span class="fc bfc" id="L74" title="All 2 branches covered.">      UserAccount e = v.getId() == null ? new UserAccount() : current.get(v.getId());</span>
+<span class="fc" id="L75">      CloneFactory.copy(e, v);</span>
+<span class="fc" id="L76">      e.setPersonType(com.cdwy.permission.service.port.data.PersonType.valueOf(v.getKind()));</span>
+<span class="fc" id="L77">      e.setDepartment(</span>
+<span class="pc bpc" id="L78" title="1 of 2 branches missed.">          v.getDepartmentId() == null ? null : departments.getReferenceById(v.getDepartmentId()));</span>
+<span class="fc" id="L79">      entities.add(e);</span>
+<span class="fc" id="L80">    }</span>
+    try {
+<span class="fc" id="L82">      List&lt;UserAccount&gt; saved = data.saveAllAndFlush(entities);</span>
+<span class="fc" id="L83">      return saved.stream().map(this::model).toList();</span>
+<span class="nc" id="L84">    } catch (DataIntegrityViolationException ex) {</span>
+<span class="nc" id="L85">      throw new ConflictException(&quot;DATA_CONFLICT&quot;, &quot;数据重复或关联约束冲突，请刷新后重试&quot;);</span>
+    }
+  }
+
+  /**
+   * {@code deleteById} 先查后删，记录不存在时静默返回；不立即刷新，未解除的用户角色等造成的外键冲突
+   * 要到后续刷新（通常是事务提交）时才抛出，不经本适配器翻译。
+   */
+  public void delete(Long id) {
+<span class="fc" id="L94">    data.deleteById(id);</span>
+<span class="fc" id="L95">  }</span>
+
+  /** 锁定账号，串行化状态与密码变更。 */
+  public Optional&lt;Account&gt; lock(Long id) {
+<span class="fc" id="L99">    return data.lockById(id).map(this::model);</span>
+  }
+
+  /** 按自然登录名读取。 */
+  public Optional&lt;Account&gt; username(String name) {
+<span class="fc" id="L104">    return data.findByUsername(name).map(this::model);</span>
+  }
+
+  /** 关键字检索的数据库分页。 */
+  public com.cdwy.permission.service.port.data.UserData.Page&lt;Account&gt; search(
+      String keyword, int page, int pageSize) {
+<span class="fc" id="L110">    org.springframework.data.domain.Page&lt;UserAccount&gt; rows =</span>
+<span class="fc" id="L111">        data.search(</span>
+<span class="fc" id="L112">            com.cdwy.permission.repository.LikePattern.of(keyword),</span>
+<span class="fc" id="L113">            org.springframework.data.domain.PageRequest.of(</span>
+<span class="fc" id="L114">                page - 1, pageSize, org.springframework.data.domain.Sort.by(&quot;id&quot;)));</span>
+<span class="fc" id="L115">    return new com.cdwy.permission.service.port.data.UserData.Page&lt;&gt;(</span>
+<span class="fc" id="L116">        page, pageSize, rows.getTotalElements(), rows.map(this::model).getContent());</span>
+  }
+
+  /** 部门成员数据库分页。 */
+  public com.cdwy.permission.service.port.data.UserData.Page&lt;Account&gt; members(
+      Long departmentId, String keyword, int page, int pageSize) {
+<span class="fc" id="L122">    org.springframework.data.domain.Page&lt;UserAccount&gt; rows =</span>
+<span class="fc" id="L123">        data.members(</span>
+            departmentId,
+<span class="fc" id="L125">            com.cdwy.permission.repository.LikePattern.of(keyword),</span>
+<span class="fc" id="L126">            org.springframework.data.domain.PageRequest.of(</span>
+<span class="fc" id="L127">                page - 1, pageSize, org.springframework.data.domain.Sort.by(&quot;username&quot;)));</span>
+<span class="fc" id="L128">    return new com.cdwy.permission.service.port.data.UserData.Page&lt;&gt;(</span>
+<span class="fc" id="L129">        page, pageSize, rows.getTotalElements(), rows.map(this::model).getContent());</span>
+  }
+
+  /** 部门删除的反向引用检查。 */
+  public boolean inDepartment(Long id) {
+<span class="fc" id="L134">    return data.existsByDepartment_Id(id);</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

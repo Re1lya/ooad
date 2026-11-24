@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JpaRoleCatalogAdapter.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.infrastructure.persistence</a> &gt; <span class="el_source">JpaRoleCatalogAdapter.java</span></div><h1>JpaRoleCatalogAdapter.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.infrastructure.persistence;
+
+import cn.edu.xmu.clonefactory.util.CloneFactory;
+import com.cdwy.permission.entity.role.Role;
+import com.cdwy.permission.repository.role.RoleRepository;
+import com.cdwy.permission.service.ddd.domain.model.AccessRole;
+import com.cdwy.permission.service.ddd.domain.repository.RoleCatalog;
+import com.cdwy.permission.service.port.error.ConflictException;
+import java.util.*;
+import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.stereotype.Repository;
+
+/** RoleCatalog 的 JPA 适配器：实体不离开基础设施边界。 */
+@Repository
+@RequiredArgsConstructor
+public class JpaRoleCatalogAdapter implements RoleCatalog {
+  private final RoleRepository data;
+
+  /** 按主键读取并拷贝为领域对象，不加锁；不存在时返回空 Optional。 */
+  public Optional&lt;AccessRole&gt; find(Long id) {
+<span class="fc" id="L22">    return data.findById(id).map(this::model);</span>
+  }
+
+  /** 按主键升序读取全部角色（含已停用）并逐个拷贝，不分页。 */
+  public List&lt;AccessRole&gt; all() {
+<span class="fc" id="L27">    return data.findAll(org.springframework.data.domain.Sort.by(&quot;id&quot;)).stream()</span>
+<span class="fc" id="L28">        .map(this::model)</span>
+<span class="fc" id="L29">        .toList();</span>
+  }
+
+  /** 实体转领域对象：字段同名同类型，全部由 CloneFactory 拷贝（含标识），没有关联或枚举需要转换。 */
+  private AccessRole model(Role e) {
+<span class="fc" id="L34">    AccessRole v = CloneFactory.copy(new AccessRole(), e);</span>
+<span class="fc" id="L35">    return v;</span>
+  }
+
+  /**
+   * 标识为空时新建实体，否则读出已有实体（不存在抛 {@code ROLE_NOT_FOUND}），再由 CloneFactory 覆盖，
+   * 主键不参与拷贝；{@code saveAndFlush} 让编码唯一约束冲突当场暴露并翻译为 {@code DATA_CONFLICT}，
+   * 当前事务随之标记为回滚。
+   */
+  public AccessRole save(AccessRole v) {
+    Role e =
+<span class="fc bfc" id="L45" title="All 2 branches covered.">        v.getId() == null</span>
+<span class="fc" id="L46">            ? new Role()</span>
+<span class="fc" id="L47">            : data.findById(v.getId())</span>
+<span class="fc" id="L48">                .orElseThrow(</span>
+                    () -&gt;
+<span class="nc" id="L50">                        new com.cdwy.permission.service.port.error.ResourceNotFoundException(</span>
+                            &quot;ROLE_NOT_FOUND&quot;, &quot;角色不存在&quot;));
+<span class="fc" id="L52">    CloneFactory.copy(e, v);</span>
+    try {
+<span class="fc" id="L54">      return model(data.saveAndFlush(e));</span>
+<span class="fc" id="L55">    } catch (DataIntegrityViolationException ex) {</span>
+<span class="fc" id="L56">      throw new ConflictException(&quot;DATA_CONFLICT&quot;, &quot;数据重复或关联约束冲突，请刷新后重试&quot;);</span>
+    }
+  }
+
+  /**
+   * {@code deleteById} 先查后删，记录不存在时静默返回；不立即刷新，继承边、用户分配或权限授权造成的外键冲突
+   * 要到后续刷新（通常是事务提交）时才抛出，不经本适配器翻译。
+   */
+  public void delete(Long id) {
+<span class="fc" id="L65">    data.deleteById(id);</span>
+<span class="fc" id="L66">  }</span>
+
+  /** 所有角色按稳定顺序加锁，复用原有角色图事务保护。 */
+  public void lockGraph() {
+<span class="fc" id="L70">    data.lockHierarchyRoles();</span>
+<span class="fc" id="L71">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

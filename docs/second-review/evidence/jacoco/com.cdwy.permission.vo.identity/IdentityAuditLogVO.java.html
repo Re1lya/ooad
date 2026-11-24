@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>IdentityAuditLogVO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.vo.identity</a> &gt; <span class="el_source">IdentityAuditLogVO.java</span></div><h1>IdentityAuditLogVO.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.vo.identity;
+
+import java.time.OffsetDateTime;
+import java.util.Map;
+
+/**
+ * 一条审计记录。
+ *
+ * @param id 记录标识
+ * @param systemCode 应用编码
+ * @param at 发生时间
+ * @param actor 操作人快照
+ * @param type 操作类型
+ * @param objectType 对象类型
+ * @param objectId 对象标识
+ * @param target 对象的可读名称
+ * @param before 变更前快照
+ * @param after 变更后快照
+ * @param termId 所属学期
+ * @param courseId 所属课程
+ * @param classId 所属教学班
+ */
+<span class="fc" id="L23">public record IdentityAuditLogVO(</span>
+    Long id,
+    String systemCode,
+    OffsetDateTime at,
+    IdentityAuditActorVO actor,
+    String type,
+    String objectType,
+    String objectId,
+    String target,
+    Map&lt;String, Object&gt; before,
+    Map&lt;String, Object&gt; after,
+    String termId,
+    String courseId,
+    String classId) {}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

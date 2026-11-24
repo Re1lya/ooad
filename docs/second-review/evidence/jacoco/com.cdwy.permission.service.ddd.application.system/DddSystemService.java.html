@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DddSystemService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.service.ddd.application.system</a> &gt; <span class="el_source">DddSystemService.java</span></div><h1>DddSystemService.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.service.ddd.application.system;
+
+import com.cdwy.permission.service.auth.ConsoleCatalog;
+import com.cdwy.permission.service.ddd.domain.model.*;
+import com.cdwy.permission.service.ddd.domain.repository.*;
+import com.cdwy.permission.service.port.data.*;
+import com.cdwy.permission.service.port.error.*;
+import com.cdwy.permission.service.port.system.SystemUseCase;
+import java.util.*;
+import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+/** DddSystemService 应用服务：编排领域对象与仓储端口，禁止依赖 JPA。 */
+@Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+@ConditionalOnProperty(name = &quot;app.backend-strategy&quot;, havingValue = &quot;ddd&quot;)
+public class DddSystemService implements SystemUseCase {
+  /** 返回实际装载模式。 */
+  @Override
+  public String strategy() {
+<span class="fc" id="L24">    return &quot;ddd&quot;;</span>
+  }
+
+  private final SystemCatalog systems;
+  private final PermissionCatalog permissions;
+  private final ResourceCatalog resources;
+
+  /** 读取应用。 */
+  private ManagedSystem require(Long id) {
+<span class="fc" id="L33">    return systems.find(id).orElseThrow(() -&gt; new ResourceNotFoundException(&quot;SYSTEM_NOT_FOUND&quot;, &quot;应用不存在&quot;));</span>
+  }
+
+  /** 明确构造不可变结果。 */
+  private SystemData.View view(ManagedSystem n) {
+<span class="fc" id="L38">    return new SystemData.View(n.getId(), n.getCode(), n.getName(), n.getBaseUrl(), n.getEnabled());</span>
+  }
+
+  /** 应用目录。 */
+  public List&lt;SystemData.View&gt; list() {
+<span class="fc" id="L43">    return systems.all().stream().map(this::view).toList();</span>
+  }
+
+  /** 新增应用且保持编码唯一。 */
+  @Transactional
+  public SystemData.View create(SystemData.Create input) {
+<span class="fc bfc" id="L49" title="All 2 branches covered.">    if (systems.all().stream().anyMatch(n -&gt; n.getCode().equals(input.code())))</span>
+<span class="fc" id="L50">      throw new ConflictException(&quot;SYSTEM_CODE_EXISTS&quot;, &quot;编码已存在&quot;);</span>
+<span class="fc" id="L51">    ManagedSystem n = new ManagedSystem();</span>
+<span class="fc" id="L52">    n.setCode(input.code());</span>
+<span class="fc" id="L53">    n.rename(input.name(), input.baseUrl());</span>
+<span class="fc" id="L54">    return view(systems.save(n));</span>
+  }
+
+  /** 修改应用描述。 */
+  @Transactional
+  public SystemData.View update(Long id, SystemData.Update input) {
+<span class="fc" id="L60">    ManagedSystem n = require(id);</span>
+<span class="fc" id="L61">    n.rename(input.name(), input.baseUrl());</span>
+<span class="fc" id="L62">    return view(systems.save(n));</span>
+  }
+
+  /** 应用开关实时参与鉴权。 */
+  @Transactional
+  public SystemData.View status(Long id, boolean enabled) {
+<span class="fc" id="L68">    ManagedSystem n = require(id);</span>
+<span class="fc" id="L69">    n.changeStatus(enabled, ConsoleCatalog.isSystem(n.getCode()));</span>
+<span class="fc" id="L70">    return view(systems.save(n));</span>
+  }
+
+  /** 有资源时不能删除应用。 */
+  @Transactional
+  public void delete(Long id) {
+<span class="fc" id="L76">    ManagedSystem n = require(id);</span>
+<span class="fc" id="L77">    n.assertDeletable(</span>
+<span class="pc bpc" id="L78" title="1 of 4 branches missed.">        ConsoleCatalog.isSystem(n.getCode()), permissions.inSystem(id) || resources.inSystem(id));</span>
+<span class="fc" id="L79">    systems.delete(id);</span>
+<span class="fc" id="L80">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

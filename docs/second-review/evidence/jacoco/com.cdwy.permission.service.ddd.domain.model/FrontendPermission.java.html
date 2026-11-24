@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FrontendPermission.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.service.ddd.domain.model</a> &gt; <span class="el_source">FrontendPermission.java</span></div><h1>FrontendPermission.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.service.ddd.domain.model;
+
+import lombok.Getter;
+import lombok.Setter;
+import com.cdwy.permission.service.port.error.InvalidDataException;
+
+/** FrontendPermission 领域对象：只维护业务状态和不变量，不依赖 JPA。 */
+@Getter
+@Setter
+<span class="fc" id="L10">public class FrontendPermission {</span>
+  private Long id;
+  private Long systemId;
+  private String code;
+  private String name;
+<span class="fc" id="L15">  private String kind = MENU;</span>
+  private String menuPath;
+  private Long parentId;
+<span class="fc" id="L18">  private boolean active = true;</span>
+
+  public static final String MENU = &quot;MENU&quot;, BUTTON = &quot;BUTTON&quot;;
+
+  /** 维护同应用菜单父级、无环、按钮无地址等不变量。 */
+  public void edit(
+      String value,
+      String type,
+      String path,
+      Long parent,
+      java.util.Map&lt;Long, FrontendPermission&gt; nodes,
+      boolean hasChildren) {
+<span class="fc bfc" id="L30" title="All 2 branches covered.">    FrontendPermission p = parent == null ? null : nodes.get(parent);</span>
+<span class="pc bpc" id="L31" title="1 of 4 branches missed.">    if (parent != null &amp;&amp; p == null)</span>
+<span class="nc" id="L32">      throw new com.cdwy.permission.service.port.error.ResourceNotFoundException(&quot;PERMISSION_NOT_FOUND&quot;, &quot;前端权限不存在&quot;);</span>
+<span class="fc bfc" id="L33" title="All 4 branches covered.">    if (BUTTON.equals(type) &amp;&amp; p == null) throw new InvalidDataException(&quot;BUTTON_PARENT_REQUIRED&quot;, &quot;按钮必须隶属菜单&quot;);</span>
+<span class="fc bfc" id="L34" title="All 6 branches covered.">    if (p != null &amp;&amp; (!MENU.equals(p.kind) || !java.util.Objects.equals(systemId, p.systemId)))</span>
+<span class="fc" id="L35">      throw new InvalidDataException(&quot;PERMISSION_PARENT_INVALID&quot;, &quot;父节点必须是同一应用的菜单&quot;);</span>
+<span class="fc" id="L36">    java.util.Set&lt;Long&gt; seen = new java.util.HashSet&lt;&gt;();</span>
+<span class="fc bfc" id="L37" title="All 2 branches covered.">    for (FrontendPermission n = p; n != null; n = nodes.get(n.parentId))</span>
+<span class="pc bpc" id="L38" title="1 of 4 branches missed.">      if (java.util.Objects.equals(n.id, id) || !seen.add(n.id))</span>
+<span class="fc" id="L39">        throw new InvalidDataException(&quot;PERMISSION_CYCLE&quot;, &quot;权限树不能形成循环&quot;);</span>
+<span class="fc bfc" id="L40" title="All 6 branches covered.">    if (BUTTON.equals(type) &amp;&amp; id != null &amp;&amp; hasChildren)</span>
+<span class="fc" id="L41">      throw new com.cdwy.permission.service.port.error.ConflictException(&quot;PERMISSION_HAS_CHILDREN&quot;, &quot;有子节点的菜单不能改为按钮&quot;);</span>
+<span class="pc bpc" id="L42" title="1 of 6 branches missed.">    if (BUTTON.equals(type) &amp;&amp; path != null &amp;&amp; !path.isBlank())</span>
+<span class="fc" id="L43">      throw new InvalidDataException(&quot;BUTTON_PATH_NOT_ALLOWED&quot;, &quot;按钮不设置菜单地址&quot;);</span>
+<span class="fc" id="L44">    name = value;</span>
+<span class="fc" id="L45">    kind = type;</span>
+<span class="pc bpc" id="L46" title="1 of 4 branches missed.">    menuPath = path == null || path.isBlank() ? null : path;</span>
+<span class="fc" id="L47">    parentId = parent;</span>
+<span class="fc" id="L48">  }</span>
+
+  /**
+   * 启停菜单或按钮，授权关系保留，后续计算实时排除。控制台的内置菜单与按钮不能停用，否则所有人（包括管理员）都用不了对应页面。
+   *
+   * @param value 生效为 true
+   * @param builtIn 是否为控制台的内置菜单或按钮，由应用服务按内置目录判断
+   */
+  public void changeStatus(boolean value, boolean builtIn) {
+<span class="fc bfc" id="L57" title="All 2 branches covered.">    if (!value) assertNotBuiltIn(builtIn);</span>
+<span class="fc" id="L58">    active = value;</span>
+<span class="fc" id="L59">  }</span>
+
+  /**
+   * 删除前检查：内置菜单与按钮抛 {@code CONSOLE_BUILT_IN}；仍有下级、角色授权或 API 绑定时抛 {@code PERMISSION_IN_USE}（均 409）。
+   *
+   * @param builtIn 是否为控制台的内置菜单或按钮
+   * @param referenced 是否仍有下级、角色授权或 API 绑定
+   */
+  public void assertDeletable(boolean builtIn, boolean referenced) {
+<span class="fc" id="L68">    assertNotBuiltIn(builtIn);</span>
+<span class="fc bfc" id="L69" title="All 2 branches covered.">    if (referenced)</span>
+<span class="fc" id="L70">      throw new com.cdwy.permission.service.port.error.ConflictException(&quot;PERMISSION_IN_USE&quot;, &quot;仍有子节点、角色授权或 API 绑定&quot;);</span>
+<span class="fc" id="L71">  }</span>
+
+  private static void assertNotBuiltIn(boolean builtIn) {
+<span class="fc bfc" id="L74" title="All 2 branches covered.">    if (builtIn)</span>
+<span class="fc" id="L75">      throw new com.cdwy.permission.service.port.error.ConflictException(&quot;CONSOLE_BUILT_IN&quot;, &quot;权限管理系统的内置菜单与按钮不能停用或删除&quot;);</span>
+<span class="fc" id="L76">  }</span>
+
+  /** 同一业务系统内才允许绑定前端权限和 API 资源。 */
+  public void assertBindable(ProtectedResource resource) {
+<span class="fc bfc" id="L80" title="All 2 branches covered.">    if (!java.util.Objects.equals(systemId, resource.getSystemId()))</span>
+<span class="fc" id="L81">      throw new InvalidDataException(&quot;BINDING_SYSTEM_MISMATCH&quot;, &quot;前端权限与 API 资源必须属于同一应用&quot;);</span>
+<span class="fc" id="L82">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

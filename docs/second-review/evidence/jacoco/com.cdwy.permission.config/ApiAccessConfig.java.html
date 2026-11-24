@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ApiAccessConfig.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.config</a> &gt; <span class="el_source">ApiAccessConfig.java</span></div><h1>ApiAccessConfig.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.config;
+
+import com.cdwy.permission.service.port.auth.AuthenticationUseCase;
+import com.cdwy.permission.service.port.error.ForbiddenException;
+import com.cdwy.permission.service.port.rbac.AuthorizationUseCase;
+import jakarta.servlet.http.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.method.HandlerMethod;
+import org.springframework.web.servlet.*;
+import org.springframework.web.servlet.config.annotation.*;
+
+/**
+ * 接口访问规则：除登录外的 /api 请求先校验 Bearer JWT，并要求令牌的 {@code aud} 包含被调用的系统（/api/apps/{应用编码}/...
+ * 为该应用，其余为权限系统自身 rbac）；
+ *
+ * &lt;ul&gt;
+ *   &lt;li&gt;/api/me 与 /api/apps/{应用编码}/... 只要求登录（接入应用以用户本人令牌查询身份、写审计）；标注 {@link AppAccess}
+ *       的统一身份目录接口另按该应用的 API 资源授权；
+ *   &lt;li&gt;其余接口须标注 {@link BusinessAccess}，按 RBAC1 有效授权链匹配该应用的 API 资源：权限系统自己的管理接口登记在应用
+ *       rbac 下（见 ConsoleCatalog），管理员也通过内置角色获得授权；
+ *   &lt;li&gt;没有登记访问规则的接口一律拒绝。
+ * &lt;/ul&gt;
+ *
+ * &lt;p&gt;接入应用的浏览器直连接口（/api/apps/**）按配置项 {@code permission.cors.allowed-origins} 放行跨域来源。
+ */
+@Configuration
+public class ApiAccessConfig implements WebMvcConfigurer {
+<span class="fc" id="L32">  private static final Logger log = LoggerFactory.getLogger(ApiAccessConfig.class);</span>
+  private final AuthenticationUseCase auth;
+  private final AuthorizationUseCase authorization;
+  private final String[] allowedOrigins;
+
+  /** {@code permission.cors.allowed-origins} 为逗号分隔的来源列表，空白项忽略；未配置时不开放跨域。 */
+  public ApiAccessConfig(
+      AuthenticationUseCase auth,
+      AuthorizationUseCase authorization,
+<span class="fc" id="L41">      @Value(&quot;${permission.cors.allowed-origins:}&quot;) String allowedOrigins) {</span>
+<span class="fc" id="L42">    this.auth = auth;</span>
+<span class="fc" id="L43">    this.authorization = authorization;</span>
+<span class="fc" id="L44">    this.allowedOrigins =</span>
+<span class="fc" id="L45">        java.util.Arrays.stream(allowedOrigins.split(&quot;,&quot;))</span>
+<span class="fc" id="L46">            .map(String::trim)</span>
+<span class="fc bfc" id="L47" title="All 2 branches covered.">            .filter(origin -&gt; !origin.isEmpty())</span>
+<span class="fc" id="L48">            .toArray(String[]::new);</span>
+<span class="fc" id="L49">  }</span>
+
+  /** 令牌目标系统：/api/apps/{应用编码}/... 为该应用，其余接口为权限系统自身。 */
+  static String audience(String route) {
+<span class="fc bfc" id="L53" title="All 2 branches covered.">    if (!route.startsWith(&quot;/api/apps/&quot;)) return BusinessAccess.CONSOLE;</span>
+<span class="fc" id="L54">    String rest = route.substring(&quot;/api/apps/&quot;.length());</span>
+<span class="fc" id="L55">    int slash = rest.indexOf('/');</span>
+<span class="pc bpc" id="L56" title="1 of 2 branches missed.">    return slash &lt; 0 ? rest : rest.substring(0, slash);</span>
+  }
+
+  /** 课程前端等接入应用在浏览器里直连统一身份接口；未配置来源时不开放跨域。 */
+  @Override
+  public void addCorsMappings(CorsRegistry registry) {
+<span class="fc bfc" id="L62" title="All 2 branches covered.">    if (allowedOrigins.length == 0) return;</span>
+<span class="fc" id="L63">    registry</span>
+<span class="fc" id="L64">        .addMapping(&quot;/api/apps/**&quot;)</span>
+<span class="fc" id="L65">        .allowedOrigins(allowedOrigins)</span>
+<span class="fc" id="L66">        .allowedMethods(&quot;GET&quot;, &quot;POST&quot;, &quot;OPTIONS&quot;)</span>
+<span class="fc" id="L67">        .allowedHeaders(&quot;Authorization&quot;, &quot;Content-Type&quot;, &quot;Accept&quot;)</span>
+<span class="fc" id="L68">        .maxAge(1800);</span>
+<span class="fc" id="L69">  }</span>
+
+  /** 只需登录即可访问的个人与接入应用接口。 */
+  static boolean selfService(String route) {
+<span class="fc bfc" id="L73" title="All 6 branches covered.">    return route.equals(&quot;/api/me&quot;) || route.startsWith(&quot;/api/me/&quot;) || route.startsWith(&quot;/api/apps/&quot;);</span>
+  }
+
+  /**
+   * 为 {@code /api/**} 注册鉴权拦截器；控制台登录 {@code /api/auth/login} 与接入应用登录
+   * {@code /api/apps/{应用编码}/auth/login} 不经过拦截器。
+   *
+   * &lt;p&gt;拦截器依次处理：
+   *
+   * &lt;ol&gt;
+   *   &lt;li&gt;响应头加 {@code Cache-Control: no-store}；处理器不是 Controller 方法时直接放行；
+   *   &lt;li&gt;校验 Bearer 令牌、账号状态、凭证版本，并要求令牌 {@code aud} 包含 {@code audience} 算出的系统，
+   *       失败返回 401 {@code UNAUTHORIZED}；
+   *   &lt;li&gt;把用户 ID 写入 MDC，把 {@link CurrentUser} 写入请求属性；
+   *   &lt;li&gt;标注 {@link AppAccess} 的方法按该应用的 API 资源授权，路径去掉 {@code /api/apps/{应用编码}} 前缀；
+   *       其余个人接口与 {@code /api/apps/**} 接口只要求登录；其他接口按 {@link BusinessAccess} 登记的应用授权；
+   *       没有登记访问规则的接口一律拒绝。授权失败返回 403 {@code FORBIDDEN}。
+   * &lt;/ol&gt;
+   */
+  @Override
+  public void addInterceptors(InterceptorRegistry registry) {
+<span class="fc" id="L94">    registry</span>
+<span class="fc" id="L95">        .addInterceptor(</span>
+<span class="fc" id="L96">            new HandlerInterceptor() {</span>
+              @Override
+              public boolean preHandle(
+                  HttpServletRequest request, HttpServletResponse response, Object handler) {
+<span class="fc" id="L100">                response.setHeader(&quot;Cache-Control&quot;, &quot;no-store&quot;);</span>
+<span class="fc bfc" id="L101" title="All 2 branches covered.">                if (!(handler instanceof HandlerMethod method)) return true;</span>
+<span class="fc" id="L102">                String route = request.getRequestURI().substring(request.getContextPath().length());</span>
+<span class="fc" id="L103">                com.cdwy.permission.service.port.data.AuthData.Identity user =</span>
+<span class="fc" id="L104">                    auth.resolve(request.getHeader(&quot;Authorization&quot;), audience(route));</span>
+<span class="fc" id="L105">                MDC.put(&quot;userId&quot;, String.valueOf(user.id()));</span>
+<span class="fc" id="L106">                request.setAttribute(</span>
+<span class="fc" id="L107">                    CurrentUser.class.getName(), new CurrentUser(user.id(), user.administrator()));</span>
+<span class="fc" id="L108">                BusinessAccess rule = method.getMethodAnnotation(BusinessAccess.class);</span>
+<span class="pc bpc" id="L109" title="1 of 2 branches missed.">                if (rule == null) rule = method.getBeanType().getAnnotation(BusinessAccess.class);</span>
+<span class="fc bfc" id="L110" title="All 2 branches covered.">                if (method.hasMethodAnnotation(AppAccess.class)) {</span>
+<span class="fc" id="L111">                  String app = audience(route);</span>
+<span class="fc" id="L112">                  authorization.requireApi(</span>
+<span class="fc" id="L113">                      user.id(),</span>
+                      app,
+<span class="fc" id="L115">                      request.getMethod(),</span>
+<span class="fc" id="L116">                      route.substring((&quot;/api/apps/&quot; + app).length()));</span>
+<span class="fc bfc" id="L117" title="All 2 branches covered.">                } else if (selfService(route)) {</span>
+                  // 个人接口与接入应用身份接口只要求登录。
+<span class="fc bfc" id="L119" title="All 2 branches covered.">                } else if (rule != null)</span>
+<span class="fc" id="L120">                  authorization.requireApi(user.id(), rule.value(), request.getMethod(), route);</span>
+                else {
+<span class="fc" id="L122">                  log.warn(&quot;拒绝访问未登记访问规则的接口 {} {}&quot;, request.getMethod(), route);</span>
+<span class="fc" id="L123">                  throw new ForbiddenException(&quot;此接口未登记访问规则&quot;);</span>
+                }
+<span class="fc" id="L125">                return true;</span>
+              }
+            })
+<span class="fc" id="L128">        .addPathPatterns(&quot;/api/**&quot;)</span>
+<span class="fc" id="L129">        .excludePathPatterns(&quot;/api/auth/login&quot;, &quot;/api/apps/*/auth/login&quot;);</span>
+<span class="fc" id="L130">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

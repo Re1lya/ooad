@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>IdentityVoMapper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.controller.identity</a> &gt; <span class="el_source">IdentityVoMapper.java</span></div><h1>IdentityVoMapper.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.controller.identity;
+
+import com.cdwy.permission.dto.identity.IdentityAuditWriteDTO;
+import com.cdwy.permission.dto.identity.IdentityLoginDTO;
+import com.cdwy.permission.service.port.data.AuditData;
+import com.cdwy.permission.service.port.data.AuthData;
+import com.cdwy.permission.service.port.data.IdentityData;
+import com.cdwy.permission.vo.common.PageVO;
+import com.cdwy.permission.vo.identity.ApiAuthorityCheckVO;
+import com.cdwy.permission.vo.identity.IdentityAuditActorVO;
+import com.cdwy.permission.vo.identity.IdentityAuditLogVO;
+import com.cdwy.permission.vo.identity.IdentityCurrentUserVO;
+import com.cdwy.permission.vo.identity.IdentityDepartmentUserVO;
+import com.cdwy.permission.vo.identity.IdentityDepartmentVO;
+import com.cdwy.permission.vo.identity.IdentityUserVO;
+import com.cdwy.permission.vo.identity.LoginVO;
+import com.cdwy.permission.vo.identity.PermissionCheckVO;
+import org.springframework.stereotype.Component;
+
+/**
+ * 统一身份与审计接口的 DTO → 命令、结果 → VO 映射。
+ *
+ * &lt;p&gt;VO 的字段名与课程项目管理系统的统一身份契约（Apifox「统一身份鉴权」「统一身份审计」）一致。
+ */
+@Component
+<span class="fc" id="L26">public class IdentityVoMapper {</span>
+  /** 接入应用的登录请求转为登录命令；target 为接口地址中的应用编码。 */
+  public AuthData.AppLogin toCommand(IdentityLoginDTO dto, String target) {
+<span class="fc" id="L29">    return new AuthData.AppLogin(dto.username(), dto.password(), dto.systems(), target);</span>
+  }
+
+  /** 审计写入请求转为命令。 */
+  public AuditData.Write toCommand(IdentityAuditWriteDTO dto) {
+<span class="fc" id="L34">    return new AuditData.Write(</span>
+<span class="fc" id="L35">        dto.requestId(),</span>
+<span class="fc" id="L36">        dto.type(),</span>
+<span class="fc" id="L37">        dto.objectType(),</span>
+<span class="fc" id="L38">        dto.objectId(),</span>
+<span class="fc" id="L39">        dto.target(),</span>
+<span class="fc" id="L40">        dto.before(),</span>
+<span class="fc" id="L41">        dto.after(),</span>
+<span class="fc" id="L42">        dto.termId(),</span>
+<span class="fc" id="L43">        dto.courseId(),</span>
+<span class="fc" id="L44">        dto.classId());</span>
+  }
+
+  /** 签发结果转为登录 VO，不含用户资料。 */
+  public LoginVO toVO(AuthData.Token token) {
+<span class="fc" id="L49">    return new LoginVO(token.accessToken(), token.tokenType(), token.expiresIn());</span>
+  }
+
+  /** 当前身份转为 VO。 */
+  public IdentityCurrentUserVO toVO(IdentityData.Current current) {
+<span class="fc" id="L54">    return new IdentityCurrentUserVO(</span>
+<span class="fc" id="L55">        current.subject(), current.roles(), current.permissions(), current.name(), current.no());</span>
+  }
+
+  /** 统一身份用户转为 VO。 */
+  public IdentityUserVO toVO(IdentityData.User user) {
+<span class="fc" id="L60">    return new IdentityUserVO(user.userId(), user.no(), user.name());</span>
+  }
+
+  /** 菜单或按钮权限的判断结果转为 VO。 */
+  public PermissionCheckVO toPermissionCheckVO(boolean allowed) {
+<span class="fc" id="L65">    return new PermissionCheckVO(allowed);</span>
+  }
+
+  /** 接口权限的判断结果转为 VO。 */
+  public ApiAuthorityCheckVO toVO(IdentityData.ApiCheck check) {
+<span class="fc" id="L70">    return new ApiAuthorityCheckVO(check.operationId(), check.allowed());</span>
+  }
+
+  /** 一层部门的分页结果转为 VO。 */
+  public PageVO&lt;IdentityDepartmentVO&gt; toDepartmentPageVO(
+      IdentityData.Page&lt;IdentityData.Department&gt; page) {
+<span class="fc" id="L76">    return new PageVO&lt;&gt;(</span>
+<span class="fc" id="L77">        page.page(),</span>
+<span class="fc" id="L78">        page.pageSize(),</span>
+<span class="fc" id="L79">        page.total(),</span>
+<span class="fc" id="L80">        page.items().stream()</span>
+<span class="fc" id="L81">            .map(d -&gt; new IdentityDepartmentVO(d.id(), d.code(), d.name(), d.parentId(), d.hasChildren()))</span>
+<span class="fc" id="L82">            .toList());</span>
+  }
+
+  /** 部门人员的分页结果转为 VO。 */
+  public PageVO&lt;IdentityDepartmentUserVO&gt; toDepartmentUserPageVO(
+      IdentityData.Page&lt;IdentityData.DepartmentUser&gt; page) {
+<span class="fc" id="L88">    return new PageVO&lt;&gt;(</span>
+<span class="fc" id="L89">        page.page(),</span>
+<span class="fc" id="L90">        page.pageSize(),</span>
+<span class="fc" id="L91">        page.total(),</span>
+<span class="fc" id="L92">        page.items().stream()</span>
+<span class="fc" id="L93">            .map(</span>
+                u -&gt;
+<span class="fc" id="L95">                    new IdentityDepartmentUserVO(</span>
+<span class="fc" id="L96">                        u.userId(), u.no(), u.name(), u.departmentId(), u.departmentName()))</span>
+<span class="fc" id="L97">            .toList());</span>
+  }
+
+  /** 一条审计记录转为 VO。 */
+  public IdentityAuditLogVO toVO(AuditData.Entry entry) {
+    IdentityAuditActorVO actor =
+<span class="pc bpc" id="L103" title="1 of 2 branches missed.">        entry.actor() == null</span>
+<span class="nc" id="L104">            ? null</span>
+<span class="fc" id="L105">            : new IdentityAuditActorVO(</span>
+<span class="fc" id="L106">                entry.actor().id(),</span>
+<span class="fc" id="L107">                entry.actor().name(),</span>
+<span class="fc" id="L108">                entry.actor().roles(),</span>
+<span class="fc" id="L109">                entry.actor().deleted());</span>
+<span class="fc" id="L110">    return new IdentityAuditLogVO(</span>
+<span class="fc" id="L111">        entry.id(),</span>
+<span class="fc" id="L112">        entry.systemCode(),</span>
+<span class="fc" id="L113">        entry.at(),</span>
+        actor,
+<span class="fc" id="L115">        entry.type(),</span>
+<span class="fc" id="L116">        entry.objectType(),</span>
+<span class="fc" id="L117">        entry.objectId(),</span>
+<span class="fc" id="L118">        entry.target(),</span>
+<span class="fc" id="L119">        entry.before(),</span>
+<span class="fc" id="L120">        entry.after(),</span>
+<span class="fc" id="L121">        entry.termId(),</span>
+<span class="fc" id="L122">        entry.courseId(),</span>
+<span class="fc" id="L123">        entry.classId());</span>
+  }
+
+  /** 审计记录分页结果转为 VO。 */
+  public PageVO&lt;IdentityAuditLogVO&gt; toVO(AuditData.Page page) {
+<span class="fc" id="L128">    return new PageVO&lt;&gt;(</span>
+<span class="fc" id="L129">        page.page(), page.pageSize(), page.total(), page.items().stream().map(this::toVO).toList());</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

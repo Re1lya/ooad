@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AccessPolicy.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.config</a> &gt; <span class="el_source">AccessPolicy.java</span></div><h1>AccessPolicy.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.config;
+
+import java.time.*;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+
+/**
+ * 人员有效期策略，绑定配置前缀 {@code permission.policy}：外部人员与临时人员的有效期上限，以及计算日期边界所用的时区。
+ *
+ * @param externalMaxDays 外部人员的到期日最晚可设为今天之后的第几天，须为正数
+ * @param temporaryMaxDays 临时人员的到期日最晚可设为今天之后的第几天，须为正数
+ * @param zone 时区 ID（例如 {@code Asia/Shanghai}），用于确定“今天”和有效期截止时刻
+ */
+@ConfigurationProperties(&quot;permission.policy&quot;)
+public record AccessPolicy(int externalMaxDays, int temporaryMaxDays, String zone) {
+  /** 校验上限为正数、时区可解析；配置不合法时抛出异常，应用启动失败。 */
+<span class="fc" id="L16">  public AccessPolicy {</span>
+<span class="pc bpc" id="L17" title="2 of 4 branches missed.">    if (externalMaxDays &lt; 1 || temporaryMaxDays &lt; 1)</span>
+<span class="nc" id="L18">      throw new IllegalArgumentException(&quot;人员有效期上限必须为正数&quot;);</span>
+<span class="fc" id="L19">    ZoneId.of(zone);</span>
+<span class="fc" id="L20">  }</span>
+
+  /** 配置时区对应的 {@link ZoneId}。 */
+  public ZoneId zoneId() {
+<span class="fc" id="L24">    return ZoneId.of(zone);</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

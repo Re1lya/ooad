@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ResourceData.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.service.port.data</a> &gt; <span class="el_source">ResourceData.java</span></div><h1>ResourceData.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.service.port.data;
+
+/** API 资源用例（{@code ResourceUseCase}）的输入与结果；菜单或按钮绑定的资源列表也用 {@code View}。 */
+public final class ResourceData {
+  private ResourceData() {}
+
+  /**
+   * 登记 API 资源（{@code ResourceUseCase#create}）的输入；除名称外登记后都不可修改。
+   *
+   * @param systemId 所属应用
+   * @param name 显示名称
+   * @param method HTTP 方法：GET、POST、PUT、PATCH 或 DELETE
+   * @param path 路径模式（Spring {@code PathPattern} 语法），以 / 开头，可含 {@code {id}} 这类变量，不含查询串，不支持
+   *     {@code **}
+   * @param code 下发给接入应用的后端权限码，可空
+   * @param operationId 接口的 operationId，可空，同一应用内唯一
+   */
+<span class="fc" id="L18">  public record Create(</span>
+      Long systemId, String name, String method, String path, String code, String operationId) {}
+
+  /**
+   * 修改 API 资源（{@code ResourceUseCase#update}）的输入：只能改显示名称。
+   *
+   * @param name 显示名称
+   */
+<span class="fc" id="L26">  public record Update(String name) {}</span>
+
+  /**
+   * 一个已登记的 API 资源：资源用例的结果，也是菜单或按钮所绑定资源列表的元素。
+   *
+   * @param id 标识
+   * @param systemId 所属应用
+   * @param name 显示名称
+   * @param method HTTP 方法
+   * @param path 路径模式
+   * @param active 是否生效；停用的资源仍参与鉴权匹配，命中即拒绝
+   * @param code 后端权限码，可空
+   * @param operationId 接口的 operationId，可空
+   */
+<span class="fc" id="L40">  public record View(</span>
+      Long id,
+      Long systemId,
+      String name,
+      String method,
+      String path,
+      boolean active,
+      String code,
+      String operationId) {}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

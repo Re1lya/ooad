@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UserViews.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.service.user</a> &gt; <span class="el_source">UserViews.java</span></div><h1>UserViews.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.service.user;
+
+import cn.edu.xmu.clonefactory.util.CloneFactory;
+import com.cdwy.permission.entity.user.UserAccount;
+import com.cdwy.permission.service.port.data.UserResult;
+
+/** 结构化路线的账号结果转换，供用户服务和认证服务（登录响应）共用；结果不含密码散列和凭证版本。 */
+public final class UserViews {
+  private UserViews() {}
+
+  /** 账号实体转为用例结果：同名字段由 CloneFactory 复制，人员类型输出为枚举名 {@code kind}，部门输出为标识（无部门为 null）。 */
+  public static UserResult view(UserAccount user) {
+<span class="fc" id="L13">    UserResult result = CloneFactory.copy(new UserResult(), user);</span>
+<span class="fc" id="L14">    result.setKind(user.getPersonType().name());</span>
+    // 实体保存的是部门关联而不是 departmentId 字段，CloneFactory 按字段名复制不到，这里显式取。
+<span class="fc" id="L16">    result.setDepartmentId(user.getDepartmentId());</span>
+<span class="fc" id="L17">    return result;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

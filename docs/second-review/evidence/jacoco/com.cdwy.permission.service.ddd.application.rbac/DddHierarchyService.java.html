@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DddHierarchyService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.service.ddd.application.rbac</a> &gt; <span class="el_source">DddHierarchyService.java</span></div><h1>DddHierarchyService.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.service.ddd.application.rbac;
+
+import com.cdwy.permission.service.ddd.domain.model.*;
+import com.cdwy.permission.service.ddd.domain.repository.*;
+import com.cdwy.permission.service.ddd.domain.repository.AssignmentRepository.Link;
+import com.cdwy.permission.service.port.data.*;
+import com.cdwy.permission.service.port.error.*;
+import com.cdwy.permission.service.port.rbac.HierarchyUseCase;
+import java.util.*;
+import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+/** DddHierarchyService 应用服务：编排领域对象与仓储端口，禁止依赖 JPA。 */
+@Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+@ConditionalOnProperty(name = &quot;app.backend-strategy&quot;, havingValue = &quot;ddd&quot;)
+public class DddHierarchyService implements HierarchyUseCase {
+  /** 返回实际装载模式。 */
+  @Override
+  public String strategy() {
+<span class="fc" id="L26">    return &quot;ddd&quot;;</span>
+  }
+
+<span class="fc" id="L29">  private static final Logger log = LoggerFactory.getLogger(DddHierarchyService.class);</span>
+  private final com.cdwy.permission.service.port.rbac.RoleGraphUseCase policy;
+  private final RoleCatalog roles;
+  private final AssignmentRepository assignments;
+  private final com.cdwy.permission.service.port.audit.AuditTrailUseCase audit;
+
+  /** 读取业务角色。 */
+  private AccessRole require(Long id) {
+<span class="fc" id="L37">    return roles.find(id).orElseThrow(() -&gt; new ResourceNotFoundException(&quot;ROLE_NOT_FOUND&quot;, &quot;角色不存在&quot;));</span>
+  }
+
+  /** 只返回显式边。 */
+  public List&lt;HierarchyData.Edge&gt; edges() {
+<span class="fc" id="L42">    Map&lt;Long, AccessRole&gt; byId = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L43">    roles.all().forEach(r -&gt; byId.put(r.getId(), r));</span>
+<span class="fc" id="L44">    return assignments.hierarchy().stream()</span>
+<span class="fc" id="L45">        .map(</span>
+            e -&gt;
+<span class="fc" id="L47">                new HierarchyData.Edge(</span>
+<span class="fc" id="L48">                    e.left(),</span>
+<span class="fc" id="L49">                    byId.get(e.left()).getName(),</span>
+<span class="fc" id="L50">                    e.right(),</span>
+<span class="fc" id="L51">                    byId.get(e.right()).getName()))</span>
+<span class="fc" id="L52">        .toList();</span>
+  }
+
+  /** 加锁后由领域图完成防环，重复边保持幂等。 */
+  @Transactional
+  public void inherit(Long senior, Long inherited) {
+<span class="fc" id="L58">    roles.lockGraph();</span>
+<span class="fc" id="L59">    AccessRole first = require(senior), second = require(inherited);</span>
+<span class="fc bfc" id="L60" title="All 2 branches covered.">    if (senior.equals(inherited)) throw new InvalidDataException(&quot;ROLE_SELF_INHERITANCE&quot;, &quot;角色不能继承自身&quot;);</span>
+<span class="fc bfc" id="L61" title="All 2 branches covered.">    if (assignments.hierarchy().contains(new Link(senior, inherited))) return;</span>
+<span class="pc bpc" id="L62" title="1 of 4 branches missed.">    if (!first.getEnabled() || !second.getEnabled())</span>
+<span class="fc" id="L63">      throw new InvalidDataException(&quot;ROLE_DISABLED&quot;, &quot;请先启用关系两端的角色&quot;);</span>
+<span class="fc" id="L64">    Map&lt;Long, AccessRole&gt; byId = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L65">    roles.all().forEach(r -&gt; byId.put(r.getId(), r));</span>
+<span class="fc" id="L66">    Map&lt;Long, List&lt;com.cdwy.permission.service.port.rbac.RoleGraphUseCase.Node&gt;&gt; graph =</span>
+        new LinkedHashMap&lt;&gt;();
+<span class="fc bfc" id="L68" title="All 2 branches covered.">    for (AssignmentRepository.Link edge : assignments.hierarchy()) {</span>
+<span class="fc" id="L69">      AccessRole child = byId.get(edge.right());</span>
+<span class="fc" id="L70">      graph</span>
+<span class="fc" id="L71">          .computeIfAbsent(edge.left(), key -&gt; new ArrayList&lt;&gt;())</span>
+<span class="fc" id="L72">          .add(</span>
+              new com.cdwy.permission.service.port.rbac.RoleGraphUseCase.Node(
+<span class="fc" id="L74">                  child.getId(), child.getEnabled()));</span>
+<span class="fc" id="L75">    }</span>
+<span class="fc" id="L76">    policy.validate(senior, inherited, graph);</span>
+<span class="fc" id="L77">    assignments.inherit(senior, inherited);</span>
+<span class="fc" id="L78">    log.info(</span>
+        &quot;角色继承已建立：{}({}) 继承 {}({})，下一次鉴权即按新继承图计算&quot;,
+<span class="fc" id="L80">        first.getCode(),</span>
+        senior,
+<span class="fc" id="L82">        second.getCode(),</span>
+        inherited);
+<span class="fc" id="L84">    audit.record(</span>
+        &quot;ROLE_INHERITANCE_ADDED&quot;,
+        &quot;role&quot;,
+        &quot;rbac-role-&quot; + senior,
+<span class="fc" id="L88">        first.getName() + &quot; 继承 &quot; + second.getName(),</span>
+<span class="fc" id="L89">        Map.of(&quot;inherits&quot;, false),</span>
+<span class="fc" id="L90">        Map.of(&quot;seniorRoleId&quot;, senior, &quot;inheritedRoleId&quot;, inherited, &quot;inherits&quot;, true));</span>
+<span class="fc" id="L91">  }</span>
+
+  /** 解除直接边不影响其他路径。 */
+  @Transactional
+  public void remove(Long senior, Long inherited) {
+<span class="fc" id="L96">    roles.lockGraph();</span>
+<span class="fc" id="L97">    AccessRole first = require(senior), second = require(inherited);</span>
+<span class="fc bfc" id="L98" title="All 2 branches covered.">    if (!assignments.hierarchy().contains(new Link(senior, inherited))) return;</span>
+<span class="fc" id="L99">    assignments.removeInheritance(senior, inherited);</span>
+<span class="fc" id="L100">    log.info(</span>
+        &quot;角色继承已解除：{}({}) 不再继承 {}({})&quot;,
+<span class="fc" id="L102">        first.getCode(),</span>
+        senior,
+<span class="fc" id="L104">        second.getCode(),</span>
+        inherited);
+<span class="fc" id="L106">    audit.record(</span>
+        &quot;ROLE_INHERITANCE_REMOVED&quot;,
+        &quot;role&quot;,
+        &quot;rbac-role-&quot; + senior,
+<span class="fc" id="L110">        first.getName() + &quot; 解除继承 &quot; + second.getName(),</span>
+<span class="fc" id="L111">        Map.of(&quot;seniorRoleId&quot;, senior, &quot;inheritedRoleId&quot;, inherited, &quot;inherits&quot;, true),</span>
+<span class="fc" id="L112">        Map.of(&quot;inherits&quot;, false));</span>
+<span class="fc" id="L113">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

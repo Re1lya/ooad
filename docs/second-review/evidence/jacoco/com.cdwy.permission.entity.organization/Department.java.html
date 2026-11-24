@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Department.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.entity.organization</a> &gt; <span class="el_source">Department.java</span></div><h1>Department.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.entity.organization;
+
+import cn.edu.xmu.clonefactory.CopyFrom;
+import cn.edu.xmu.clonefactory.CopyTo;
+import com.cdwy.permission.service.ddd.domain.model.DepartmentNode;
+import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * 部门（表 {@code sys_department}），以 {@code parent} 组成部门树；DDD 路线的持久化适配器按 {@code @CopyTo}/{@code
+ * @CopyFrom} 与 {@link DepartmentNode} 互相拷贝。
+ */
+@CopyTo(DepartmentNode.class)
+@CopyFrom(DepartmentNode.class)
+@Entity
+@Table(
+    name = &quot;sys_department&quot;,
+    uniqueConstraints = {
+      @UniqueConstraint(
+          name = &quot;uk_department_sibling&quot;,
+          columnNames = {&quot;parent_id&quot;, &quot;name&quot;}),
+      @UniqueConstraint(name = &quot;uk_department_code&quot;, columnNames = &quot;code&quot;)
+    })
+@Getter
+@Setter
+<span class="fc" id="L28">public class Department {</span>
+  /** 主键由数据库生成：不提供 setter，从领域对象拷回实体时也不覆盖。 */
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  @Setter(AccessLevel.NONE)
+  @CopyFrom.Exclude(DepartmentNode.class)
+  private Long id;
+
+  /** 同一上级下名称唯一：各分公司都有“综合办公室”“财务部”等同名部门。 */
+  @Column(nullable = false, length = 128)
+  private String name;
+
+  /** 部门编码，统一身份接口对外提供；全局唯一。 */
+  @lombok.Getter
+  @lombok.Setter
+  @Column(length = 64)
+  private String code;
+
+  /** 上级部门；为空表示根部门，员工信息同步时分公司即根部门、部门为其子部门。 */
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = &quot;parent_id&quot;)
+  private Department parent;
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

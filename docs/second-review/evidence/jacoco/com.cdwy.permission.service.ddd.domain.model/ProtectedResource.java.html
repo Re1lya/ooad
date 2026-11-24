@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ProtectedResource.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.service.ddd.domain.model</a> &gt; <span class="el_source">ProtectedResource.java</span></div><h1>ProtectedResource.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.service.ddd.domain.model;
+
+import lombok.Getter;
+import lombok.Setter;
+import com.cdwy.permission.service.port.error.InvalidDataException;
+
+/** ProtectedResource 领域对象：只维护业务状态和不变量，不依赖 JPA。 */
+@Getter
+@Setter
+<span class="fc" id="L10">public class ProtectedResource {</span>
+  private Long id;
+  private Long systemId;
+  private String name;
+  private String code;
+  private String operationId;
+  private String method;
+  private String path;
+<span class="fc" id="L18">  private boolean active = true;</span>
+
+  /** 资源创建前的路径格式验证；模式语法由共享路径端口进一步校验。 */
+  public void assertPath() {
+<span class="pc bpc" id="L22" title="1 of 2 branches missed.">    if (path == null</span>
+<span class="pc bpc" id="L23" title="1 of 2 branches missed.">        || !path.startsWith(&quot;/&quot;)</span>
+<span class="pc bpc" id="L24" title="1 of 2 branches missed.">        || path.contains(&quot;?&quot;)</span>
+<span class="pc bpc" id="L25" title="1 of 2 branches missed.">        || path.contains(&quot;#&quot;)</span>
+<span class="fc bfc" id="L26" title="All 2 branches covered.">        || path.contains(&quot;**&quot;)) throw new InvalidDataException(&quot;API_RESOURCE_PATH_INVALID&quot;, &quot;资源路径须为不含查询参数的绝对路径，不支持 ** 通配符&quot;);</span>
+<span class="fc" id="L27">  }</span>
+
+  /** 后端权限码可选；登记后与方法、路径一样固定，供接入应用做方法级授权。 */
+  public void assertCode() {
+<span class="fc bfc" id="L31" title="All 4 branches covered.">    if (code != null &amp;&amp; !code.matches(&quot;[A-Za-z][A-Za-z0-9_:.-]{0,63}&quot;))</span>
+<span class="fc" id="L32">      throw new InvalidDataException(&quot;API_RESOURCE_CODE_INVALID&quot;, &quot;权限码须以字母开头，只含字母、数字和 _:.-，最长 64 位&quot;);</span>
+<span class="fc" id="L33">  }</span>
+
+  /** operationId 可选；登记后用于“能否调用指定接口”的查询。 */
+  public void assertOperationId() {
+<span class="fc bfc" id="L37" title="All 4 branches covered.">    if (operationId != null &amp;&amp; !operationId.matches(&quot;[A-Za-z_][A-Za-z0-9_.-]{0,127}&quot;))</span>
+<span class="fc" id="L38">      throw new InvalidDataException(&quot;API_OPERATION_ID_INVALID&quot;, &quot;operationId 须以字母或下划线开头，只含字母、数字和 _.-，最长 128 位&quot;);</span>
+<span class="fc" id="L39">  }</span>
+
+  /** 启用且登记了权限码的资源才向接入应用提供后端权限码（信息专家：资源自己知道是否有效）。 */
+  public java.util.Optional&lt;String&gt; authorityCode() {
+<span class="fc bfc" id="L43" title="All 4 branches covered.">    return active &amp;&amp; code != null ? java.util.Optional.of(code) : java.util.Optional.empty();</span>
+  }
+
+  /** 启用且绑定的前端权限中至少有一项在用户有效权限内时才可调用（信息专家：资源知道自己是否启用）。 */
+  public boolean callableBy(
+      java.util.Set&lt;Long&gt; grantedPermissions, java.util.Collection&lt;Long&gt; boundPermissions) {
+<span class="fc bfc" id="L49" title="All 4 branches covered.">    return active &amp;&amp; boundPermissions.stream().anyMatch(grantedPermissions::contains);</span>
+  }
+
+  /** 更名不会修改既有 HTTP 资源标识。 */
+  public void rename(String value) {
+<span class="nc" id="L54">    name = value;</span>
+<span class="nc" id="L55">  }</span>
+
+  /**
+   * 启停 API 资源；停用后仍优先匹配该资源，不能借更宽泛的授权绕过。控制台的内置管理接口不能停用，否则所有人（包括管理员）都调用不了。
+   *
+   * @param value 生效为 true
+   * @param builtIn 是否为控制台的内置管理接口，由应用服务按内置目录判断
+   */
+  public void changeStatus(boolean value, boolean builtIn) {
+<span class="fc bfc" id="L64" title="All 2 branches covered.">    if (!value) assertNotBuiltIn(builtIn);</span>
+<span class="fc" id="L65">    active = value;</span>
+<span class="fc" id="L66">  }</span>
+
+  /**
+   * 删除前检查：内置管理接口抛 {@code CONSOLE_BUILT_IN}；仍绑定前端权限时抛 {@code API_RESOURCE_IN_USE}（均 409）。
+   *
+   * @param builtIn 是否为控制台的内置管理接口
+   * @param bound 是否仍绑定菜单或按钮
+   */
+  public void assertDeletable(boolean builtIn, boolean bound) {
+<span class="fc" id="L75">    assertNotBuiltIn(builtIn);</span>
+<span class="pc bpc" id="L76" title="1 of 2 branches missed.">    if (bound) throw new com.cdwy.permission.service.port.error.ConflictException(&quot;API_RESOURCE_IN_USE&quot;, &quot;API 资源仍绑定前端权限&quot;);</span>
+<span class="nc" id="L77">  }</span>
+
+  private static void assertNotBuiltIn(boolean builtIn) {
+<span class="fc bfc" id="L80" title="All 2 branches covered.">    if (builtIn)</span>
+<span class="fc" id="L81">      throw new com.cdwy.permission.service.port.error.ConflictException(&quot;CONSOLE_BUILT_IN&quot;, &quot;权限管理系统的内置管理接口不能停用或删除&quot;);</span>
+<span class="fc" id="L82">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

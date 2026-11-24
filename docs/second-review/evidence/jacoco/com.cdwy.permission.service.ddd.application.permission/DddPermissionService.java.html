@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DddPermissionService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.service.ddd.application.permission</a> &gt; <span class="el_source">DddPermissionService.java</span></div><h1>DddPermissionService.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.service.ddd.application.permission;
+
+import com.cdwy.permission.service.auth.ConsoleCatalog;
+import com.cdwy.permission.service.ddd.domain.model.*;
+import com.cdwy.permission.service.ddd.domain.repository.*;
+import com.cdwy.permission.service.port.data.*;
+import com.cdwy.permission.service.port.error.*;
+import com.cdwy.permission.service.port.permission.PermissionUseCase;
+import java.util.*;
+import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+/** DddPermissionService 应用服务：编排领域对象与仓储端口，禁止依赖 JPA。 */
+@Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+@ConditionalOnProperty(name = &quot;app.backend-strategy&quot;, havingValue = &quot;ddd&quot;)
+public class DddPermissionService implements PermissionUseCase {
+  /** 返回实际装载模式。 */
+  @Override
+  public String strategy() {
+<span class="fc" id="L24">    return &quot;ddd&quot;;</span>
+  }
+
+  private final PermissionCatalog permissions;
+  private final SystemCatalog systems;
+  private final ResourceCatalog resources;
+  private final AssignmentRepository assignments;
+
+  /** 当前权限图。 */
+  private Map&lt;Long, FrontendPermission&gt; nodes() {
+<span class="fc" id="L34">    Map&lt;Long, FrontendPermission&gt; nodes = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L35">    permissions.all().forEach(n -&gt; nodes.put(n.getId(), n));</span>
+<span class="fc" id="L36">    return nodes;</span>
+  }
+
+  /** 当前目录领域快照。 */
+  private PermissionDirectory directory() {
+<span class="fc" id="L41">    return new PermissionDirectory(permissions.all(), systems.all());</span>
+  }
+
+  /** 读取前端权限。 */
+  private FrontendPermission require(Long id) {
+<span class="fc" id="L46">    return permissions.find(id).orElseThrow(() -&gt; new ResourceNotFoundException(&quot;PERMISSION_NOT_FOUND&quot;, &quot;前端权限不存在&quot;));</span>
+  }
+
+  /** 读取 API 资源。 */
+  private ProtectedResource resource(Long id) {
+<span class="fc" id="L51">    return resources.find(id).orElseThrow(() -&gt; new ResourceNotFoundException(&quot;API_RESOURCE_NOT_FOUND&quot;, &quot;API 资源不存在&quot;));</span>
+  }
+
+  /** 不重复访问数据库的结果转换。 */
+  private PermissionData.View view(FrontendPermission n) {
+<span class="fc" id="L56">    return new PermissionData.View(</span>
+<span class="fc" id="L57">        n.getId(),</span>
+<span class="fc" id="L58">        n.getSystemId(),</span>
+<span class="fc" id="L59">        n.getCode(),</span>
+<span class="fc" id="L60">        n.getName(),</span>
+<span class="fc" id="L61">        n.getKind(),</span>
+<span class="fc" id="L62">        n.getMenuPath(),</span>
+<span class="fc" id="L63">        n.getParentId(),</span>
+<span class="fc" id="L64">        n.getActive());</span>
+  }
+
+  /** 根据应用过滤权限。 */
+  public List&lt;PermissionData.View&gt; list(Long systemId) {
+<span class="fc" id="L69">    return permissions.all().stream()</span>
+<span class="pc bpc" id="L70" title="3 of 4 branches missed.">        .filter(n -&gt; systemId == null || n.getSystemId().equals(systemId))</span>
+<span class="fc" id="L71">        .map(this::view)</span>
+<span class="fc" id="L72">        .toList();</span>
+  }
+
+  /** 对象维护菜单按钮规则，仓储处理唯一约束。 */
+  @Transactional
+  public PermissionData.View create(PermissionData.Input input) {
+<span class="fc bfc" id="L78" title="All 2 branches covered.">    if (permissions.all().stream().anyMatch(n -&gt; n.getCode().equals(input.code())))</span>
+<span class="fc" id="L79">      throw new ConflictException(&quot;PERMISSION_CODE_EXISTS&quot;, &quot;前端权限编码已存在&quot;);</span>
+<span class="fc" id="L80">    systems.find(input.systemId()).orElseThrow(() -&gt; new ResourceNotFoundException(&quot;SYSTEM_NOT_FOUND&quot;, &quot;应用不存在&quot;));</span>
+<span class="fc" id="L81">    FrontendPermission n = new FrontendPermission();</span>
+<span class="fc" id="L82">    n.setSystemId(input.systemId());</span>
+<span class="fc" id="L83">    n.setCode(input.code());</span>
+<span class="fc" id="L84">    n.edit(input.name(), input.type(), input.menuPath(), input.parentId(), nodes(), false);</span>
+<span class="fc" id="L85">    return view(permissions.save(n));</span>
+  }
+
+  /** 修改父级时重新检查整条路径。 */
+  @Transactional
+  public PermissionData.View update(Long id, PermissionData.Update input) {
+<span class="fc" id="L91">    FrontendPermission n = require(id);</span>
+<span class="fc" id="L92">    n.edit(</span>
+<span class="fc" id="L93">        input.name(),</span>
+<span class="fc" id="L94">        input.type(),</span>
+<span class="fc" id="L95">        input.menuPath(),</span>
+<span class="fc" id="L96">        input.parentId(),</span>
+<span class="fc" id="L97">        nodes(),</span>
+<span class="fc" id="L98">        permissions.hasChildren(id));</span>
+<span class="fc" id="L99">    return view(permissions.save(n));</span>
+  }
+
+  /** 停用权限保留来源信息。 */
+  @Transactional
+  public PermissionData.View status(Long id, boolean active) {
+<span class="fc" id="L105">    FrontendPermission n = require(id);</span>
+<span class="fc" id="L106">    n.changeStatus(active, ConsoleCatalog.isEntry(n.getCode()));</span>
+<span class="fc" id="L107">    return view(permissions.save(n));</span>
+  }
+
+  /** 先解除子节点、角色授权与 API 绑定。 */
+  @Transactional
+  public void delete(Long id) {
+<span class="fc" id="L113">    FrontendPermission n = require(id);</span>
+<span class="fc" id="L114">    n.assertDeletable(</span>
+<span class="fc" id="L115">        ConsoleCatalog.isEntry(n.getCode()),</span>
+<span class="fc bfc" id="L116" title="All 2 branches covered.">        permissions.hasChildren(id)</span>
+<span class="fc bfc" id="L117" title="All 2 branches covered.">            || assignments.rolePermissions().stream().anyMatch(e -&gt; e.right().equals(id))</span>
+<span class="pc bpc" id="L118" title="1 of 2 branches missed.">            || assignments.bindings().stream().anyMatch(e -&gt; e.left().equals(id)));</span>
+<span class="fc" id="L119">    permissions.delete(id);</span>
+<span class="fc" id="L120">  }</span>
+
+  /** 对象维护同应用绑定规则。 */
+  @Transactional
+  public void bind(Long permissionId, Long resourceId) {
+<span class="fc" id="L125">    FrontendPermission n = require(permissionId);</span>
+<span class="fc" id="L126">    ProtectedResource r = resource(resourceId);</span>
+<span class="fc" id="L127">    n.assertBindable(r);</span>
+<span class="fc" id="L128">    assignments.bind(permissionId, resourceId);</span>
+<span class="fc" id="L129">  }</span>
+
+  /** 幂等解除绑定。 */
+  @Transactional
+  public void unbind(Long permissionId, Long resourceId) {
+<span class="fc" id="L134">    require(permissionId);</span>
+<span class="fc" id="L135">    resource(resourceId);</span>
+<span class="fc" id="L136">    assignments.unbind(permissionId, resourceId);</span>
+<span class="fc" id="L137">  }</span>
+
+  /** 查询已绑定 API。 */
+  public List&lt;ResourceData.View&gt; resources(Long id) {
+<span class="fc" id="L141">    require(id);</span>
+<span class="fc" id="L142">    return assignments.bindings().stream()</span>
+<span class="fc" id="L143">        .filter(e -&gt; e.left().equals(id))</span>
+<span class="fc" id="L144">        .map(e -&gt; resource(e.right()))</span>
+<span class="fc" id="L145">        .map(</span>
+            n -&gt;
+<span class="fc" id="L147">                new ResourceData.View(</span>
+<span class="fc" id="L148">                    n.getId(),</span>
+<span class="fc" id="L149">                    n.getSystemId(),</span>
+<span class="fc" id="L150">                    n.getName(),</span>
+<span class="fc" id="L151">                    n.getMethod(),</span>
+<span class="fc" id="L152">                    n.getPath(),</span>
+<span class="fc" id="L153">                    n.getActive(),</span>
+<span class="fc" id="L154">                    n.getCode(),</span>
+<span class="fc" id="L155">                    n.getOperationId()))</span>
+<span class="fc" id="L156">        .toList();</span>
+  }
+
+  /** 管理目录展示不把未授权祖先当成实际授权。 */
+  public List&lt;PermissionData.Tree&gt; tree(Long systemId) {
+<span class="fc" id="L161">    List&lt;Long&gt; ids =</span>
+<span class="fc" id="L162">        permissions.all().stream()</span>
+<span class="fc bfc" id="L163" title="All 4 branches covered.">            .filter(n -&gt; systemId == null || n.getSystemId().equals(systemId))</span>
+<span class="fc" id="L164">            .map(FrontendPermission::getId)</span>
+<span class="fc" id="L165">            .toList();</span>
+<span class="fc" id="L166">    return directory().tree(ids);</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

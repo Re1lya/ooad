@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UserRole.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.entity.rbac</a> &gt; <span class="el_source">UserRole.java</span></div><h1>UserRole.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.entity.rbac;
+
+import com.cdwy.permission.entity.role.Role;
+import com.cdwy.permission.entity.user.UserAccount;
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+/** 用户直接拥有的角色（表 {@code sys_user_role}）；经继承得到的角色不在此表，计算有效权限时再沿继承边展开。 */
+@Entity
+@Table(
+    name = &quot;sys_user_role&quot;,
+    uniqueConstraints =
+        @UniqueConstraint(
+            name = &quot;uk_sys_user_role&quot;,
+            columnNames = {&quot;user_id&quot;, &quot;role_id&quot;}))
+@Getter
+@NoArgsConstructor
+public class UserRole {
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
+
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(name = &quot;user_id&quot;, nullable = false)
+  private UserAccount user;
+
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(name = &quot;role_id&quot;, nullable = false)
+  private Role role;
+
+  /** 为用户直接授予角色；同一用户与角色只能有一条记录。 */
+<span class="fc" id="L33">  public UserRole(UserAccount user, Role role) {</span>
+<span class="fc" id="L34">    this.user = user;</span>
+<span class="fc" id="L35">    this.role = role;</span>
+<span class="fc" id="L36">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

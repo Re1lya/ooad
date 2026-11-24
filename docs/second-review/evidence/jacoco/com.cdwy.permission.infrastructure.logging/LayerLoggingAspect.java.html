@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>LayerLoggingAspect.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.infrastructure.logging</a> &gt; <span class="el_source">LayerLoggingAspect.java</span></div><h1>LayerLoggingAspect.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.infrastructure.logging;
+
+import java.util.Locale;
+import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.annotation.Around;
+import org.aspectj.lang.annotation.Aspect;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.aop.support.AopUtils;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
+import org.springframework.stereotype.Component;
+
+/**
+ * 分层 logback 日志切面：Controller、Service（结构化服务、DDD 应用服务与共享技术服务）、基础设施适配器。
+ *
+ * &lt;p&gt;日志使用目标类自己的 Logger，因此可以按包分别调整级别：Controller 与 Service 默认 INFO，
+ * 基础设施适配器默认 DEBUG。参数只输出数字、布尔、枚举和短字符串；请求体对象只输出类型名，
+ * 涉及密码或登录的方法不输出任何参数。
+ */
+@Aspect
+@Component
+@Order(Ordered.HIGHEST_PRECEDENCE)
+<span class="fc" id="L24">public class LayerLoggingAspect {</span>
+  /** 字符串参数最多输出的字符数，超出部分截断。 */
+  private static final int MAX_TEXT = 64;
+  /** 每个请求都会调用的方法名（令牌校验、取当前时间），与基础设施层一样只在 DEBUG 输出。 */
+<span class="fc" id="L28">  private static final java.util.Set&lt;String&gt; PER_REQUEST = java.util.Set.of(&quot;verify&quot;, &quot;resolve&quot;, &quot;now&quot;);</span>
+
+  /** 记录各层方法完成、耗时与失败原因。 */
+  @Around(
+      &quot;(within(com.cdwy.permission.controller..*)&quot;
+          + &quot; || within(com.cdwy.permission.service..*)&quot;
+          + &quot; || within(com.cdwy.permission.infrastructure..*))&quot;
+          + &quot; &amp;&amp; !within(com.cdwy.permission.infrastructure.logging..*)&quot;
+          + &quot; &amp;&amp; !execution(* jakarta.servlet.Filter+.*(..))&quot;)
+  public Object logLayerMethod(ProceedingJoinPoint joinPoint) throws Throwable {
+<span class="fc" id="L38">    Class&lt;?&gt; target = AopUtils.getTargetClass(joinPoint.getTarget());</span>
+<span class="fc" id="L39">    Logger log = LoggerFactory.getLogger(target);</span>
+<span class="fc" id="L40">    String layer = layerOf(target);</span>
+<span class="fc" id="L41">    String method = joinPoint.getSignature().getName();</span>
+    // 基础设施适配器与每个请求都会触发的令牌校验只在 DEBUG 输出，INFO 保留业务调用链。
+<span class="fc bfc" id="L43" title="All 4 branches covered.">    boolean infrastructure = &quot;Infrastructure&quot;.equals(layer) || PER_REQUEST.contains(method);</span>
+<span class="pc bpc" id="L44" title="2 of 6 branches missed.">    if (infrastructure ? !log.isDebugEnabled() : !log.isInfoEnabled()) return joinPoint.proceed();</span>
+    String[] names =
+<span class="pc bpc" id="L46" title="1 of 2 branches missed.">        joinPoint.getSignature() instanceof org.aspectj.lang.reflect.MethodSignature signature</span>
+<span class="fc" id="L47">            ? signature.getParameterNames()</span>
+<span class="pc" id="L48">            : null;</span>
+<span class="fc" id="L49">    String args = arguments(method, names, joinPoint.getArgs());</span>
+<span class="fc" id="L50">    long started = System.nanoTime();</span>
+    try {
+<span class="fc" id="L52">      Object result = joinPoint.proceed();</span>
+<span class="fc" id="L53">      long elapsed = (System.nanoTime() - started) / 1_000_000;</span>
+<span class="pc bpc" id="L54" title="1 of 2 branches missed.">      if (infrastructure) log.debug(&quot;[{}] {}({}) 完成，耗时 {} ms&quot;, layer, method, args, elapsed);</span>
+<span class="fc" id="L55">      else log.info(&quot;[{}] {}({}) 完成，耗时 {} ms&quot;, layer, method, args, elapsed);</span>
+<span class="fc" id="L56">      return result;</span>
+<span class="fc" id="L57">    } catch (Throwable error) {</span>
+<span class="fc" id="L58">      long elapsed = (System.nanoTime() - started) / 1_000_000;</span>
+<span class="fc" id="L59">      log.warn(</span>
+          &quot;[{}] {}({}) 失败，耗时 {} ms：{} {}&quot;,
+          layer,
+          method,
+          args,
+<span class="fc" id="L64">          elapsed,</span>
+<span class="fc" id="L65">          error.getClass().getSimpleName(),</span>
+<span class="fc" id="L66">          error.getMessage());</span>
+<span class="fc" id="L67">      throw error;</span>
+    }
+  }
+
+  /** 按包名区分层次，便于在日志中按层筛选。 */
+  static String layerOf(Class&lt;?&gt; target) {
+<span class="fc" id="L73">    String name = target.getPackageName();</span>
+<span class="fc bfc" id="L74" title="All 2 branches covered.">    if (name.startsWith(&quot;com.cdwy.permission.controller&quot;)) return &quot;Controller&quot;;</span>
+<span class="fc bfc" id="L75" title="All 2 branches covered.">    if (name.startsWith(&quot;com.cdwy.permission.service.ddd.application&quot;)) return &quot;DDD-Application&quot;;</span>
+<span class="fc bfc" id="L76" title="All 2 branches covered.">    if (name.startsWith(&quot;com.cdwy.permission.service&quot;)) return &quot;Service&quot;;</span>
+<span class="fc" id="L77">    return &quot;Infrastructure&quot;;</span>
+  }
+
+  /**
+   * 只输出不敏感的简单参数：密码、登录、令牌相关方法完全隐藏参数；其他方法中参数名含 password、secret、token、credential
+   * 的参数单独打码（例如启动管理员的初始密码）。
+   */
+  static String arguments(String method, String[] names, Object[] values) {
+<span class="fc" id="L85">    String lower = method.toLowerCase(Locale.ROOT);</span>
+<span class="fc bfc" id="L86" title="All 2 branches covered.">    for (String sensitive : SENSITIVE_METHODS)</span>
+<span class="pc bpc" id="L87" title="1 of 4 branches missed.">      if (lower.contains(sensitive)) return values.length == 0 ? &quot;&quot; : &quot;***&quot;;</span>
+<span class="fc" id="L88">    java.util.List&lt;String&gt; parts = new java.util.ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L89" title="All 2 branches covered.">    for (int i = 0; i &lt; values.length; i++)</span>
+<span class="fc" id="L90">      parts.add(</span>
+<span class="fc bfc" id="L91" title="All 6 branches covered.">          names != null &amp;&amp; i &lt; names.length &amp;&amp; sensitiveName(names[i])</span>
+<span class="fc" id="L92">              ? &quot;***&quot;</span>
+<span class="fc" id="L93">              : describe(values[i]));</span>
+<span class="fc" id="L94">    return String.join(&quot;, &quot;, parts);</span>
+  }
+
+  /** 参数名（不区分大小写）含 password、secret、token 或 credential 时视为敏感。 */
+  private static boolean sensitiveName(String name) {
+<span class="fc" id="L99">    String lower = name.toLowerCase(Locale.ROOT);</span>
+<span class="fc" id="L100">    return SENSITIVE_PARAMETERS.stream().anyMatch(lower::contains);</span>
+  }
+
+<span class="fc" id="L103">  private static final java.util.List&lt;String&gt; SENSITIVE_PARAMETERS =</span>
+<span class="fc" id="L104">      java.util.List.of(&quot;password&quot;, &quot;secret&quot;, &quot;token&quot;, &quot;credential&quot;);</span>
+
+  /** 方法名（不区分大小写）含其中任一词时，不输出任何参数。 */
+<span class="fc" id="L107">  private static final java.util.List&lt;String&gt; SENSITIVE_METHODS =</span>
+<span class="fc" id="L108">      java.util.List.of(</span>
+          &quot;password&quot;, &quot;login&quot;, &quot;resolve&quot;, &quot;verify&quot;, &quot;token&quot;, &quot;issue&quot;, &quot;secret&quot;, &quot;credential&quot;);
+  /** 形似 Bearer 认证头或 JWT 的字符串，输出时打码。 */
+<span class="fc" id="L111">  private static final java.util.regex.Pattern TOKEN_LIKE =</span>
+<span class="fc" id="L112">      java.util.regex.Pattern.compile(&quot;(?i)^bearer\\s.*|^[A-Za-z0-9_-]{8,}\\.[A-Za-z0-9_-]{8,}\\..*&quot;);</span>
+
+  /** 换行等控制字符：写日志前替换掉，防止参数伪造日志行。 */
+<span class="fc" id="L115">  private static final java.util.regex.Pattern CONTROL = java.util.regex.Pattern.compile(&quot;\\p{Cntrl}&quot;);</span>
+
+  /**
+   * 单个参数的日志文本：数字、布尔、枚举原样输出；字符串形似令牌时打码，过长时截断，控制字符替换为 {@code ?}；请求对象输出
+   * {@code request}，其余只输出类型名。
+   */
+  private static String describe(Object value) {
+<span class="fc bfc" id="L122" title="All 2 branches covered.">    if (value == null) return &quot;null&quot;;</span>
+<span class="pc bpc" id="L123" title="1 of 6 branches missed.">    if (value instanceof Number || value instanceof Boolean || value instanceof Enum&lt;?&gt;)</span>
+<span class="fc" id="L124">      return String.valueOf(value);</span>
+<span class="fc bfc" id="L125" title="All 2 branches covered.">    if (value instanceof CharSequence text) {</span>
+<span class="fc bfc" id="L126" title="All 2 branches covered.">      if (TOKEN_LIKE.matcher(text).matches()) return &quot;***&quot;;</span>
+<span class="fc bfc" id="L127" title="All 2 branches covered.">      String shown = text.length() &lt;= MAX_TEXT ? text.toString() : text.subSequence(0, MAX_TEXT) + &quot;…&quot;;</span>
+<span class="fc" id="L128">      return &quot;\&quot;&quot; + CONTROL.matcher(shown).replaceAll(&quot;?&quot;) + &quot;\&quot;&quot;;</span>
+    }
+<span class="fc bfc" id="L130" title="All 2 branches covered.">    if (value instanceof jakarta.servlet.ServletRequest) return &quot;request&quot;;</span>
+<span class="fc" id="L131">    return value.getClass().getSimpleName();</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

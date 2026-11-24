@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SyncSummaryVO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.vo.directory</a> &gt; <span class="el_source">SyncSummaryVO.java</span></div><h1>SyncSummaryVO.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.vo.directory;
+
+/**
+ * 员工信息同步的预览或确认汇总，不含员工个人明细；确认时须回传 digest。
+ *
+ * @param rows 数据行数
+ * @param companies 公司数
+ * @param departmentsCreated 新建部门数
+ * @param departmentsKept 沿用的部门数
+ * @param usersCreated 新建人员数
+ * @param usersUpdated 更新人员数
+ * @param usersUnchanged 未变人员数
+ * @param roleGrants 补授角色条数
+ * @param digest 文件与规则的摘要
+ * @param applied 是否已写入
+ */
+<span class="fc" id="L17">public record SyncSummaryVO(</span>
+    int rows,
+    int companies,
+    int departmentsCreated,
+    int departmentsKept,
+    int usersCreated,
+    int usersUpdated,
+    int usersUnchanged,
+    int roleGrants,
+    String digest,
+    boolean applied) {}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DddRoleGraphService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.service.ddd.application.rbac</a> &gt; <span class="el_source">DddRoleGraphService.java</span></div><h1>DddRoleGraphService.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.service.ddd.application.rbac;
+
+import com.cdwy.permission.service.ddd.domain.model.RoleGraph;
+import com.cdwy.permission.service.port.rbac.RoleGraphUseCase;
+import java.util.*;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Service;
+
+/** 面向对象应用服务只编排纯角色图，不接触 JPA 仓储或实体。 */
+@Service
+@ConditionalOnProperty(name = &quot;app.backend-strategy&quot;, havingValue = &quot;ddd&quot;)
+<span class="fc" id="L12">public class DddRoleGraphService implements RoleGraphUseCase {</span>
+  /** 让领域图维护无环规则。 */
+  public void validate(Long senior, Long inherited, Map&lt;Long, List&lt;Node&gt;&gt; graph) {
+<span class="fc" id="L15">    new RoleGraph(graph).assertCanInherit(senior, inherited);</span>
+<span class="fc" id="L16">  }</span>
+
+  /** 将图遍历交给领域对象，返回共享结果类型。 */
+  public List&lt;Path&gt; resolve(Node assigned, Map&lt;Long, List&lt;Node&gt;&gt; graph) {
+<span class="nc" id="L20">    return new RoleGraph(graph).effectivePaths(assigned);</span>
+  }
+
+  /** 标识面向对象实现。 */
+  public String strategy() {
+<span class="fc" id="L25">    return &quot;ddd&quot;;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

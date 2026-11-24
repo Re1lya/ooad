@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PermissionType.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">nified-permission-system</a> &gt; <a href="index.source.html" class="el_package">com.cdwy.permission.service.port.data</a> &gt; <span class="el_source">PermissionType.java</span></div><h1>PermissionType.java</h1><pre class="source lang-java linenums">package com.cdwy.permission.service.port.data;
+
+/**
+ * 前端权限的类型。请求 DTO、结构化实现的实体与内置授权目录使用本枚举；用例数据以枚举名称字符串传递，DDD 领域模型使用同名字符串常量。
+ */
+<span class="fc" id="L6">public enum PermissionType {</span>
+  /** 菜单：可设置菜单地址，可作为子菜单与按钮的上级。 */
+<span class="fc" id="L8">  MENU,</span>
+  /** 按钮：必须隶属同一应用的菜单，不设置菜单地址，也不能作为其他节点的上级。 */
+<span class="fc" id="L10">  BUTTON</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>
