@@ -3,6 +3,7 @@ const { test } = require('node:test');
 const s = require('./support.cjs');
 const { assert } = s;
 
+// 测试类型：等价类
 test('FR-13 FR-38 NFR-11 侧栏菜单与写操作按钮随本人在 rbac 应用中的授权显示，请求带当前菜单', { skip: s.skip }, async () => {
   const admin = await s.token();
   const perms = await s.consolePermissions(admin);
@@ -60,6 +61,7 @@ test('FR-13 FR-38 NFR-11 侧栏菜单与写操作按钮随本人在 rbac 应用�
   }
 });
 
+// 测试类型：异常
 test('FR-38 内置应用、内置管理员角色、内置菜单按钮与管理接口只显示“内置”，不提供停用和注销', { skip: s.skip }, async () => {
   const browser = await s.launch();
   try {

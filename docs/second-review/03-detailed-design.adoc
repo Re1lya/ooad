@@ -203,6 +203,17 @@ image::sequence-ddd-identity.png[DDD 顺序图 API B,900]
 
 权限码模型：课程系统的前端菜单/按钮码（`MCO`、`MCOR` …）登记为 `course-project-management` 应用的前端权限；后端权限码（`TC`、`CV` …）登记在 API 资源的 `code` 上；两者经“前端权限—API”绑定，随角色（含继承）下发。课程应用的完整登记清单见 link:../../scripts/register-course-app.py[register-course-app.py]（只调用普通管理 API，可重复执行）。
 
+=== 统一会话
+
+一个用户在权限系统控制台和各接入应用之间共用同一个会话，会话的状态记在账号上：`sys_user.credential_version`（凭证版本）。
+
+* 登录时，令牌里写入用户编号、凭证版本、可使用的系统（`aud`）和有效期。
+* 每次请求，权限系统都核对账号仍然启用、令牌里的凭证版本与账号当前的一致。课程后端每次请求也经 `/auth/me`、`/auth/api-permissions` 回到权限系统核对，所以失效能立即传到课程系统。
+* 管理员停用账号、管理员重置密码、本人改密、本人在任一接入应用退出，都把凭证版本加一：这个用户在所有系统已签发的令牌同时失效，相当于从所有系统踢出；重新启用不会让旧令牌恢复。
+* `aud` 只限定令牌能交给哪些系统使用（老师统一身份契约中登录的 `systems`），不是把会话按系统隔离。
+
+测试：`ApplicationIdentityTests` 的三个 FR-39 用例（两条路线各跑一遍），以及公网联调检查“停用后已登录的课程系统令牌立即失效”。
+
 == 日志设计
 
 * `logback-spring.xml`：控制台始终输出；`swarm` 配置下另写滚动文件 `/app/logs/permission.log`（20 MB 滚动，保留 14 天）。

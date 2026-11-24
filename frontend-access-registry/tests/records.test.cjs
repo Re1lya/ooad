@@ -3,6 +3,7 @@ const { test } = require('node:test');
 const s = require('./support.cjs');
 const { assert } = s;
 
+// 测试类型：等价类、异常
 test('FR-03 FR-04 FR-22 登记外部人员须填有效期，部门显示完整路径；注销前二次确认，取消不写入', { skip: s.skip }, async () => {
   const admin = await s.token();
   const tag = s.suffix();
@@ -54,6 +55,7 @@ test('FR-03 FR-04 FR-22 登记外部人员须填有效期，部门显示完整�
   }
 });
 
+// 测试类型：等价类
 test('FR-05 部门编码：新建留空按编号生成，修改时可改编码', { skip: s.skip }, async () => {
   const admin = await s.token();
   const tag = s.suffix();
@@ -87,6 +89,7 @@ test('FR-05 部门编码：新建留空按编号生成，修改时可改编码',
   }
 });
 
+// 测试类型：等价类
 test('FR-09 登记 API 资源时权限码与 operationId 可选，列表按 operationId 检索', { skip: s.skip }, async () => {
   const admin = await s.token();
   const tag = s.suffix();

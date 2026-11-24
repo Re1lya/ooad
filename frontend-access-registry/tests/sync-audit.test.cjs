@@ -13,6 +13,7 @@ async function summary(page) {
   return out;
 }
 
+// 测试类型：等价类
 test('FR-24 FR-25 员工同步：预览变动、确认写入，同一张表再预览没有变化', { skip: s.skip }, async () => {
   const admin = await s.token();
   const tag = s.suffix().toUpperCase();
@@ -63,6 +64,7 @@ test('FR-24 FR-25 员工同步：预览变动、确认写入，同一张表再�
   }
 });
 
+// 测试类型：等价类
 test('FR-30 审计日志默认看权限系统自己的记录，类型与对象写中文', { skip: s.skip }, async () => {
   const admin = await s.token();
   const tag = s.suffix();

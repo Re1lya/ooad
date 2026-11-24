@@ -19,6 +19,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import org.hibernate.annotations.Check;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -60,6 +61,7 @@ class MySqlSchemaTests {
 
   /** NFR-03：数据库层的唯一键、外键与检查约束是业务不变量的兜底，必须与实体声明完全一致。 */
   @Test
+  @Tag("等价类")
   @DisplayName("NFR-03 NFR-09 在真实 MySQL 上，部署建表脚本的主键、唯一约束、外键与检查约束与实体声明一致")
   void NFR03_deploymentDdlMatchesEntityConstraints() {
     Set<String> primary = new TreeSet<>();

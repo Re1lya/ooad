@@ -22,7 +22,7 @@
 | `register-course-app.txt` | 11-21 首次登记课程系统、同步一万名员工（约 20 秒）、启用演示工号的输出 |
 | `register-course-app-20261122.txt` | 11-22 重跑登记脚本：应用、角色、部门和人员都沿用已有的，为尚未启用的 9996 名员工设置测试密码并启用（约 12 分钟） |
 | `test-accounts.txt` | 两个库的核对：一万名员工全部启用；总公司 190 人都有 `teacher`，分公司 9810 人都有 `student`；课程系统的教师、学生名单与之对应 |
-| `verify-public.txt` | 接口验收脚本（11-24 换新镜像后），46/46 通过 |
+| `verify-public.txt` | 接口验收脚本（11-24 换新镜像并加入统一会话检查后），48/48 通过 |
 | `course-identity-calls-log.txt` | 课程后端（老师镜像）调用统一身份的 DEBUG 日志：一次登录（经 `rbac-backend` 调 `/auth/login`、`/auth/me`），一次添加教师（先用当前令牌调 `/auth/me`，再调 `/auth/users/{userId}` 取姓名和工号）；日志里没有令牌 |
 | `menu-switch-log.txt` | 浏览器走查在权限台账依次进入“总览”（`overview`）、“权限来源”（`effective`）、“审计日志”（`audit`）时，`docker service logs cdwy_rbac-backend` 中带 `[menu=...]` 标记的请求日志，含 Controller、Service 两层（时间为 UTC） |
 | `01-course-admin-menu.png` | 课程管理员从课程系统教师入口登录后的“管理”菜单 |

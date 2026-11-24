@@ -174,8 +174,9 @@ class FirstReviewWorkflowTests {
   }
 
   @Test
-  @DisplayName("FR-01 NFR-10 登录返回 Bearer JWT，不创建服务端会话，库中也没有会话表")
-  void FR01_loginReturnsBearerAndNeverCreatesServerSession() throws Exception {
+  @Tag("等价类")
+  @DisplayName("FR-01 NFR-10 登录返回 Bearer JWT；统一会话记在账号的凭证版本上，库中没有会话表")
+  void FR01_loginReturnsBearerWithoutSessionTable() throws Exception {
     MvcResult response =
         call(
             "POST",
@@ -203,6 +204,7 @@ class FirstReviewWorkflowTests {
   }
 
   @Test
+  @Tag("异常")
   @DisplayName("NFR-01 错误凭证、缺少或畸形令牌、过期或伪造令牌一律返回 401")
   void NFR01_badCredentialsMissingMalformedExpiredAndForgedTokensReturn401() throws Exception {
     call("POST", LOGIN_URL, null, Map.of("username", "worker", "password", "wrong"), 401);
@@ -233,6 +235,7 @@ class FirstReviewWorkflowTests {
   }
 
   @Test
+  @Tag("异常")
   @DisplayName("NFR-02 响应不含密码摘要与凭证版本，请求也不能夹带管理员身份")
   void NFR02_loginResponseCannotExposePasswordOrCredentialVersionOrAdminAssignment() throws Exception {
     String body =
@@ -263,6 +266,7 @@ class FirstReviewWorkflowTests {
   }
 
   @Test
+  @Tag("异常")
   @DisplayName("NFR-01 普通用户不能调用管理接口，管理员也不会自动获得业务接口权限")
   void NFR01_ordinaryUsersCannotManageAndAdministratorHasNoAutomaticBusinessGrant() throws Exception {
     call("GET", USERS_URL, employee, null, 403);
@@ -271,6 +275,7 @@ class FirstReviewWorkflowTests {
   }
 
   @Test
+  @Tag("等价类")
   @DisplayName("FR-14 角色、权限、接口绑定缺一不可，新授权无需重新登录即生效")
   void FR14_rolePermissionAndApiBindingAreAllNecessaryAndNewGrantsWorkWithoutRelogin() throws Exception {
     demo(403);
@@ -283,6 +288,7 @@ class FirstReviewWorkflowTests {
   }
 
   @Test
+  @Tag("等价类")
   @DisplayName("FR-10 重复分配幂等，撤回一个角色后其他角色提供的权限仍然有效")
   void FR10_duplicateAssignmentsAreIdempotentAndGrantUnionSurvivesOneRoleRevocation() throws Exception {
     grant();
@@ -305,6 +311,7 @@ class FirstReviewWorkflowTests {
   }
 
   @Test
+  @Tag("等价类")
   @DisplayName("FR-11 FR-12 撤回角色权限或解除接口绑定后，已签发的令牌立即被拒绝")
   void FR11_permissionRevocationAndApiUnbindingImmediatelyRejectExistingToken() throws Exception {
     grant();
@@ -318,6 +325,7 @@ class FirstReviewWorkflowTests {
   }
 
   @Test
+  @Tag("等价类")
   @DisplayName("FR-15 状态接口停用后影响全部持有者，且不改动普通字段")
   void FR15_statusCommandsAffectAllHoldersWithoutChangingOrdinaryFields() throws Exception {
     grant();
@@ -341,6 +349,7 @@ class FirstReviewWorkflowTests {
   }
 
   @Test
+  @Tag("异常")
   @DisplayName("FR-15 普通编辑不能夹带状态字段，改名不影响已有授权")
   void FR15_ordinaryEditsCannotSmuggleStatusAndNamesDoNotRevokeGrants() throws Exception {
     grant();
@@ -368,6 +377,7 @@ class FirstReviewWorkflowTests {
   }
 
   @Test
+  @Tag("等价类")
   @DisplayName("FR-03 停用账号使已签发令牌失效，重新启用也不恢复旧令牌")
   void FR03_disabledAccountInvalidatesTokenAndReenableDoesNotReviveIt() throws Exception {
     call("PUT", url(USER_STATUS_URL, user), admin, Map.of("enabled", false), 200);
@@ -379,8 +389,10 @@ class FirstReviewWorkflowTests {
   }
 
   @Test
-  @DisplayName("FR-02 改密后旧令牌失效，不依赖服务端会话存储")
-  void FR02_passwordChangeInvalidatesOldTokenWithoutSessionStorage() throws Exception {
+  @Tag("等价类")
+  @Tag("异常")
+  @DisplayName("FR-02 改密后本人全部旧令牌失效，旧密码不能再登录")
+  void FR02_passwordChangeInvalidatesOldTokens() throws Exception {
     call(
         "PUT",
         MY_PASSWORD_URL,
@@ -399,6 +411,7 @@ class FirstReviewWorkflowTests {
   }
 
   @Test
+  @Tag("等价类")
   @DisplayName("FR-13 个人菜单保留祖先容器，祖先不因此获得接口权限")
   void FR13_menuTreeKeepsAncestorsAsContainersWithoutGrantingTheirApi() throws Exception {
     grant();
@@ -410,6 +423,7 @@ class FirstReviewWorkflowTests {
   }
 
   @Test
+  @Tag("异常")
   @DisplayName("FR-08 菜单树拒绝环路、跨应用上级和以按钮为上级")
   void FR08_menuTreeRejectsCyclesCrossApplicationParentsAndButtonParents() throws Exception {
     call(
@@ -456,6 +470,7 @@ class FirstReviewWorkflowTests {
   }
 
   @Test
+  @Tag("异常")
   @DisplayName("FR-12 FR-14 接口不能跨应用绑定，鉴权按最具体的路径匹配且不能绕过")
   void FR14_apiResourcesCannotBindAcrossApplicationsOrBypassMoreSpecificRoute() throws Exception {
     grant();
@@ -490,6 +505,7 @@ class FirstReviewWorkflowTests {
   }
 
   @Test
+  @Tag("异常")
   @DisplayName("FR-09 API 资源拒绝重复路由和过宽的通配路径")
   void FR09_resourceValidationRejectsDuplicatesAndBroadWildcards() throws Exception {
     call(
@@ -513,6 +529,7 @@ class FirstReviewWorkflowTests {
   }
 
   @Test
+  @Tag("异常")
   @DisplayName("FR-05 部门树防环，有子部门或员工时不能删除")
   void FR05_departmentTreeAndDeleteReferencesRemainConsistent() throws Exception {
     long root = create(DEPARTMENTS_URL, Map.of("name", "信息部"));
@@ -529,6 +546,9 @@ class FirstReviewWorkflowTests {
   }
 
   @Test
+  @Tag("等价类")
+  @Tag("边界值")
+  @Tag("异常")
   @DisplayName("FR-04 NFR-06 外部与临时人员共用用户实体，期限受配置上限约束，过期后不能登录")
   void FR04_externalAndTemporaryPeopleUseSharedUserEntityAndConfiguredValidityLimits() throws Exception {
     java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Shanghai"));
@@ -607,6 +627,7 @@ class FirstReviewWorkflowTests {
   }
 
   @Test
+  @Tag("异常")
   @DisplayName("FR-03 删除前检查引用，管理员账号受保护")
   void FR03_deletionsRespectReferencesAndProtectAdministrator() throws Exception {
     grant();
@@ -622,6 +643,7 @@ class FirstReviewWorkflowTests {
   }
 
   @Test
+  @Tag("异常")
   @DisplayName("NFR-01 初始化不能把普通账号提升为管理员，已删除的接口不再注册")
   void NFR01_initializationCannotEscalateOrdinaryUserAndRemovedEndpointsAreNotRegistered() {
     assertThrows(IllegalStateException.class, () -> bootstrap.initialize("worker", PASSWORD));
@@ -645,6 +667,7 @@ class FirstReviewWorkflowTests {
   }
 
   @Test
+  @Tag("等价类")
   @DisplayName("NFR-05 导出实际路由与 MySQL 库结构，供需求追踪文档生成")
   void NFR05_exportOpenApiInputsRoutesAndActualSchemaForDocumentation() throws Exception {
     Map<String, List<Map<String, Object>>> schemas = new LinkedHashMap<>();
@@ -697,6 +720,7 @@ class FirstReviewWorkflowTests {
 
   /** FR-26：两种配置均对外报告真实装载模式，防止部分服务静默回退。 */
   @Test
+  @Tag("等价类")
   @DisplayName("FR-26 NFR-06 两种配置下全部业务模块都报告实际装载的设计路线")
   void FR26_allBusinessModulesReportSelectedStrategy() throws Exception {
     String selected = environment.getProperty("app.backend-strategy", "structured");

@@ -3,6 +3,7 @@ const { test } = require('node:test');
 const s = require('./support.cjs');
 const { assert } = s;
 
+// 测试类型：等价类、边界值、异常
 test('FR-16 FR-21 FR-22 NFR-10 前端资源管理、授权工作台、接口绑定、窄屏与退出', { skip: s.skip }, async () => {
   assert.ok(s.out && s.admin.username && s.admin.password, '需要设置演示账号及独立输出目录');
   const admin = await s.token();

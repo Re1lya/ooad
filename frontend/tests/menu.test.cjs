@@ -3,6 +3,7 @@ const { test } = require('node:test');
 const s = require('./support.cjs');
 const { assert } = s;
 
+// 测试类型：等价类
 test('FR-13 FR-38 菜单根据后端授权动态显示', { skip: s.skip }, async () => {
   const admin = await s.token();
   const { perms } = await s.ensureConsole(admin);

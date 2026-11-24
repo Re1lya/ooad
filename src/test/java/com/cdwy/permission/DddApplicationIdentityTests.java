@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.cdwy.permission.support.RequestTransactionBoundary;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
@@ -34,6 +35,7 @@ class DddApplicationIdentityTests extends ApplicationIdentityTests {
 
   /** 接入应用身份模块报告实际装载的 DDD 实现。 */
   @Test
+  @Tag("等价类")
   @DisplayName("FR-27 DDD 模式下统一身份模块报告 ddd 实现")
   void FR27_identityModuleReportsDdd() throws Exception {
     mvc.perform(get(SYSTEM_INFO_URL).header("Authorization", "Bearer " + admin))

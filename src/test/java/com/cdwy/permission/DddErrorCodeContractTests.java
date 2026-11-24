@@ -11,6 +11,7 @@ import com.cdwy.permission.service.port.error.ConflictException;
 import com.cdwy.permission.service.port.error.InvalidDataException;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -32,6 +33,7 @@ class DddErrorCodeContractTests extends ErrorCodeContractTests {
 
   /** NFR-03：DDD 适配器在保存处就地把唯一约束冲突翻译为 DATA_CONFLICT。 */
   @Test
+  @Tag("异常")
   @DisplayName("NFR-03 DDD 仓储适配器把数据库唯一约束冲突就地翻译为 DATA_CONFLICT")
   void NFR03_adapterTranslatesUniqueViolation() {
     AccessRole duplicate = new AccessRole();
@@ -46,6 +48,7 @@ class DddErrorCodeContractTests extends ErrorCodeContractTests {
    * API 层直接使用时出现。
    */
   @Test
+  @Tag("异常")
   @DisplayName("FR-26 领域对象拒绝不合法的资源路径、权限码、operationId 与部门编码")
   void FR26_domainObjectsGuardFormats() {
     ProtectedResource resource = new ProtectedResource();

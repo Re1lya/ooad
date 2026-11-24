@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.cdwy.permission.support.RequestTransactionBoundary;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
@@ -25,6 +26,7 @@ class DddFullWorkflowTests extends FirstReviewWorkflowTests {
 
   /** 防止仅切换角色图，却把整个系统误报为面向对象模式。 */
   @Test @DisplayName("FR-26 DDD 模式下每个业务模块都报告 ddd 实现")
+ @Tag("等价类")
  void FR26_reportsEverySelectedBusinessImplementation() throws Exception {
     for (String module : java.util.List.of("users", "departments", "systems", "roles",
         "permissions", "resources", "authorization", "hierarchy", "authentication", "directorySync")) {

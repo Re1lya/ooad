@@ -105,17 +105,24 @@ def main():
     check("学生从学生入口登录", status == 200 and "student" in body["user"]["roles"], f"HTTP {status}")
     check("密码错误时登录失败", course_login("teacher", "SG000003", demo + "x")[0] == 401)
 
-    print("== 一万名员工都是测试账号：总公司员工是教师，分公司员工是学生")
+    print("== 一万名员工都是测试账号：总公司员工是教师，分公司员工是学生；统一会话")
     check("总公司员工 SG000190 从教师入口登录", course_login("teacher", "SG000190", demo)[0] == 200)
     check("分公司员工 SG010000 从学生入口登录", course_login("student", "SG010000", demo)[0] == 200)
+    status, body = course_login("teacher", "SG000004", demo)
+    signed_in = body.get("accessToken") if status == 200 else None
+    check("SG000004 登录课程系统后可以正常访问", signed_in and call(COURSE, "GET", "/me", signed_in)[0] == 200)
     try:
-        check("在权限系统停用 SG000004 后不能登录",
-              set_enabled(console, "SG000004", False) and course_login("teacher", "SG000004", demo)[0] == 401)
+        disabled = set_enabled(console, "SG000004", False)
+        check("统一会话：在权限系统停用 SG000004，已登录的课程系统令牌立即失效",
+              disabled and call(COURSE, "GET", "/me", signed_in)[0] == 401)
+        check("停用后不能再登录", disabled and course_login("teacher", "SG000004", demo)[0] == 401)
     finally:
         enabled = set_enabled(console, "SG000004", True)
-    check("重新启用后恢复登录", enabled and course_login("teacher", "SG000004", demo)[0] == 200)
+    check("重新启用后旧令牌仍然无效，重新登录可以使用",
+          enabled and call(COURSE, "GET", "/me", signed_in)[0] == 401
+          and course_login("teacher", "SG000004", demo)[0] == 200)
 
-    print("== 令牌只对目标系统有效")
+    print("== 令牌按登录时选择的系统使用（会话仍是统一的）")
     status, me, _ = call(IDENTITY, "GET", "/auth/me", admin)
     check("/auth/me 的 subject 与 no 都是工号，并带姓名",
           status == 200 and me["subject"] == me["no"] == "SG000001" and me.get("name"), f"name={me.get('name')}")

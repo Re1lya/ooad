@@ -1,6 +1,7 @@
 """根据测试源码生成需求—测试追踪表与错误码—测试表，写入 docs/second-review/04-test-traceability.adoc。
 
-需求编号取自每个测试方法的 @DisplayName（形如 "FR-18 ..." 或 "NFR-07 ..."）；需求名称取自
+需求编号取自每个测试方法的 @DisplayName（形如 "FR-18 ..." 或 "NFR-07 ..."），测试类型（等价类、边界值、异常）取自
+@Tag，浏览器测试取自 test(...) 上一行的“// 测试类型：”注释；每条功能需求三类都要有，缺一类时脚本报错。需求名称取自
 docs/second-review/01-requirements.adoc 的需求表。错误码取自主代码中业务异常的第一个参数，再在测试源码中查找断言它的测试方法。
 测试数量取自 target/surefire-reports（先运行 mvn clean verify）。
 
@@ -31,7 +32,7 @@ def requirement_names():
 
 
 def test_methods():
-    """返回 [(类名, 方法名, 显示名, 方法体)]：测试方法的方法体包含它调用的本类辅助方法，便于找到经辅助方法断言的错误码。"""
+    """返回 [(类名, 方法名, 显示名, 方法体, 测试类型)]：方法体包含它调用的本类辅助方法，便于找到经辅助方法断言的错误码。"""
     methods = []
     declaration = re.compile(r"^  (?=[^ \n])(?!(?:if|for|while|switch|try|catch|return|new)\b)(?:@\w+(?:\([^)]*\))?\s+)*(?:(?:public|protected|private|static|final)\s+)*"
                              r"[\w<>\[\], ?.]+\s+(\w+)\s*\([^;{]*\)\s*(?:throws [\w., ]+)?\{", re.M)
@@ -47,23 +48,26 @@ def test_methods():
             bodies[name] = bodies.get(name, "") + text[start:end]
             if "@Test" in annotations:
                 display = re.search(r'@DisplayName\("([^"]*)"\)', annotations)
-                tests.append((name, display.group(1) if display else ""))
-        for name, display in tests:
+                kinds = tuple(re.findall(r'@Tag\("([^"]+)"\)', annotations))
+                tests.append((name, display.group(1) if display else "", kinds))
+        for name, display, kinds in tests:
             body = bodies[name]
             for helper, helper_body in bodies.items():
                 if helper != name and re.search(r"\b" + helper + r"\(", body):
                     body += helper_body
-            methods.append((path.stem, name, display, body))
+            methods.append((path.stem, name, display, body, kinds))
     return methods
 
 
 def browser_tests():
-    """两个前端的浏览器测试（权限台账、原管理控制台）：返回 [(相对路径, 测试名)]。"""
+    """两个前端的浏览器测试（权限台账、原管理控制台）：返回 [(相对路径, 测试名, 测试类型)]。"""
     found = []
     for folder in ("frontend-access-registry/tests", "frontend/tests"):
         for path in sorted((ROOT / folder).glob("*.test.cjs")):
-            for match in re.finditer(r"\btest\('([^']+)'", path.read_text(encoding="utf-8")):
-                found.append((f"{folder}/{path.name}", match.group(1)))
+            text = path.read_text(encoding="utf-8")
+            for match in re.finditer(r"(?:// 测试类型：([^\n]*)\n)?test\('([^']+)'", text):
+                kinds = tuple(k for k in (match.group(1) or "").split("、") if k)
+                found.append((f"{folder}/{path.name}", match.group(2), kinds))
     return found
 
 
@@ -101,12 +105,17 @@ def build():
     counts = surefire_counts()
 
     by_requirement = defaultdict(list)
-    for owner, method, display, _ in methods:
+    by_kind = defaultdict(lambda: defaultdict(list))
+    for owner, method, display, _, kinds in methods:
         for requirement in re.findall(r"\b(N?FR-\d+)\b", display):
             by_requirement[requirement].append((owner, method, display))
-    for owner, display in browser_tests():
+            for kind in kinds:
+                by_kind[requirement][kind].append(f"`{owner}.{method}`")
+    for owner, display, kinds in browser_tests():
         for requirement in re.findall(r"\b(N?FR-\d+)\b", display):
             by_requirement[requirement].append((owner, "", display))
+            for kind in kinds:
+                by_kind[requirement][kind].append(f"`{owner}`")
 
     def routes(owner):
         if owner.endswith(".test.cjs"):
@@ -123,13 +132,27 @@ def build():
         label = f"`{owner}` / `{variant}`" if variant else f"`{owner}`"
         total = counts.get(owner, 0) + (counts.get(variant, 0) if variant else 0)
         lines.append(f"|{label} |{routes(owner)} |{total}")
-    lines += ["|===", "", "=== 需求—测试追踪", "",
-              "每个测试方法的名称以需求编号开头，`@DisplayName` 写明需求编号与验收条件；下表由测试源码生成。", "",
-              '[cols="1,2,6,1",options="header"]', "|===", "|编号 |需求 |测试方法（显示名） |设计路线"]
-
     def order(requirement):
         kind, number = requirement.split("-")
         return (kind == "NFR", int(number))
+
+    lines += ["|===", "", "=== 等价类、边界值与异常", "",
+              "每条功能需求都有三类测试：等价类取一组合法输入看正常结果（含停用、撤回等合法的状态变化）；"
+              "边界值在长度、数量、分页、层级等界限的两侧各取一个值；异常覆盖非法输入、缺少授权、引用冲突与不存在的对象。"
+              "后端测试用 `@Tag(\"等价类\")`、`@Tag(\"边界值\")`、`@Tag(\"异常\")` 标注，浏览器测试在 `test(...)` 上一行注明。"
+              "非功能需求按各自的验收条件测试，见下一节。", "",
+              '[cols="1,2,4,4,4",options="header"]', "|===", "|编号 |需求 |等价类 |边界值 |异常"]
+    for requirement in sorted((r for r in names if r.startswith("FR-")), key=order):
+        cells = []
+        for kind in ("等价类", "边界值", "异常"):
+            tests = sorted(set(by_kind[requirement][kind]))
+            if not tests:
+                raise SystemExit(f"{requirement} 缺少{kind}测试")
+            cells.append(" +\n".join(tests))
+        lines.append(f"|{requirement} |{names[requirement]} |" + " |".join(cells))
+    lines += ["|===", "", "=== 需求—测试追踪", "",
+              "每个测试方法的名称以需求编号开头，`@DisplayName` 写明需求编号与验收条件；下表由测试源码生成。", "",
+              '[cols="1,2,6,1",options="header"]', "|===", "|编号 |需求 |测试方法（显示名） |设计路线"]
 
     for requirement in sorted(set(names) | set(by_requirement), key=order):
         tests = by_requirement.get(requirement)
@@ -145,7 +168,7 @@ def build():
               "每个业务错误码至少有一个测试断言响应体的 `code`；按 id 操作的接口在 `ErrorCodeContractTests.NFR07_everyByIdEndpointRejectsMissingIds` 中逐个覆盖不存在的 id。", "",
               '[cols="2,1,5",options="header"]', "|===", "|错误码 |HTTP |断言它的测试方法"]
     for code, status in sorted(error_codes().items()):
-        hits = sorted({f"`{owner}.{method}`" for owner, method, _, body in methods if f'"{code}"' in body})
+        hits = sorted({f"`{owner}.{method}`" for owner, method, _, body, _ in methods if f'"{code}"' in body})
         if not hits:
             raise SystemExit(f"错误码 {code} 没有测试断言")
         lines.append(f"|`{code}` |{status} |{'、'.join(hits)}")

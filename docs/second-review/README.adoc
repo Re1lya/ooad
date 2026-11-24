@@ -29,7 +29,7 @@ Cdwy 小组：温家正、姚景云、杜奕含、陈浩贤
 |Swarm 部署 |已部署：权限系统 http://120.46.213.158/ （stack `cdwy`，首页进权限台账，原管理控制台在 `/ui/`），课程系统 http://124.70.102.248/ （stack `course-project`）；`deploy/stack.yml`、`deploy/course/stack.yml`、`deploy/permission/*`；部署说明“验收”一节的核对清单；`evidence/deployment/`
 |两个系统权限由权限系统管理 |`/api/apps/course-project-management/**` 接口；`scripts/register-course-app.py`；`scripts/verify-course-integration.py`
 |菜单切换与 logback 日志 |前端请求头 `X-Client-Menu`；`RequestLoggingFilter`、`LayerLoggingAspect`；日志行 `[menu=…]`
-|需求与测试 |需求—测试追踪表（由测试源码生成）；`mvn clean verify` 在真实 MySQL 上 186 个测试全部通过
+|需求与测试 |需求—测试追踪表（由测试源码生成）；`mvn clean verify` 在真实 MySQL 上 282 个测试全部通过；每条功能需求都有等价类、边界值、异常三类测试
 |包图、类图、顺序图、代码 |详细设计第 1、3、4 节；图源 `diagrams/*.puml`，PNG/SVG 在 `images/`
 |结构化与 DDD 区别、GRASP |详细设计第 5、6 节
 |JavaEE 技术 |详细设计第 9 节

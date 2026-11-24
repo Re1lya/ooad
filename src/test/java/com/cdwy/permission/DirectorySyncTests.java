@@ -84,6 +84,7 @@ class DirectorySyncTests {
   }
 
   @Test
+  @Tag("等价类")
   @DisplayName("FR-24 预览只计算变化：两级部门、新人员、按分公司补授角色，不写数据库")
   void FR24_previewCountsChangesAndWritesNothing() throws Exception {
     JsonNode summary = sync("preview", workbook(ROWS), rule("teacher", "student"), null, 200);
@@ -113,6 +114,7 @@ class DirectorySyncTests {
   }
 
   @Test
+  @Tag("等价类")
   @DisplayName("FR-25 确认后建成“分公司 / 部门”两级树，同名部门分属不同分公司；新人员停用且无法登录；按分公司授予教师或学生")
   void FR25_commitBuildsTwoLevelTreeAndUnprovisionedUsers() throws Exception {
     JsonNode result = commit(workbook(ROWS), rule("teacher", "student"));
@@ -150,6 +152,7 @@ class DirectorySyncTests {
   }
 
   @Test
+  @Tag("等价类")
   @DisplayName("FR-25 重复执行同一份表没有任何变化")
   void FR25_rerunIsIdempotent() throws Exception {
     commit(workbook(ROWS), rule("teacher", "student"));
@@ -171,6 +174,7 @@ class DirectorySyncTests {
   }
 
   @Test
+  @Tag("等价类")
   @DisplayName("FR-25 变化的人员只更新姓名、部门、岗位与电话，保留密码、启用状态与已有角色；不在表中的人员不受影响；角色只增不减")
   void FR25_changesUpdateSourceFieldsAndKeepCredentialsAndGrants() throws Exception {
     commit(workbook(ROWS), rule("teacher", "student"));
@@ -211,6 +215,7 @@ class DirectorySyncTests {
   }
 
   @Test
+  @Tag("异常")
   @DisplayName("FR-25 确认时文件或规则与预览不一致须重新预览，且不写入")
   void FR25_digestMustMatchFileAndRule() throws Exception {
     byte[] file = workbook(ROWS);
@@ -226,6 +231,7 @@ class DirectorySyncTests {
   }
 
   @Test
+  @Tag("异常")
   @DisplayName("FR-25 表中出现管理员账号时整批拒绝，已经建好的部门也回滚")
   void FR25_administratorConflictRollsBackEverything() throws Exception {
     String[][] rows = Arrays.copyOf(ROWS, ROWS.length + 1);
@@ -245,6 +251,45 @@ class DirectorySyncTests {
   }
 
   @Test
+  @Tag("边界值")
+  @DisplayName("FR-24 各列长度上限：姓名、分公司、部门、岗位 128 个字符，用户名 64 个字符，电话 32 个字符可以，各超出一位拒绝并指出行号")
+  void FR24_columnLengthBoundaries() throws Exception {
+    JsonNode preview = sync("preview", workbook(new String[][] {MAX_ROW}), rule(null, null), null, 200);
+    assertEquals(1, preview.get("usersCreated").asInt());
+    assertTrue(message(new String[][] {HEADER, longer(MAX_ROW, 0)}).contains("第 2 行：姓名超过 128 个字符"));
+    assertTrue(message(new String[][] {HEADER, longer(MAX_ROW, 1)}).contains("第 2 行：用户名超过 64 个字符"));
+    assertTrue(message(new String[][] {HEADER, longer(MAX_ROW, 2)}).contains("第 2 行：分公司超过 128 个字符"));
+    assertTrue(message(new String[][] {HEADER, longer(MAX_ROW, 3)}).contains("第 2 行：部门超过 128 个字符"));
+    assertTrue(message(new String[][] {HEADER, longer(MAX_ROW, 4)}).contains("第 2 行：岗位超过 128 个字符"));
+    assertTrue(message(new String[][] {HEADER, longer(MAX_ROW, 5)}).contains("第 2 行：电话号码超过 32 个字符"));
+  }
+
+  @Test
+  @Tag("边界值")
+  @DisplayName("FR-25 只有一行、且各列都取到上限的员工表可以确认写入，再预览同一张表没有变化")
+  void FR25_singleMaximumRowCommitsAndStaysIdempotent() throws Exception {
+    JsonNode done = commit(workbook(new String[][] {MAX_ROW}), rule("teacher", "student"));
+    assertEquals(1, done.get("usersCreated").asInt());
+    JsonNode again = sync("preview", workbook(new String[][] {MAX_ROW}), rule("teacher", "student"), null, 200);
+    assertEquals(0, again.get("usersCreated").asInt());
+    assertEquals(0, again.get("usersUpdated").asInt());
+    assertEquals(1, again.get("usersUnchanged").asInt());
+  }
+
+  /** 各列都取到长度上限的一行：姓名、分公司、部门、岗位 128 个字符，用户名 64 个字符，电话 32 个字符。 */
+  static final String[] MAX_ROW = {
+    "姓".repeat(128), "S".repeat(64), "分".repeat(128), "部".repeat(128), "岗".repeat(128), "1".repeat(32)
+  };
+
+  /** 把一行的第 column 列加长一个字符。 */
+  static String[] longer(String[] row, int column) {
+    String[] copy = row.clone();
+    copy[column] = copy[column] + (column == 1 ? "S" : column == 5 ? "1" : "长");
+    return copy;
+  }
+
+  @Test
+  @Tag("异常")
   @DisplayName("FR-24 员工表格式错误逐项拒绝，并指出 Excel 行号")
   void FR24_invalidSheetsAreRejectedWithRowNumbers() throws Exception {
     assertTrue(message(new String[][] {{"姓名", "工号", "分公司", "部门", "岗位", "电话号码"}, ROWS[0]}).contains("表头"));
@@ -270,6 +315,7 @@ class DirectorySyncTests {
   }
 
   @Test
+  @Tag("等价类")
   @DisplayName("FR-24 按工作簿关系定位首张工作表并读取共享字符串（与课程系统提供的原表结构相同）")
   void FR24_firstWorksheetFollowsWorkbookRelationshipAndSharedStrings() throws Exception {
     JsonNode summary = sync("preview", sharedStringWorkbook(ROWS), rule("teacher", "student"), null, 200);
@@ -278,6 +324,7 @@ class DirectorySyncTests {
   }
 
   @Test
+  @Tag("异常")
   @DisplayName("FR-38 员工信息同步须拥有“同步员工信息”按钮的授权")
   void FR38_syncRequiresDirectorySyncGrant() throws Exception {
     long operator =
@@ -305,6 +352,7 @@ class DirectorySyncTests {
   }
 
   @Test
+  @Tag("边界值")
   @DisplayName("NFR-08 一万行员工表（与课程系统员工表同规模）在一个事务内同步，部门与人员按数据库分页查询")
   void NFR08_tenThousandRows() throws Exception {
     String[] companies = {"总公司", "道路工程分公司", "桥梁工程分公司", "隧道工程分公司", "轨道交通分公司", "管网工程分公司", "水务工程分公司", "园林绿化分公司", "照明工程分公司", "市政养护分公司"};

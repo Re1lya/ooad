@@ -96,6 +96,7 @@ class ConsoleRbacTests {
   }
 
   @Test
+  @Tag("等价类")
   @DisplayName("FR-38 每个标注为 rbac 的管理接口（个人接口除外）都在内置目录中登记，且目录中没有多余接口")
   void FR38_catalogCoversEveryConsoleEndpoint() {
     Set<String> endpoints = new TreeSet<>();
@@ -118,6 +119,7 @@ class ConsoleRbacTests {
   }
 
   @Test
+  @Tag("等价类")
   @DisplayName("FR-38 启动登记幂等：重复初始化不产生重复数据；被删掉的内置授权在下次启动时补齐")
   void FR38_registrationIsIdempotentAndRestoresBuiltInGrants() throws Exception {
     bootstrap.initialize("admin", PASSWORD);
@@ -146,6 +148,7 @@ class ConsoleRbacTests {
    * FR-38：接口已拒绝停用内置对象，但早先的数据或直接改库仍可能留下停用状态；启动登记要把它们恢复启用，管理员不会被永久锁在外面。
    */
   @Test
+  @Tag("异常")
   @DisplayName("FR-38 内置应用、管理员角色、内置菜单与管理接口被停用时管理员进不了控制台，下次启动登记恢复启用")
   void FR38_startupRestoresDisabledBuiltIns() throws Exception {
     db.update("update biz_system set enabled = 0 where code = 'rbac'");
@@ -168,6 +171,7 @@ class ConsoleRbacTests {
   }
 
   @Test
+  @Tag("等价类")
   @DisplayName("FR-38 管理员的导航包含全部 11 个控制台菜单，按钮挂在所属菜单下")
   void FR38_administratorSeesEveryConsoleMenu() throws Exception {
     JsonNode menu = result(call("GET", url(MY_MENU_OF_SYSTEM_URL, "rbac"), admin, null, 200));
@@ -188,6 +192,8 @@ class ConsoleRbacTests {
   }
 
   @Test
+  @Tag("等价类")
+  @Tag("异常")
   @DisplayName("FR-38 菜单根据后端授权动态显示：授予后出现、页面接口放行，撤销后下一次请求立即消失并返回 403")
   void FR38_menuAndApisFollowGrants() throws Exception {
     assertEquals(0, result(call("GET", url(MY_MENU_OF_SYSTEM_URL, "rbac"), auditor, null, 200)).size());
@@ -220,6 +226,23 @@ class ConsoleRbacTests {
   }
 
   @Test
+  @Tag("边界值")
+  @DisplayName("FR-38 只有“用户管理”菜单时可以查看用户但不能新建；再授予“维护用户”按钮后才能新建")
+  void FR38_readMenuWithoutWriteButton() throws Exception {
+    long role = result(call("POST", ROLES_URL, admin, Map.of("code", "user-viewer", "name", "用户查看员"), 201)).get("id").asLong();
+    long users = db.queryForObject("select id from sys_permission where code = 'rbac.users'", Long.class);
+    long write = db.queryForObject("select id from sys_permission where code = 'rbac.users.write'", Long.class);
+    call("PUT", url(ROLE_PERMISSION_URL, role, users), admin, null, 204);
+    call("PUT", url(USER_ROLE_URL, auditorId, role), admin, null, 204);
+    Map<String, Object> person = Map.of("username", "new-person", "displayName", "新人员", "password", "Review-2026!");
+    call("GET", USERS_URL, auditor, null, 200);
+    call("POST", USERS_URL, auditor, person, 403);
+    call("PUT", url(ROLE_PERMISSION_URL, role, write), admin, null, 204);
+    call("POST", USERS_URL, auditor, person, 201);
+  }
+
+  @Test
+  @Tag("异常")
   @DisplayName("FR-38 个人接口只要求登录；没有登记访问规则的接口一律拒绝；控制台管理员也不能绕过")
   void FR38_personalEndpointsAndFailClosed() throws Exception {
     call("GET", ME_URL, auditor, null, 200);

@@ -5,6 +5,7 @@ const path = require('node:path');
 const s = require('./support.cjs');
 const { assert } = s;
 
+// 测试类型：等价类、异常
 test('FR-24 FR-25 同步员工信息：预览、确认、重复执行无变化，更换文件或规则须重新预览', { skip: s.skip }, async () => {
   const admin = await s.token();
   await s.ensureConsole(admin);

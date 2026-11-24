@@ -3,6 +3,7 @@ const { test } = require('node:test');
 const s = require('./support.cjs');
 const { assert } = s;
 
+// 测试类型：等价类
 test('FR-10 FR-17 FR-19 用户授权盖印后，按人员查看有效权限的来源与继承路径', { skip: s.skip }, async () => {
   const admin = await s.token();
   const tag = s.suffix();

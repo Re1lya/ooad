@@ -107,6 +107,11 @@ class ApplicationIdentityTests {
       "/api/users?page={page}&pageSize={pageSize}&keyword={keyword}";
   private static final String USERS_URL = "/api/users";
   private static final String USER_ROLE_URL = "/api/users/{userId}/roles/{roleId}";
+  private static final String USER_STATUS_URL = "/api/users/{userId}/status";
+  private static final String CPM_ROOTS_PAGED_URL = BASE + "/auth/departments?page={page}&pageSize={pageSize}";
+  private static final String CPM_DEPARTMENT_USERS_PAGED_URL =
+      BASE + "/auth/departments/{departmentId}/users?page={page}&pageSize={pageSize}";
+  private static final String USER_PASSWORD_URL = "/api/users/{userId}/password";
 
   @Autowired MockMvc mvc;
   @Autowired JsonMapper json;
@@ -174,6 +179,7 @@ class ApplicationIdentityTests {
   // ---------- 登录、令牌目标系统、退出 ----------
 
   @Test
+  @Tag("等价类")
   @DisplayName("FR-31 登录不需要令牌，响应只有 accessToken、tokenType、expiresIn")
   void FR31_loginReturnsTokenContract() throws Exception {
     JsonNode token =
@@ -191,6 +197,7 @@ class ApplicationIdentityTests {
   }
 
   @Test
+  @Tag("异常")
   @DisplayName("FR-31 密码错误 401 UNAUTHORIZED；systems 缺当前应用、含未登记应用、为空或请求多出字段都 400")
   void FR31_loginRejectsBadCredentialsAndSystems() throws Exception {
     JsonNode wrong =
@@ -233,6 +240,8 @@ class ApplicationIdentityTests {
   }
 
   @Test
+  @Tag("等价类")
+  @Tag("异常")
   @DisplayName("FR-31 令牌只能用于 aud 中的系统：课程令牌不能调控制台，控制台令牌不能调课程身份接口")
   void FR31_tokenAudienceIsEnforced() throws Exception {
     call("GET", ME_URL, teacher, null, 401);
@@ -246,6 +255,8 @@ class ApplicationIdentityTests {
   }
 
   @Test
+  @Tag("等价类")
+  @Tag("异常")
   @DisplayName("FR-32 退出登录后同一令牌立即失效，重新登录可以继续使用")
   void FR32_logoutInvalidatesIssuedTokens() throws Exception {
     MvcResult out = call("POST", CPM_LOGOUT_URL, teacher, null, 204);
@@ -256,9 +267,211 @@ class ApplicationIdentityTests {
     call("GET", CPM_ME_URL, again, null, 200);
   }
 
+  @Test
+  @Tag("边界值")
+  @DisplayName("FR-31 接入应用登录：登录名 128 个字符、密码 256 个字符以内按账号校验返回 401，各超出一位返回 400；systems 只含当前应用即可登录")
+  void FR31_loginFieldBoundaries() throws Exception {
+    call("POST", CPM_LOGIN_URL, null, Map.of("username", "u".repeat(128), "password", PASSWORD, "systems", List.of(CPM)), 401);
+    call("POST", CPM_LOGIN_URL, null, Map.of("username", "u".repeat(129), "password", PASSWORD, "systems", List.of(CPM)), 400);
+    call("POST", CPM_LOGIN_URL, null, Map.of("username", "SG000001", "password", "p".repeat(256), "systems", List.of(CPM)), 401);
+    call("POST", CPM_LOGIN_URL, null, Map.of("username", "SG000001", "password", "p".repeat(257), "systems", List.of(CPM)), 400);
+    call("GET", CPM_ME_URL, appLogin("SG000001", List.of(CPM)), null, 200);
+  }
+
+  @Test
+  @Tag("边界值")
+  @DisplayName("FR-32 同一应用里有两个令牌时，用其中一个退出，另一个也失效")
+  void FR32_logoutEndsEveryTokenOfTheApplication() throws Exception {
+    String second = appLogin("SG000001", List.of(CPM));
+    call("POST", CPM_LOGOUT_URL, teacher, null, 204);
+    call("GET", CPM_ME_URL, second, null, 401);
+  }
+
+  @Test
+  @Tag("边界值")
+  @DisplayName("FR-27 在应用内没有任何角色的用户也能查询身份：角色和权限都为空")
+  void FR27_userWithoutRolesGetsEmptyIdentity() throws Exception {
+    JsonNode me = result(call("GET", CPM_ME_URL, outsider, null, 200));
+    assertEquals("SG000191", me.get("subject").asString());
+    assertEquals(0, me.get("roles").size());
+    assertEquals(0, me.get("permissions").size());
+  }
+
+  @Test
+  @Tag("边界值")
+  @DisplayName("FR-28 已停用的人员仍能按工号查到姓名（员工信息同步新建的人员是停用的，课程系统要能选他们登记为教师）")
+  void FR28_disabledPeopleCanStillBeLookedUp() throws Exception {
+    long zhou = result(call("GET", url(USERS_BY_KEYWORD_URL, "SG000191"), admin, null, 200)).get("items").get(0).get("id").asLong();
+    call("PUT", url(USER_STATUS_URL, zhou), admin, Map.of("enabled", false), 200);
+    JsonNode found = result(call("GET", url(CPM_USER_URL, "SG000191"), teacher, null, 200));
+    assertEquals("周雨桐", found.get("name").asString());
+  }
+
+  @Test
+  @Tag("边界值")
+  @DisplayName("FR-29 审计 requestId 64 个字符可以、65 个拒绝；查询每页 100 条可以、101 条拒绝")
+  void FR29_auditBoundaries() throws Exception {
+    Map<String, Object> entry = new HashMap<>(Map.of(
+        "type", "ROSTER_CHANGED", "objectType", "class", "objectId", "cpm-class-1", "target", "导入学生名单",
+        "before", Map.of("imported", 0), "after", Map.of("imported", 1)));
+    entry.put("requestId", "r".repeat(64));
+    call("POST", CPM_AUDIT_LOGS_URL, teacher, entry, 201);
+    entry.put("requestId", "r".repeat(65));
+    call("POST", CPM_AUDIT_LOGS_URL, teacher, entry, 400);
+    call("GET", url(CPM_AUDIT_LOGS_PAGE_URL, 1, 100), teacher, null, 200);
+    call("GET", url(CPM_AUDIT_LOGS_PAGE_URL, 1, 101), teacher, null, 400);
+  }
+
+  @Test
+  @Tag("边界值")
+  @Tag("异常")
+  @DisplayName("FR-30 重复建立已有的继承不再写审计；被拒绝的成环继承也不写审计")
+  void FR30_noAuditForIdempotentOrRejectedChanges() throws Exception {
+    long before = result(call("GET", url(AUDIT_LOGS_OF_SYSTEM_URL, "rbac"), admin, null, 200)).get("total").asLong();
+    call("PUT", url(ROLE_INHERIT_URL, adminRole, teacherRole), admin, null, 204);
+    call("PUT", url(ROLE_INHERIT_URL, teacherRole, adminRole), admin, null, 400);
+    assertEquals(before, result(call("GET", url(AUDIT_LOGS_OF_SYSTEM_URL, "rbac"), admin, null, 200)).get("total").asLong());
+  }
+
+  @Test
+  @Tag("边界值")
+  @DisplayName("FR-33 权限码按原样精确比较：MCO 为真，大小写不同的 mco 为假")
+  void FR33_permissionCodesMatchExactly() throws Exception {
+    assertEquals(Map.of("allowed", true), json.convertValue(result(call("GET", url(CPM_PERMISSION_URL, "MCO"), teacher, null, 200)), Map.class));
+    assertEquals(Map.of("allowed", false), json.convertValue(result(call("GET", url(CPM_PERMISSION_URL, "mco"), teacher, null, 200)), Map.class));
+  }
+
+  @Test
+  @Tag("异常")
+  @DisplayName("FR-33 没有令牌或用控制台令牌校验前端权限码都返回 401")
+  void FR33_permissionCheckRequiresApplicationToken() throws Exception {
+    call("GET", url(CPM_PERMISSION_URL, "MCO"), null, null, 401);
+    call("GET", url(CPM_PERMISSION_URL, "MCO"), admin, null, 401);
+  }
+
+  @Test
+  @Tag("边界值")
+  @DisplayName("FR-34 operationId 最长 128 个字符：登记过的按授权返回，没登记过的返回 404")
+  void FR34_longestOperationId() throws Exception {
+    String longest = "o".repeat(128);
+    bind(button, resource("最长操作", "GET", "/longest", null, longest));
+    JsonNode answer = result(call("GET", url(CPM_API_PERMISSION_URL, longest), teacher, null, 200));
+    assertEquals(longest, answer.get("operationId").asString());
+    assertTrue(answer.get("allowed").asBoolean());
+    call("GET", url(CPM_API_PERMISSION_URL, "p".repeat(128)), teacher, null, 404);
+  }
+
+  @Test
+  @Tag("边界值")
+  @DisplayName("FR-35 部门分页：每页 1 条只返回一条且总数不变，超过最后一页返回空列表；关键字 100 个字符可以")
+  void FR35_departmentPagingBoundaries() throws Exception {
+    JsonNode first = result(call("GET", url(CPM_ROOTS_PAGED_URL, 1, 1), teacher, null, 200));
+    assertEquals(1, first.get("items").size());
+    assertEquals(2, first.get("total").asLong());
+    JsonNode beyond = result(call("GET", url(CPM_ROOTS_PAGED_URL, 3, 1), teacher, null, 200));
+    assertEquals(0, beyond.get("items").size());
+    assertEquals(2, beyond.get("total").asLong());
+    call("GET", url(CPM_ROOTS_PAGED_URL, 1, 100), teacher, null, 200);
+    call("GET", url(CPM_DEPARTMENTS_SEARCH_URL, "很".repeat(100)), teacher, null, 200);
+  }
+
+  @Test
+  @Tag("边界值")
+  @DisplayName("FR-36 部门人员分页：每页 1 与 100 条可以，0 与 101 条拒绝；关键字 100 个字符可以、101 个拒绝")
+  void FR36_departmentUserPagingBoundaries() throws Exception {
+    long engineering = 0;
+    for (JsonNode d : result(call("GET", url(CPM_SUBDEPARTMENTS_URL, hq), teacher, null, 200)).get("items"))
+      if (d.get("name").asString().equals("工程管理部")) engineering = d.get("id").asLong();
+    create(USERS_URL, Map.of("username", "SG000002", "displayName", "陈嘉禾", "password", PASSWORD, "departmentId", engineering));
+    JsonNode one = result(call("GET", url(CPM_DEPARTMENT_USERS_PAGED_URL, engineering, 1, 1), teacher, null, 200));
+    assertEquals(1, one.get("items").size());
+    assertEquals(2, one.get("total").asLong());
+    call("GET", url(CPM_DEPARTMENT_USERS_PAGED_URL, engineering, 1, 100), teacher, null, 200);
+    call("GET", url(CPM_DEPARTMENT_USERS_PAGED_URL, engineering, 1, 0), teacher, null, 400);
+    call("GET", url(CPM_DEPARTMENT_USERS_PAGED_URL, engineering, 1, 101), teacher, null, 400);
+    call("GET", url(CPM_DEPARTMENT_USERS_SEARCH_URL, engineering, "很".repeat(100)), teacher, null, 200);
+    call("GET", url(CPM_DEPARTMENT_USERS_SEARCH_URL, engineering, "很".repeat(101)), teacher, null, 400);
+  }
+
+  @Test
+  @Tag("边界值")
+  @DisplayName("FR-37 来源地址须完全一致：http://course.example 放行，换端口或换成 https 都被拒绝")
+  void FR37_originMustMatchExactly() throws Exception {
+    for (String origin : List.of("http://course.example:8080", "https://course.example"))
+      mvc.perform(
+              options(url(CPM_PERMISSION_URL, "MCO"))
+                  .header("Origin", origin)
+                  .header("Access-Control-Request-Method", "GET"))
+          .andExpect(status().isForbidden());
+    mvc.perform(
+            options(url(CPM_PERMISSION_URL, "MCO"))
+                .header("Origin", "http://course.example")
+                .header("Access-Control-Request-Method", "GET"))
+        .andExpect(status().isOk());
+  }
+
+  // ---------- 统一会话 ----------
+
+  @Test
+  @Tag("异常")
+  @DisplayName("FR-39 会话结束后，用旧令牌再次退出返回 401；重新登录后可以继续使用")
+  void FR39_endedSessionCannotBeUsedAgain() throws Exception {
+    call("POST", CPM_LOGOUT_URL, teacher, null, 204);
+    call("POST", CPM_LOGOUT_URL, teacher, null, 401);
+    call("GET", CPM_ME_URL, appLogin("SG000001", List.of(CPM)), null, 200);
+  }
+
+  @Test
+  @Tag("等价类")
+  @Tag("边界值")
+  @DisplayName("FR-39 统一会话：管理员停用后，本人在控制台和各接入应用的令牌同时失效，重新启用也不恢复旧令牌")
+  void FR39_disablingEndsTheSessionInEverySystem() throws Exception {
+    String console = login("SG000001", PASSWORD);
+    String both = appLogin("SG000001", List.of(CPM, "oa"));
+    call("GET", ME_URL, console, null, 200);
+    call("GET", url(APP_ME_URL, "oa"), both, null, 200);
+
+    call("PUT", url(USER_STATUS_URL, lin), admin, Map.of("enabled", false), 200);
+    call("GET", ME_URL, console, null, 401);
+    call("GET", CPM_ME_URL, teacher, null, 401);
+    call("GET", url(APP_ME_URL, "oa"), both, null, 401);
+    call("POST", CPM_LOGIN_URL, null, appLoginBody("SG000001", List.of(CPM)), 401);
+
+    call("PUT", url(USER_STATUS_URL, lin), admin, Map.of("enabled", true), 200);
+    call("GET", CPM_ME_URL, teacher, null, 401);
+    call("GET", ME_URL, console, null, 401);
+    call("GET", CPM_ME_URL, appLogin("SG000001", List.of(CPM)), null, 200);
+    call("GET", CPM_ME_URL, outsider, null, 200);
+  }
+
+  @Test
+  @Tag("等价类")
+  @DisplayName("FR-39 统一会话：在任一接入应用退出，本人在控制台和其他应用的令牌一起失效")
+  void FR39_logoutInOneApplicationEndsTheSessionEverywhere() throws Exception {
+    String console = login("SG000001", PASSWORD);
+    String oa = appLogin("SG000001", List.of(CPM, "oa"));
+    call("POST", CPM_LOGOUT_URL, teacher, null, 204);
+    call("GET", ME_URL, console, null, 401);
+    call("GET", url(APP_ME_URL, "oa"), oa, null, 401);
+    call("GET", CPM_ME_URL, outsider, null, 200);
+  }
+
+  @Test
+  @Tag("等价类")
+  @DisplayName("FR-39 统一会话：管理员重置密码后各系统的旧令牌失效，旧密码不能再登录")
+  void FR39_passwordResetEndsTheSessionEverywhere() throws Exception {
+    String console = login("SG000001", PASSWORD);
+    call("PUT", url(USER_PASSWORD_URL, lin), admin, Map.of("password", "Reset-Pass!2026"), 204);
+    call("GET", ME_URL, console, null, 401);
+    call("GET", CPM_ME_URL, teacher, null, 401);
+    call("POST", CPM_LOGIN_URL, null, appLoginBody("SG000001", List.of(CPM)), 401);
+    call("GET", CPM_ME_URL, appLogin("SG000001", List.of(CPM), "Reset-Pass!2026"), null, 200);
+  }
+
   // ---------- 当前用户 ----------
 
   @Test
+  @Tag("等价类")
   @DisplayName("FR-27 /auth/me 返回 subject、继承得到的角色、菜单按钮码与绑定的 API 权限码、姓名和工号")
   void FR27_currentIdentityIncludesInheritedRolesAndCodes() throws Exception {
     JsonNode me = result(call("GET", CPM_ME_URL, teacher, null, 200));
@@ -271,6 +484,7 @@ class ApplicationIdentityTests {
   }
 
   @Test
+  @Tag("等价类")
   @DisplayName("FR-27 解除继承后同一令牌的下一次 /auth/me 立即失去继承权限")
   void FR27_inheritanceChangeIsVisibleOnNextCall() throws Exception {
     call("DELETE", url(ROLE_INHERIT_URL, adminRole, teacherRole), admin, null, 204);
@@ -283,6 +497,7 @@ class ApplicationIdentityTests {
   }
 
   @Test
+  @Tag("等价类")
   @DisplayName("FR-27 停用被继承角色阻断路径；停用 API 资源只撤回对应后端权限码")
   void FR27_disabledRoleAndResourceAreExcluded() throws Exception {
     call("PUT", url(ROLE_STATUS_URL, teacherRole), admin, Map.of("enabled", false), 200);
@@ -296,6 +511,7 @@ class ApplicationIdentityTests {
   }
 
   @Test
+  @Tag("异常")
   @DisplayName("FR-27 应用停用时不返回角色和权限；未知应用的令牌无法签发，无令牌 401")
   void FR27_disabledApplicationAndMissingToken() throws Exception {
     call("PUT", url(SYSTEM_STATUS_URL, cpm), admin, Map.of("enabled", false), 200);
@@ -315,6 +531,7 @@ class ApplicationIdentityTests {
   // ---------- 前端权限与 API 权限校验 ----------
 
   @Test
+  @Tag("等价类")
   @DisplayName("FR-33 校验前端菜单/按钮权限码：只返回 allowed；继承得到的菜单为真，后端 API 权限码与无关权限为假")
   void FR33_permissionCheckCoversMenusAndButtonsOnly() throws Exception {
     JsonNode inherited = result(call("GET", url(CPM_PERMISSION_URL, "MCO"), teacher, null, 200));
@@ -332,6 +549,8 @@ class ApplicationIdentityTests {
   }
 
   @Test
+  @Tag("等价类")
+  @Tag("异常")
   @DisplayName("FR-34 按 operationId 判断能否调用接口：只返回 operationId 与 allowed；未登记 404 API_OPERATION_NOT_FOUND")
   void FR34_apiPermissionByOperationId() throws Exception {
     JsonNode check =
@@ -351,6 +570,7 @@ class ApplicationIdentityTests {
   }
 
   @Test
+  @Tag("异常")
   @DisplayName("FR-34 operationId 在同一应用内唯一，格式不合法时拒绝")
   void FR34_operationIdIsUniquePerApplication() throws Exception {
     Map<String, Object> duplicate = new HashMap<>();
@@ -371,6 +591,7 @@ class ApplicationIdentityTests {
   // ---------- 统一身份目录 ----------
 
   @Test
+  @Tag("等价类")
   @DisplayName("FR-35 逐层查询部门：不传 parentId 为根部门，传入为直接子部门；字段与分页结构符合契约")
   void FR35_departmentsAreListedLevelByLevel() throws Exception {
     JsonNode roots = result(call("GET", CPM_DEPARTMENTS_URL, teacher, null, 200));
@@ -411,6 +632,7 @@ class ApplicationIdentityTests {
   }
 
   @Test
+  @Tag("异常")
   @DisplayName("FR-35 部门查询参数校验：页码、每页条数、关键字长度 400；上级部门不存在 404；没有授权 403")
   void FR35_departmentQueryValidationAndAccess() throws Exception {
     call("GET", url(CPM_DEPARTMENTS_PAGE_URL, 0), teacher, null, 400);
@@ -426,6 +648,8 @@ class ApplicationIdentityTests {
   }
 
   @Test
+  @Tag("等价类")
+  @Tag("异常")
   @DisplayName("FR-36 部门下的用户：按工号或姓名查询，字段不含联系方式；部门不存在 404；没有授权 403")
   void FR36_departmentUsers() throws Exception {
     long roadOffice =
@@ -474,6 +698,8 @@ class ApplicationIdentityTests {
   }
 
   @Test
+  @Tag("等价类")
+  @Tag("异常")
   @DisplayName("FR-28 按统一身份用户标识查询姓名与工号；不存在 404 IDENTITY_USER_NOT_FOUND；旧路径已删除")
   void FR28_lookupUserByIdentityId() throws Exception {
     JsonNode user = result(call("GET", url(CPM_USER_URL, "SG000191"), teacher, null, 200));
@@ -488,6 +714,8 @@ class ApplicationIdentityTests {
   }
 
   @Test
+  @Tag("等价类")
+  @Tag("异常")
   @DisplayName("FR-35 部门名称同一上级下唯一、编码全局唯一；未填编码时自动编码")
   void FR35_departmentNamesAreUniquePerParentAndCodesAreUnique() throws Exception {
     call("POST", DEPARTMENTS_URL, admin, Map.of("name", "综合办公室", "parentId", hq), 409);
@@ -511,6 +739,7 @@ class ApplicationIdentityTests {
   }
 
   @Test
+  @Tag("等价类")
   @DisplayName("FR-03 用户列表按工号或姓名在数据库层检索并分页；新建用户的所属部门随结果返回")
   void FR03_userSearchIsPagedInDatabaseAndKeepsDepartment() throws Exception {
     JsonNode found = result(call("GET", url(USERS_SEARCH_URL, 1, 10, "雨桐"), admin, null, 200));
@@ -547,6 +776,8 @@ class ApplicationIdentityTests {
   // ---------- 跨域 ----------
 
   @Test
+  @Tag("等价类")
+  @Tag("异常")
   @DisplayName("FR-37 浏览器直连接口按配置放行课程前端来源：预检允许 Authorization 与 GET，未配置的来源被拒绝")
   void FR37_corsAllowsConfiguredOrigins() throws Exception {
     mvc.perform(
@@ -579,6 +810,7 @@ class ApplicationIdentityTests {
   // ---------- 审计 ----------
 
   @Test
+  @Tag("等价类")
   @DisplayName("FR-29 审计写入按 requestId 幂等，查询按应用隔离并保留操作人快照")
   void FR29_auditWriteIsIdempotentAndScoped() throws Exception {
     Map<String, Object> body =
@@ -612,6 +844,7 @@ class ApplicationIdentityTests {
   }
 
   @Test
+  @Tag("异常")
   @DisplayName("FR-29 应用内没有任何有效权限的用户不能查询审计；请求体校验 400")
   void FR29_auditQueryRequiresPermissionInApplication() throws Exception {
     call("GET", CPM_AUDIT_LOGS_URL, outsider, null, 403);
@@ -619,6 +852,7 @@ class ApplicationIdentityTests {
   }
 
   @Test
+  @Tag("等价类")
   @DisplayName("FR-30 角色继承建立与解除写入审计记录，操作人为当前管理员")
   void FR30_hierarchyChangesAreAudited() throws Exception {
     call("DELETE", url(ROLE_INHERIT_URL, adminRole, teacherRole), admin, null, 204);
@@ -633,6 +867,7 @@ class ApplicationIdentityTests {
   }
 
   @Test
+  @Tag("等价类")
   @DisplayName("NFR-11 前端菜单切换携带 X-Client-Menu，后端 logback 日志按菜单记录请求与各层调用")
   void NFR11_menuSwitchProducesLayeredLogs(CapturedOutput output) throws Exception {
     mvc.perform(
@@ -650,6 +885,7 @@ class ApplicationIdentityTests {
   }
 
   @Test
+  @Tag("等价类")
   @DisplayName("NFR-11 登录请求体中的密码不进入任何日志")
   void NFR11_loginPasswordIsNeverLogged(CapturedOutput output) throws Exception {
     appLogin("SG000001", List.of(CPM));
@@ -755,14 +991,24 @@ class ApplicationIdentityTests {
 
   /** 接入应用登录（令牌目标系统为 systems）。 */
   String appLogin(String name, List<String> systems) throws Exception {
+    return appLogin(name, systems, PASSWORD);
+  }
+
+  /** 用指定密码在课程系统登录，返回令牌。 */
+  String appLogin(String name, List<String> systems, String password) throws Exception {
     return result(
             call(
                 "POST",
                 CPM_LOGIN_URL,
                 null,
-                Map.of("username", name, "password", PASSWORD, "systems", systems),
+                Map.of("username", name, "password", password, "systems", systems),
                 200))
         .get("accessToken")
         .asString();
+  }
+
+  /** 课程系统登录请求体（测试数据的默认密码）。 */
+  Map<String, Object> appLoginBody(String name, List<String> systems) {
+    return Map.of("username", name, "password", PASSWORD, "systems", systems);
   }
 }

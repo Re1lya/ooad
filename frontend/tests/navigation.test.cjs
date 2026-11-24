@@ -2,6 +2,7 @@
 const { test } = require('node:test');
 const s = require('./support.cjs');
 
+// 测试类型：等价类
 test('FR-22 浏览器后退和前进恢复正确页面', { skip: s.skip }, async () => {
   await s.ensureConsole(await s.token());
   const browser = await s.launch();

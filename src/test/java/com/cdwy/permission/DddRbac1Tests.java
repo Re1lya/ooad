@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.cdwy.permission.support.RequestTransactionBoundary;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
@@ -27,6 +28,7 @@ class DddRbac1Tests extends PhaseTwoRbac1Tests {
 
   /** 页面和运维能读到真实装载的实现模式。 */
   @Test
+  @Tag("等价类")
   @DisplayName("FR-23 DDD 模式下角色继承模块报告 ddd 实现")
   void FR23_reportsSelectedImplementation() throws Exception {
     mvc.perform(get(SYSTEM_INFO_URL).header("Authorization", "Bearer " + admin))

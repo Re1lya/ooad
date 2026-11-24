@@ -159,6 +159,7 @@ class PhaseTwoRbac1Tests {
 
   /** FR-17：继承关系支持多级传递，并在相同令牌的下一次请求生效。 */
   @Test
+  @Tag("等价类")
   @DisplayName("FR-17 多级继承与撤回在同一Token下生效")
   void FR17_transitiveInheritanceAndRevocation() throws Exception {
     long manager = role("manager"), lead = role("lead");
@@ -185,6 +186,7 @@ class PhaseTwoRbac1Tests {
 
   /** FR-18：拒绝自继承和多级闭环，失败不污染原关系。 */
   @Test
+  @Tag("异常")
   @DisplayName("FR-18 自继承、环路、重复边及缺失对象")
   void FR18_rejectCyclesAndKeepIdempotency() throws Exception {
     long second = role("second"), third = role("third");
@@ -206,6 +208,7 @@ class PhaseTwoRbac1Tests {
 
   /** FR-19：多路径权限去重，停用阻断继承但保留其他来源。 */
   @Test
+  @Tag("等价类")
   @DisplayName("FR-19 菱形继承去重、停用隔离和直接授权")
   void FR19_diamondAndDisabledBranches() throws Exception {
     long left = role("left"), right = role("right"), top = role("top");
@@ -230,6 +233,8 @@ class PhaseTwoRbac1Tests {
 
   /** FR-20：普通用户仅能读取自身来源，不能修改继承或查看他人。 */
   @Test
+  @Tag("等价类")
+  @Tag("异常")
   @DisplayName("FR-20 继承管理权限边界与角色有效权限预览")
   void FR20_authorizationBoundaryAndPreview() throws Exception {
     long manager = role("manager");
@@ -250,6 +255,7 @@ class PhaseTwoRbac1Tests {
 
   /** FR-19：撤回一条来源不能删除另一条仍有效的授权。 */
   @Test
+  @Tag("等价类")
   @DisplayName("FR-19 多来源去重且撤回直接授权后继承授权仍有效")
   void FR19_independentSourcesSurviveDirectRevocation() throws Exception {
     long manager = role("manager");
@@ -269,6 +275,7 @@ class PhaseTwoRbac1Tests {
 
   /** FR-18：停用不能掩盖潜在环路；关系两端停用时拒绝新增。 */
   @Test
+  @Tag("异常")
   @DisplayName("FR-18 停用节点仍参与防环检查")
   void FR18_disabledIntermediateStillParticipatesInCycleCheck() throws Exception {
     long middle = role("middle"), bottom = role("bottom");
@@ -282,6 +289,7 @@ class PhaseTwoRbac1Tests {
 
   /** FR-18：并发反向加边最多成功一次，由 MySQL 行锁串行化继承图写入。 */
   @Test
+  @Tag("异常")
   @DisplayName("FR-18 并发反向继承不会形成环路")
   @Transactional(propagation = Propagation.NOT_SUPPORTED)
   void FR18_concurrentOppositeEdgesCannotFormCycle() throws Exception {

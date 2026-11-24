@@ -16,7 +16,7 @@
 | 两个系统的权限都由权限系统管理 | 实现 Apifox「统一身份鉴权」的 8 个接口（`/api/apps/{应用编码}/auth/login`、`logout`、`me`、`permissions/{permission}`、`api-permissions/{operationId}`、`departments`、`departments/{departmentId}/users`、`users/{userId}`）及审计接口 `/auth/audit-logs`，与老师课程项目管理系统的统一身份契约一致；课程系统只需配置 `IDENTITY_BASE_URL=http://rbac-backend:18081/api/apps/course-project-management`。API 资源新增后端权限码（`TC`、`CV` 等），随角色及继承下发 |
 | 前后端部署到 Docker Swarm | 已部署：权限系统 http://120.46.213.158/ （首页进权限台账，原管理控制台在 `/ui/`；stack `cdwy`，[deploy/stack.yml](deploy/stack.yml)），课程系统 http://124.70.102.248/ （stack `course-project`，[deploy/course/stack.yml](deploy/course/stack.yml)，后端用老师发布的镜像，前端按老师 master 编译，未改老师代码）；老师员工信息表的一万名员工都是测试账号（总公司员工是教师，分公司员工是学生）；权限系统与课程前端的镜像在服务器上构建，密码用 docker secret，健康检查用 Actuator；[部署说明](docs/second-review/05-deployment.adoc)、[部署证据](docs/second-review/evidence/deployment/README.md) |
 | 菜单切换产生 logback 日志 | 前端每个请求带 `X-Client-Menu`；`logback-spring.xml` + `RequestLoggingFilter`（请求号、菜单、操作人）+ `LayerLoggingAspect`（Controller / Service / DDD 应用服务 / 基础设施分层日志，令牌与密码打码） |
-| 需求与测试对应 | [需求规格](docs/second-review/01-requirements.adoc) FR-01~FR-38、NFR-01~NFR-12；[需求—测试追踪](docs/second-review/04-test-traceability.adoc)（由 `scripts/build-test-traceability.py` 按测试源码生成） |
+| 需求与测试对应 | [需求规格](docs/second-review/01-requirements.adoc) FR-01~FR-39、NFR-01~NFR-12；[需求—测试追踪](docs/second-review/04-test-traceability.adoc)（由 `scripts/build-test-traceability.py` 按测试源码生成） |
 | 按课程代码规范整改 | DTO/VO 分包并以 `DTO`/`VO` 结尾，Controller 负责 DTO → Command、Result → VO 映射；优先 CloneFactory 0.0.2 拷贝；Lombok 去样板代码，禁用 `var`；全部类与公开方法写中文 Javadoc；列表分页统一 `page`/`pageSize`/`total`；格式校验在 API 层，业务异常带稳定错误码；测试连接真实 MySQL 并回滚、带需求编号、每个错误码与不存在的 id 都有契约测试。见[详细设计](docs/second-review/03-detailed-design.adoc)“代码规范”一节 |
 | 包图、类图、顺序图、GRASP、结构化与 DDD 区别、JavaEE 技术 | [详细设计](docs/second-review/03-detailed-design.adoc)：包图、DFD、模块结构图、两个答辩 API 的两种类图与顺序图 |
 | 数据库设计（adoc） | [数据库设计](docs/second-review/02-database-design.adoc)、[增量迁移](docs/second-review/migrate-second-review.sql) |
@@ -177,9 +177,9 @@ mvn -B clean verify
 
 | 验证项 | 结果（2026-11-21） |
 |---|---|
-| 后端测试（真实 MySQL 8.4） | 186 个，0 失败、0 错误、0 跳过；两种设计路线运行同一组测试 |
+| 后端测试（真实 MySQL 8.4） | 282 个，0 失败、0 错误、0 跳过；两种设计路线运行同一组测试；每条功能需求都有等价类、边界值、异常三类测试 |
 | 错误码与不存在的 id | 53 个业务错误码全部有契约测试；40 个按 id 操作的请求组合覆盖不存在的 id |
-| JaCoCo | 指令 93.6%、分支 84.0%、行 94.0%、方法 92.0%（含 CloneFactory 生成代码） |
+| JaCoCo | 指令 95.2%、分支 85.1%、行 95.8%、方法 94.6%（含 CloneFactory 生成代码） |
 | 前端 | 两个前端的 TypeScript 检查与 Vite 生产构建通过；权限台账 8 个浏览器测试、原管理控制台 5 组浏览器测试，两种设计路线各自通过（2026-11-22） |
 | 跨系统联调 | 与老师课程系统联调（2026-11-22 按老师的部署通知更新：后端用老师发布的镜像，前端按 master `990cea2` 编译，一万名员工都是测试账号），两种模式与公网部署各 45/45 项通过，13 张走查截图 |
 

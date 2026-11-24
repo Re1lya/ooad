@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -128,6 +129,7 @@ class ErrorCodeContractTests {
 
   /** NFR-01：未登录、凭证错误与越权分别返回 UNAUTHORIZED、FORBIDDEN。 */
   @Test
+  @Tag("异常")
   @DisplayName("NFR-01 未登录或凭证错误返回 UNAUTHORIZED，普通用户调用管理接口返回 FORBIDDEN")
   void NFR01_authenticationAndAuthorizationCodes() throws Exception {
     expectError(HttpMethod.GET, USERS_URL, null, null, 401, "UNAUTHORIZED");
@@ -143,6 +145,7 @@ class ErrorCodeContractTests {
 
   /** NFR-07：请求格式问题在 API 层拦截，统一返回 BAD_REQUEST，不进入业务层。 */
   @Test
+  @Tag("异常")
   @DisplayName("NFR-07 字段校验失败、JSON 无法解析、未知字段、参数越界或类型不符都返回 BAD_REQUEST")
   void NFR07_malformedRequestsReturnBadRequest() throws Exception {
     expectError(HttpMethod.POST, ROLES_URL, admin, Map.of("code", "Bad Code", "name", "x"), 400, "BAD_REQUEST");
@@ -156,6 +159,7 @@ class ErrorCodeContractTests {
 
   /** FR-02：改密码时原密码错误视为凭证错误，新密码须满足密码策略。 */
   @Test
+  @Tag("异常")
   @DisplayName("FR-02 本人改密：原密码错误返回 UNAUTHORIZED，新密码太弱返回 PASSWORD_POLICY_VIOLATION")
   void FR02_passwordChangeCodes() throws Exception {
     expectError(
@@ -176,6 +180,7 @@ class ErrorCodeContractTests {
 
   /** FR-03：新建用户时登录名唯一、密码满足策略、所选部门存在。 */
   @Test
+  @Tag("异常")
   @DisplayName("FR-03 新建用户：登录名重复 USERNAME_EXISTS，弱密码 PASSWORD_POLICY_VIOLATION，部门不存在 DEPARTMENT_NOT_FOUND")
   void FR03_userCreationCodes() throws Exception {
     expectError(HttpMethod.POST, USERS_URL, admin, user("worker"), 409, "USERNAME_EXISTS");
@@ -189,6 +194,7 @@ class ErrorCodeContractTests {
 
   /** FR-04：正式员工不设期限；外部、临时人员必须设期限，且不超过配置的上限。 */
   @Test
+  @Tag("异常")
   @DisplayName("FR-04 人员期限不符合人员类型或超过上限时返回 ACCESS_WINDOW_INVALID")
   void FR04_accessWindowCodes() throws Exception {
     Map<String, Object> employee = user("employee");
@@ -205,6 +211,7 @@ class ErrorCodeContractTests {
 
   /** FR-05：部门同级不重名、编码唯一、树不成环，有子部门或员工时不能删除。 */
   @Test
+  @Tag("异常")
   @DisplayName("FR-05 部门：同级重名、编码重复、形成环路、仍被使用时分别返回对应错误码")
   void FR05_departmentCodes() throws Exception {
     long root = create(DEPARTMENTS_URL, Map.of("name", "总公司", "code", "HQ"));
@@ -225,6 +232,7 @@ class ErrorCodeContractTests {
 
   /** FR-06：应用编码唯一；有权限或资源时不能删除；引用不存在的应用返回 SYSTEM_NOT_FOUND。 */
   @Test
+  @Tag("异常")
   @DisplayName("FR-06 应用：编码重复 SYSTEM_CODE_EXISTS，仍被引用 SYSTEM_IN_USE，引用不存在的应用 SYSTEM_NOT_FOUND")
   void FR06_systemCodes() throws Exception {
     expectError(
@@ -250,6 +258,7 @@ class ErrorCodeContractTests {
 
   /** FR-07：角色编码唯一；仍有授权或继承关系时不能删除。 */
   @Test
+  @Tag("异常")
   @DisplayName("FR-07 角色：编码重复 ROLE_CODE_EXISTS，仍有授权 ROLE_IN_USE，仍有继承关系 ROLE_HAS_INHERITANCE")
   void FR07_roleCodes() throws Exception {
     expectError(HttpMethod.POST, ROLES_URL, admin, Map.of("code", "teacher", "name", "重复"), 409, "ROLE_CODE_EXISTS");
@@ -263,6 +272,7 @@ class ErrorCodeContractTests {
 
   /** FR-08：前端权限树的结构规则。 */
   @Test
+  @Tag("异常")
   @DisplayName("FR-08 前端权限：编码重复、按钮无上级、按钮带地址、上级不合法、形成环路、有子节点改按钮、仍被使用")
   void FR08_permissionTreeCodes() throws Exception {
     expectError(
@@ -303,6 +313,7 @@ class ErrorCodeContractTests {
 
   /** FR-09：同一应用内方法加路径唯一、operationId 唯一；仍绑定前端权限时不能删除。 */
   @Test
+  @Tag("异常")
   @DisplayName("FR-09 API 资源：路由重复 API_RESOURCE_EXISTS，operationId 重复 API_OPERATION_EXISTS，仍被绑定 API_RESOURCE_IN_USE")
   void FR09_resourceCodes() throws Exception {
     expectError(
@@ -348,6 +359,7 @@ class ErrorCodeContractTests {
 
   /** FR-10、FR-11：停用的角色或前端权限不能再新增授权。 */
   @Test
+  @Tag("异常")
   @DisplayName("FR-10 FR-11 给用户授予停用角色、给角色授予停用权限都返回 GRANT_TARGET_INACTIVE")
   void FR10_inactiveGrantTargets() throws Exception {
     call(HttpMethod.PUT, ROLE_STATUS_URL, admin, Map.of("enabled", false), 200, role);
@@ -360,6 +372,7 @@ class ErrorCodeContractTests {
 
   /** FR-12：前端权限只能绑定同一应用的 API 资源。 */
   @Test
+  @Tag("异常")
   @DisplayName("FR-12 前端权限绑定其他应用的 API 资源返回 BINDING_SYSTEM_MISMATCH")
   void FR12_bindingAcrossSystems() throws Exception {
     long office = create(SYSTEMS_URL, Map.of("code", "oa", "name", "办公系统"));
@@ -373,6 +386,7 @@ class ErrorCodeContractTests {
 
   /** FR-18：继承图拒绝自继承与环路，关系两端的角色必须启用。 */
   @Test
+  @Tag("异常")
   @DisplayName("FR-18 角色继承：自继承 ROLE_SELF_INHERITANCE，成环 ROLE_INHERITANCE_CYCLE，端点停用 ROLE_DISABLED")
   void FR18_hierarchyCodes() throws Exception {
     long senior = create(ROLES_URL, Map.of("code", "senior", "name", "高级"));
@@ -386,6 +400,7 @@ class ErrorCodeContractTests {
 
   /** FR-38：权限系统自身的内置应用、管理员角色、内置菜单按钮与管理接口不能停用或删除，否则所有人（包括管理员）都会进不了控制台。 */
   @Test
+  @Tag("异常")
   @DisplayName("FR-38 停用或删除内置应用、内置管理员角色、内置菜单按钮与管理接口都返回 CONSOLE_BUILT_IN，重新启用仍然允许")
   void FR38_builtInConsoleObjectsCannotBeDisabledOrDeleted() throws Exception {
     long console = id("select id from biz_system where code = 'rbac'");
@@ -413,6 +428,7 @@ class ErrorCodeContractTests {
 
   /** FR-31：接入应用登录时，令牌目标 systems 必须包含当前应用，且每个目标都已登记。 */
   @Test
+  @Tag("异常")
   @DisplayName("FR-31 接入应用登录：systems 不含当前应用 LOGIN_TARGET_NOT_IN_SYSTEMS，含未登记应用 LOGIN_SYSTEM_UNKNOWN")
   void FR31_applicationLoginTargets() throws Exception {
     expectError(
@@ -435,6 +451,7 @@ class ErrorCodeContractTests {
 
   /** FR-29：审计记录的 before、after 序列化后不能超过列宽。 */
   @Test
+  @Tag("异常")
   @DisplayName("FR-29 写入审计记录时 before 内容过长返回 AUDIT_SNAPSHOT_TOO_LARGE")
   void FR29_auditSnapshotTooLarge() throws Exception {
     String token =
@@ -459,6 +476,7 @@ class ErrorCodeContractTests {
 
   /** NFR-03：并发写入漏过业务检查时，由数据库唯一约束兜底，并翻译为 409 DATA_CONFLICT。 */
   @Test
+  @Tag("异常")
   @DisplayName("NFR-03 业务检查之外的唯一约束冲突由数据库拦截，统一翻译为 DATA_CONFLICT")
   void NFR03_uniqueViolationFallsBackToDataConflict() {
     Role duplicate = new Role();
@@ -473,6 +491,7 @@ class ErrorCodeContractTests {
 
   /** NFR-07：所有按 id 操作的接口，id 不存在时返回 404 和对应对象的业务码；两个 id 的接口分别覆盖。 */
   @Test
+  @Tag("异常")
   @DisplayName("NFR-07 所有按 id 操作的接口对不存在的 id 返回 404 与对应的 *_NOT_FOUND 业务码")
   void NFR07_everyByIdEndpointRejectsMissingIds() {
     Map<String, Object> userUpdate = Map.of("displayName", "不存在", "personType", "EMPLOYEE");

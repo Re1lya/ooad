@@ -3,6 +3,7 @@ const { test } = require('node:test');
 const s = require('./support.cjs');
 const { assert } = s;
 
+// 测试类型：等价类、异常
 test('FR-16 FR-17 FR-18 FR-19 角色层级、循环继承与有效权限来源', { skip: s.skip }, async () => {
   const admin = await s.token();
   await s.ensureConsole(admin);
