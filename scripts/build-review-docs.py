@@ -221,7 +221,7 @@ for (verb,path),value in sorted(operations.items(),key=lambda item:(item[0][1],i
     runtime=actual[(verb,path)]
     files=list(SRC.glob('controller/**/'+runtime['controller']+'.java'));assert len(files)==1
     source=files[0].relative_to(ROOT).as_posix()
-    params=[{'name':key,'in':'path','required':True,'schema':string() if key=='systemCode' or (key=='userId' and path.startswith('/api/apps/')) else integer()} for key in re.findall(r'\{(\w+)\}',path)]
+    params=[{'name':key,'in':'path','required':True,'schema':string() if key in ('systemCode','operationId','permission') or (key=='userId' and path.startswith('/api/apps/')) else integer()} for key in re.findall(r'\{(\w+)\}',path)]
     if path=='/api/apps/{systemCode}/auth/audit-logs' and verb=='GET':
         params += [{'name':key,'in':'query','schema':schema} for key,schema in [('actor',string()),('actorId',integer()),('target',string()),('from',string(format='date-time')),('to',string(format='date-time')),('page',{'type':'integer','minimum':1,'default':1}),('pageSize',{'type':'integer','minimum':1,'maximum':100,'default':20})]]
     if path=='/api/audit-logs':
