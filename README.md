@@ -21,7 +21,7 @@
 | 包图、类图、顺序图、GRASP、结构化与 DDD 区别、JavaEE 技术 | [详细设计](docs/second-review/03-detailed-design.adoc)：包图、DFD、模块结构图、两个答辩 API 的两种类图与顺序图 |
 | 数据库设计（adoc） | [数据库设计](docs/second-review/02-database-design.adoc)、[增量迁移](docs/second-review/migrate-second-review.sql) |
 | 课程系统登记与联调 | [scripts/register-course-app.py](scripts/register-course-app.py) 用普通管理 API 登记 `course-project-management` 应用的菜单、按钮、API、角色，同步员工信息表，并把一万名员工启用为测试账号；[scripts/verify-course-integration.py](scripts/verify-course-integration.py) 跨系统验收（45 项；结构化、DDD 两种模式各 45/45 通过，公网部署后复核通过） |
-| 课程系统构建 | [deploy/course](deploy/course)：后端用老师发布的镜像 `course-mgt-backend:0.0.1`，前端按老师仓库 master（`990cea2`）编译，不打补丁 |
+| 课程系统构建 | [deploy/course](deploy/course)：后端用老师发布的镜像 `course-mgt-backend:0.0.1`（11-23 重新发布版，以权限码作为 operationId 查接口权限），前端按老师仓库 master（`990cea2`）编译，不打补丁 |
 
 ## 你应该先看哪里
 

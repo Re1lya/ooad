@@ -29,6 +29,8 @@ COURSE = os.environ.get("COURSE_URL", "http://127.0.0.1:8080").rstrip("/")
 ORIGIN = os.environ.get("COURSE_ORIGIN", "http://127.0.0.1:4173").rstrip("/")
 HEAD_OFFICE = os.environ.get("HEAD_OFFICE", "总公司")
 MENUS = {"MCO", "MTR", "MTE", "MLG"}
+# 课程后端 @ApiPermission 用到的权限码（老师 AuthorityCodes），它以权限码作为 operationId 调 /auth/api-permissions
+AUTHORITY_CODES = ["CV", "CR", "CE", "CD", "CTM", "TC", "TE", "TD", "TCM", "TV", "TEC", "TEE", "TED", "AV"]
 results = []
 
 
@@ -133,10 +135,13 @@ def main():
     check("课程管理员有“课程管理”菜单", body == {"allowed": True}
           and headers.get("Access-Control-Allow-Origin") == ORIGIN)
     check("普通教师没有“课程管理”菜单", not allowed(teacher, "MCO"))
-    status, body, _ = call(IDENTITY, "GET", "/auth/api-permissions/createTeacher", admin)
-    check("按 operationId 判断：课程管理员可以添加教师", body == {"operationId": "createTeacher", "allowed": True})
-    status, body, _ = call(IDENTITY, "GET", "/auth/api-permissions/createTeacher", teacher)
-    check("按 operationId 判断：普通教师不能添加教师", body == {"operationId": "createTeacher", "allowed": False})
+    status, body, _ = call(IDENTITY, "GET", "/auth/api-permissions/TEC", admin)
+    check("按 operationId 判断：课程管理员可以添加教师", body == {"operationId": "TEC", "allowed": True})
+    status, body, _ = call(IDENTITY, "GET", "/auth/api-permissions/TEC", teacher)
+    check("按 operationId 判断：普通教师不能添加教师", body == {"operationId": "TEC", "allowed": False})
+    answers = {code: call(IDENTITY, "GET", f"/auth/api-permissions/{code}", admin)[1] for code in AUTHORITY_CODES}
+    missing = [code for code, body in answers.items() if body != {"operationId": code, "allowed": True}]
+    check("课程后端拦截器用到的权限码都已登记为 operationId，课程管理员全部放行", not missing, f"未通过：{missing}")
     status, body, _ = call(IDENTITY, "GET", "/auth/api-permissions/noSuchOperation", admin)
     check("未登记的 operationId 返回 404", status == 404 and body.get("code") == "API_OPERATION_NOT_FOUND")
 

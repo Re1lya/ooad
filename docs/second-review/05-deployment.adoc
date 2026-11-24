@@ -14,17 +14,19 @@ Cdwy 小组
 
 2026-11-22 晚并入同组重构的前端“权限台账”并补齐缺失的功能，权限系统滚动更新到 `39ba5ec`：首页 http://120.46.213.158/ 进入权限台账，原管理控制台仍在 `/ui/`。后端代码与 `b56e81c` 相同，镜像只是多带了权限台账的页面；数据库不变。更新后公网接口验收 45/45、浏览器走查 13 步（控制台部分在权限台账上操作）重新通过。
 
+2026-11-24 跟进老师 11-23 的更新：老师用同一标签 `0.0.1` 重新发布了课程后端（对应老师仓库 master `24a4d7d`），新版在 14 个管理接口（课程、学期、教师、操作日志）前，以权限码（老师代码中的 `AuthorityCodes`，如 `TC`、`TV`、`TEC`）作为 operationId 调 `/auth/api-permissions/{operationId}`。我们把课程系统 API 资源的 operationId 改为对应的权限码（`CTM`、`TCM` 各对应两个接口，operationId 在应用内唯一，只给其中一个；两个接口绑在同一个按钮上，授权结果相同），课程后端改用新镜像；前端在 `990cea2` 之后只多了控制台日志，未重新编译。更新后公网接口验收 46/46 通过，权限系统日志中可见课程后端按权限码查询。
+
 [cols="2,3,2,3",options="header"]
 |===
 |系统 |访问地址 |stack |位置与镜像
 |统一权限管理系统 |http://120.46.213.158/ （权限台账；原管理控制台 http://120.46.213.158/ui/index.html） |`cdwy` |CDWY3（`hcss-ecs-a955`）；`cdwy/rbac-backend:39ba5ec`、`cdwy/rbac-frontend:39ba5ec`；结构化路线
-|课程项目管理系统 |http://124.70.102.248/ |`course-project` |CDWY4（`hcss-ecs-1488`）；后端为老师发布的 `oomall-javaee/course-mgt-backend:0.0.1`（按摘要 `sha256:ed56582e…` 固定），前端 `course-mgt-frontend:990cea2` 由我们按老师仓库编译；未改老师代码；DDD 路线
+|课程项目管理系统 |http://124.70.102.248/ |`course-project` |CDWY4（`hcss-ecs-1488`）；后端为老师发布的 `oomall-javaee/course-mgt-backend:0.0.1`（11-23 重新发布版，按摘要 `sha256:88a476df…` 固定），前端 `course-mgt-frontend:990cea2` 由我们按老师仓库编译；未改老师代码；DDD 路线
 |数据库 |集群内 `mysql:3306` |`lab`（已有） |CDWY2 的 `lab_mysql`（MySQL 9.2），新建库 `cdwy_rbac`、`course_project`
 |===
 
 测试账号是老师员工信息表中的一万名员工：总公司员工（SG000001～SG000190）从教师入口登录，分公司员工（SG000191～SG010000）从学生入口登录，统一使用测试密码（不写进仓库，检查时当面提供）。
 
-从外部地址运行接口验收脚本，45 项全部通过；浏览器走查与 Swarm 状态见 link:evidence/deployment/README.md[部署证据]。
+从外部地址运行接口验收脚本，46 项全部通过；浏览器走查与 Swarm 状态见 link:evidence/deployment/README.md[部署证据]。
 
 == 部署拓扑
 
@@ -197,7 +199,7 @@ RBAC_ADMIN=admin RBAC_ADMIN_PASSWORD=... DEMO_PASSWORD=... python3 scripts/verif
 |6 |用 SG000003 或任一总公司工号从教师入口登录；用 SG000191 或任一分公司工号从学生入口登录 |教师没有“管理”组；学生进入学生工作台
 |7 |在权限系统撤销“课程督导”的“课程管理”，刷新课程系统 |课程管理员的“课程”菜单变灰；恢复后重新可用，无需重新登录
 |8 |“添加教师”中选公司、选部门、选人 |姓名、工号来自权限系统，保存后出现在教师列表
-|9 |运行验收脚本 |45/45 通过
+|9 |运行验收脚本 |46/46 通过
 |===
 
 == 旧版权限系统的清理

@@ -3,7 +3,7 @@
 完整说明见 [docs/second-review/05-deployment.adoc](../docs/second-review/05-deployment.adoc)。当前部署（2026-11-22 更新）：
 
 - 统一权限管理系统：http://120.46.213.158/ （stack `cdwy`，CDWY3）：首页进权限台账，原管理控制台在 `/ui/`
-- 课程项目管理系统：http://124.70.102.248/ （stack `course-project`，CDWY4）：后端用老师发布的镜像 `course-mgt-backend:0.0.1`，前端按老师仓库 master `990cea2` 编译，未改老师代码
+- 课程项目管理系统：http://124.70.102.248/ （stack `course-project`，CDWY4）：后端用老师发布的镜像 `course-mgt-backend:0.0.1`（11-23 重新发布版，按摘要固定），前端按老师仓库 master `990cea2` 编译，未改老师代码
 - 测试账号：老师员工信息表中的一万名员工，总公司员工从教师入口登录，分公司员工从学生入口登录，统一使用测试密码（不写进仓库）
 
 | 文件 | 用途 |

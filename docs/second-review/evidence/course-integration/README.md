@@ -5,7 +5,7 @@
 每种路线都从空库开始，依次运行：
 
 1. `scripts/register-course-app.py`：登记应用、菜单与按钮、API 资源（含 operationId）、角色与继承；同步老师的员工信息表（一万人）；按老师的约定把一万名员工都启用为测试账号，四个演示工号另外分配课程督导、课程管理员角色。
-2. `scripts/verify-course-integration.py`：45 项接口验收，课程接口经课程前端的 `/api` 代理调用，与浏览器路径一致。
+2. `scripts/verify-course-integration.py`：接口验收（下表为 11-22 的 45 项；11-24 起增加“课程后端用到的权限码都已登记为 operationId”一项，共 46 项，结果见部署证据），课程接口经课程前端的 `/api` 代理调用，与浏览器路径一致。
 3. `frontend/tests/course-walkthrough.cjs`：用 Chrome 实际操作课程前端和权限台账，逐步截图。
 
 | 文件 | 内容 |

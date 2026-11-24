@@ -58,27 +58,29 @@ FRONTEND = [
 ]
 
 # (名称, 方法, 路径, 后端权限码, operationId)。
-# 前半部分是课程后端自己的接口，权限码随 /auth/me 下发给课程后端做强校验；
+# 前半部分是课程后端自己的接口：课程后端在这些接口前以权限码作为 operationId 调
+# /auth/api-permissions/{operationId}（老师 AuthorityCodes），所以 operationId 就是权限码。
+# CTM、TCM 各对应两个接口，operationId 在应用内唯一，只给其中一个；两个接口绑在同一个按钮上，授权结果相同。
 # 后三项是权限系统提供给课程系统的组织架构接口（/api/apps/<应用>/auth/...），按绑定授权。
 RESOURCES = [
-    ("管理员课程列表", "GET", "/admin/courses", "CV", "listAdminCourses"),
-    ("审核课程", "POST", "/courses/{courseId}/review", "CR", "reviewCourse"),
-    ("修改课程", "PATCH", "/courses/{courseId}", "CE", "updateCourse"),
-    ("删除课程", "DELETE", "/courses/{courseId}", "CD", "deleteCourse"),
-    ("拷贝课程", "POST", "/courses/copy", "CC", "copyCourse"),
-    ("维护课程组长", "PUT", "/courses/{courseId}/leaders", "CTM", "setCourseLeaders"),
+    ("管理员课程列表", "GET", "/admin/courses", "CV", "CV"),
+    ("审核课程", "POST", "/courses/{courseId}/review", "CR", "CR"),
+    ("修改课程", "PATCH", "/courses/{courseId}", "CE", "CE"),
+    ("删除课程", "DELETE", "/courses/{courseId}", "CD", "CD"),
+    ("拷贝课程", "POST", "/courses/copy", "CC", "CC"),
+    ("维护课程组长", "PUT", "/courses/{courseId}/leaders", "CTM", "CTM"),
     ("维护任课教师", "PUT", "/classes/{classId}/teachers", "CTM", "setClassTeachers"),
-    ("新建学期", "POST", "/terms", "TC", "createTerm"),
-    ("修改学期", "PATCH", "/terms/{termId}", "TE", "updateTerm"),
-    ("删除学期", "DELETE", "/terms/{termId}", "TD", "deleteTerm"),
-    ("设置当前学期", "PUT", "/current-term", "TCM", "replaceCurrentTerm"),
+    ("新建学期", "POST", "/terms", "TC", "TC"),
+    ("修改学期", "PATCH", "/terms/{termId}", "TE", "TE"),
+    ("删除学期", "DELETE", "/terms/{termId}", "TD", "TD"),
+    ("设置当前学期", "PUT", "/current-term", "TCM", "TCM"),
     ("取消当前学期", "DELETE", "/current-term", "TCM", "clearCurrentTerm"),
-    ("教师列表", "GET", "/teachers", "TV", "listTeachers"),
-    ("添加教师", "POST", "/teachers", "TEC", "createTeacher"),
-    ("修改教师", "PATCH", "/teachers/{teacherId}", "TEE", "updateTeacher"),
-    ("删除教师", "DELETE", "/teachers/{teacherId}", "TED", "deleteTeacher"),
-    ("查看全部操作日志", "GET", "/audit-logs", "AV", "listAuditLogs"),
-    ("查询统一身份用户", "GET", "/auth/users/{userId}", "UL", "lookupIdentityUser"),
+    ("教师列表", "GET", "/teachers", "TV", "TV"),
+    ("添加教师", "POST", "/teachers", "TEC", "TEC"),
+    ("修改教师", "PATCH", "/teachers/{teacherId}", "TEE", "TEE"),
+    ("删除教师", "DELETE", "/teachers/{teacherId}", "TED", "TED"),
+    ("查看全部操作日志", "GET", "/audit-logs", "AV", "AV"),
+    ("查询统一身份用户", "GET", "/auth/users/{userId}", "UL", "UL"),
     ("组织架构部门", "GET", "/auth/departments", None, "listIdentityDepartments"),
     ("部门下的人员", "GET", "/auth/departments/{departmentId}/users", None, "listIdentityDepartmentUsers"),
 ]
@@ -185,6 +187,23 @@ def multipart(boundary, form):
     return b"".join(parts)
 
 
+def replace_resource(api, app, permissions, resource, name, code, operation):
+    """operationId 登记后不能修改：解除本脚本建立的按钮绑定，删除旧资源，再按新 operationId 登记。
+
+    之后 register 会重新建立绑定。资源还被其他菜单或按钮绑定时删除返回 409，脚本停下。
+    """
+    route = (resource["method"], resource["path"])
+    for permission, routes in BINDINGS.items():
+        if route in routes:
+            api.call("DELETE", f"/api/permissions/{permissions[permission]['id']}/resources/{resource['id']}")
+    api.call("DELETE", f"/api/resources/{resource['id']}")
+    body = {"systemId": app["id"], "name": name, "method": route[0], "path": route[1], "operationId": operation}
+    if code:
+        body["code"] = code
+    print(f"重新登记 {route[0]} {route[1]}：operationId {resource.get('operationId')} → {operation}")
+    return api.call("POST", "/api/resources", body)
+
+
 def register(api):
     systems = {s["code"]: s for s in api.call("GET", "/api/systems")}
     app = systems.get(APP["code"]) or api.call("POST", "/api/systems", APP)
@@ -217,8 +236,7 @@ def register(api):
                 body["code"] = code
             resource = api.call("POST", "/api/resources", body)
         elif resource.get("operationId") != operation:
-            print(f"注意：{method} {path} 已登记但 operationId 为 {resource.get('operationId')}，"
-                  f"应为 {operation}；请在控制台删除后重跑本脚本")
+            resource = replace_resource(api, app, permissions, resource, name, code, operation)
         resources[(method, path)] = resource
     print(f"API 资源 {len(resources)} 个")
 
