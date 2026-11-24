@@ -1,6 +1,6 @@
 = 数据库设计（第二次检查版）
 Cdwy 小组
-:revdate: 2026-11-18
+:revdate: 2026-11-24
 :toc: left
 :sectnums:
 :table-caption: 表
@@ -40,13 +40,13 @@ image::er-physical.png[物理 ER,900]
 [cols="2,2,4",options="header"]
 |===
 |表 |主键 / 唯一键 |外键与说明
-|`sys_department` |id；`uk_department_name` |`parent_id → sys_department`
+|`sys_department` |id；`uk_department_sibling(parent_id, name)`、`uk_department_code(code)` |`parent_id → sys_department`；同一上级下名称唯一，编码全局唯一（可空，新建时留空按编号生成）
 |`sys_user` |id |`department_id → sys_department`；人员身份、状态、有效期、凭证版本
 |`sys_account` |user_id |`user_id → sys_user`；`uk_account_username`；用户凭证技术拆表（同一实体 `@SecondaryTable`）
 |`sys_role` |id；`uk_role_code` |—
 |`biz_system` |id；`uk_system_code` |—
 |`sys_permission` |id；`uk_permission_code` |`system_id → biz_system`，`parent_id → sys_permission`；type 只允许 MENU/BUTTON
-|`api_resource` |id；`uk_api_route(system_id, method, path)` |`system_id → biz_system`；*本轮新增* `code`（可空，后端权限码）
+|`api_resource` |id；`uk_api_route(system_id, method, path)`、`uk_api_operation(system_id, operation_id)` |`system_id → biz_system`；*本轮新增* `code`（可空，后端权限码，不唯一）与 `operation_id`（可空，同一应用内唯一，供 `/auth/api-permissions/{operationId}` 查询）
 |`sys_user_role` |id；`uk_sys_user_role(user_id, role_id)` |两个外键
 |`sys_role_permission` |id；`uk_sys_role_permission(role_id, permission_id)` |两个外键
 |`permission_api` |id；`uk_permission_api(permission_id, resource_id)` |两个外键
@@ -60,6 +60,7 @@ image::er-physical.png[物理 ER,900]
 |===
 |变更 |原因
 |`api_resource.code` |课程系统按后端权限码（`TC`、`CV` 等）做方法级授权；权限码登记在 API 资源上，经“前端权限—API”绑定随角色下发。一个权限码可覆盖多个接口（`TCM` 同时覆盖 `PUT`、`DELETE /current-term`），因此不设唯一键
+|`api_resource.operation_id` |课程后端在管理接口前按 operationId 调 `/auth/api-permissions/{operationId}` 判断能否调用（老师 11-23 的版本以权限码作为 operationId）；同一应用内唯一，一个 operationId 只对应一个接口
 |`sys_audit_log` |课程系统把关键操作写入统一身份系统并从中查询（老师课程系统的既有契约）；本系统也记录角色继承变更
 |===
 
