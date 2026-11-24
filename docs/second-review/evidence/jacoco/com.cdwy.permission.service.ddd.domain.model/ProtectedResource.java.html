@@ -51,8 +51,8 @@ import com.cdwy.permission.service.port.error.InvalidDataException;
 
   /** 更名不会修改既有 HTTP 资源标识。 */
   public void rename(String value) {
-<span class="nc" id="L54">    name = value;</span>
-<span class="nc" id="L55">  }</span>
+<span class="fc" id="L54">    name = value;</span>
+<span class="fc" id="L55">  }</span>
 
   /**
    * 启停 API 资源；停用后仍优先匹配该资源，不能借更宽泛的授权绕过。控制台的内置管理接口不能停用，否则所有人（包括管理员）都调用不了。
@@ -73,8 +73,8 @@ import com.cdwy.permission.service.port.error.InvalidDataException;
    */
   public void assertDeletable(boolean builtIn, boolean bound) {
 <span class="fc" id="L75">    assertNotBuiltIn(builtIn);</span>
-<span class="pc bpc" id="L76" title="1 of 2 branches missed.">    if (bound) throw new com.cdwy.permission.service.port.error.ConflictException(&quot;API_RESOURCE_IN_USE&quot;, &quot;API 资源仍绑定前端权限&quot;);</span>
-<span class="nc" id="L77">  }</span>
+<span class="fc bfc" id="L76" title="All 2 branches covered.">    if (bound) throw new com.cdwy.permission.service.port.error.ConflictException(&quot;API_RESOURCE_IN_USE&quot;, &quot;API 资源仍绑定前端权限&quot;);</span>
+<span class="fc" id="L77">  }</span>
 
   private static void assertNotBuiltIn(boolean builtIn) {
 <span class="fc bfc" id="L80" title="All 2 branches covered.">    if (builtIn)</span>

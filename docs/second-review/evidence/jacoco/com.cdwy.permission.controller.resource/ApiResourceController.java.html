@@ -45,7 +45,7 @@ public class ApiResourceController {
   /** 修改名称。 */
   @PutMapping(&quot;/{id}&quot;)
   public ApiResourceVO update(@PathVariable Long id, @Valid @RequestBody ApiResourceUpdateDTO input) {
-<span class="nc" id="L48">    return mapper.toVO(service.update(id, mapper.toCommand(input)));</span>
+<span class="fc" id="L48">    return mapper.toVO(service.update(id, mapper.toCommand(input)));</span>
   }
 
   /** 使资源生效或失效；失效后该接口不可调用。 */
@@ -58,7 +58,7 @@ public class ApiResourceController {
   @DeleteMapping(&quot;/{id}&quot;)
   @ResponseStatus(HttpStatus.NO_CONTENT)
   public void delete(@PathVariable Long id) {
-<span class="nc" id="L61">    service.delete(id);</span>
-<span class="nc" id="L62">  }</span>
+<span class="fc" id="L61">    service.delete(id);</span>
+<span class="fc" id="L62">  }</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

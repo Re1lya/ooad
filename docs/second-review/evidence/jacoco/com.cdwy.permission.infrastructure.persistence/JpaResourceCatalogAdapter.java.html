@@ -65,8 +65,8 @@ public class JpaResourceCatalogAdapter implements ResourceCatalog {
    * 要到后续刷新（通常是事务提交）时才抛出，不经本适配器翻译。
    */
   public void delete(Long id) {
-<span class="nc" id="L68">    data.deleteById(id);</span>
-<span class="nc" id="L69">  }</span>
+<span class="fc" id="L68">    data.deleteById(id);</span>
+<span class="fc" id="L69">  }</span>
 
   /** 应用删除的反向引用检查。 */
   public boolean inSystem(Long id) {

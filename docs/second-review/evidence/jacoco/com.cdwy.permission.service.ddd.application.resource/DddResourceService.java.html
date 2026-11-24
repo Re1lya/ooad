@@ -86,9 +86,9 @@ public class DddResourceService implements ResourceUseCase {
   /** 修改显示名称。 */
   @Transactional
   public ResourceData.View update(Long id, ResourceData.Update input) {
-<span class="nc" id="L89">    ProtectedResource n = require(id);</span>
-<span class="nc" id="L90">    n.rename(input.name());</span>
-<span class="nc" id="L91">    return view(resources.save(n));</span>
+<span class="fc" id="L89">    ProtectedResource n = require(id);</span>
+<span class="fc" id="L90">    n.rename(input.name());</span>
+<span class="fc" id="L91">    return view(resources.save(n));</span>
   }
 
   /** 停用仍保留资源标识防止宽泛规则绕过。 */
@@ -103,9 +103,9 @@ public class DddResourceService implements ResourceUseCase {
   @Transactional
   public void delete(Long id) {
 <span class="fc" id="L105">    ProtectedResource n = require(id);</span>
-<span class="pc" id="L106">    n.assertDeletable(builtIn(n), assignments.bindings().stream().anyMatch(e -&gt; e.right().equals(id)));</span>
-<span class="nc" id="L107">    resources.delete(id);</span>
-<span class="nc" id="L108">  }</span>
+<span class="fc" id="L106">    n.assertDeletable(builtIn(n), assignments.bindings().stream().anyMatch(e -&gt; e.right().equals(id)));</span>
+<span class="fc" id="L107">    resources.delete(id);</span>
+<span class="fc" id="L108">  }</span>
 
   /** 控制台的内置管理接口：属于内置应用 rbac，且方法与路径在内置目录中。 */
   private boolean builtIn(ProtectedResource n) {

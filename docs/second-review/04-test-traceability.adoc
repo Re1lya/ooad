@@ -19,7 +19,7 @@ mvn -B clean verify          # 同时生成 target/site/jacoco/index.html
 python3 scripts/build-test-traceability.py   # 按测试源码重新生成本文第 3 节的三张表
 ----
 
-2026-11-24 结果（本机 MySQL 8.4）：315 个测试，失败 0、错误 0、跳过 0。JaCoCo：指令 97.8%、分支 89.1%、行 98.2%、方法 97.2%（含 CloneFactory 生成代码）。这次运行的完整报告存档在 link:evidence/jacoco/index.html[evidence/jacoco/index.html]，可逐个包、类查看每一行的覆盖情况。
+2026-11-24 结果（本机 MySQL 8.4）：321 个测试，失败 0、错误 0、跳过 0。JaCoCo：指令 98.3%、分支 89.3%、行 98.7%、方法 97.9%（含 CloneFactory 生成代码）。这次运行的完整报告存档在 link:evidence/jacoco/index.html[evidence/jacoco/index.html]，可逐个包、类查看每一行的覆盖情况。
 
 == 测试约定
 
@@ -54,7 +54,7 @@ python3 scripts/build-test-traceability.py   # 按测试源码重新生成本文
 |测试类 |设计路线 |测试数
 |`ApplicationIdentityTests` / `DddApplicationIdentityTests` |结构化 + DDD |89
 |`ConsoleRbacTests` / `DddConsoleRbacTests` |结构化 + DDD |14
-|`ConsoleRequirementTests` / `DddConsoleRequirementTests` |结构化 + DDD |74
+|`ConsoleRequirementTests` / `DddConsoleRequirementTests` |结构化 + DDD |80
 |`DirectorySyncTests` / `DddDirectorySyncTests` |结构化 + DDD |24
 |`DualDesignBoundaryTests` |通用 |5
 |`ErrorCodeContractTests` / `DddErrorCodeContractTests` |结构化 + DDD |38
@@ -96,7 +96,10 @@ python3 scripts/build-test-traceability.py   # 按测试源码重新生成本文
 `ConsoleRequirementTests.FR08_menuTreeIsReturnedByLevel` |`ConsoleRequirementTests.FR08_permissionFieldBoundaries` |`ErrorCodeContractTests.FR08_permissionTreeCodes` +
 `FirstReviewWorkflowTests.FR08_menuTreeRejectsCyclesCrossApplicationParentsAndButtonParents`
 |FR-09 |API 资源维护 |`ConsoleRequirementTests.FR09_backendCodeCoversSeveralResources` +
-`frontend-access-registry/tests/records.test.cjs` |`ConsoleRequirementTests.FR09_resourceFieldBoundaries` |`ErrorCodeContractTests.FR09_resourceCodes` +
+`ConsoleRequirementTests.FR09_renameAndDeleteUnboundResource` +
+`frontend-access-registry/tests/records.test.cjs` |`ConsoleRequirementTests.FR09_renameBoundariesAndDeleteAfterLastUnbind` +
+`ConsoleRequirementTests.FR09_resourceFieldBoundaries` |`ConsoleRequirementTests.FR09_renameOrDeleteMissingAndBuiltInResource` +
+`ErrorCodeContractTests.FR09_resourceCodes` +
 `FirstReviewWorkflowTests.FR09_resourceValidationRejectsDuplicatesAndBroadWildcards`
 |FR-10 |用户角色分配 |`ConsoleRequirementTests.FR10_listDirectRolesOfUser` +
 `FirstReviewWorkflowTests.FR10_duplicateAssignmentsAreIdempotentAndGrantUnionSurvivesOneRoleRevocation` +
@@ -248,6 +251,9 @@ python3 scripts/build-test-traceability.py   # 按测试源码重新生成本文
 `FirstReviewWorkflowTests.FR08_menuTreeRejectsCyclesCrossApplicationParentsAndButtonParents`：FR-08 菜单树拒绝环路、跨应用上级和以按钮为上级 |结构化 + DDD
 |FR-09 |API 资源维护 |`ConsoleRequirementTests.FR09_backendCodeCoversSeveralResources`：FR-09 同一后端权限码可以登记在多个接口上；接口可以单独停用和启用 +
 `ConsoleRequirementTests.FR09_resourceFieldBoundaries`：FR-09 路径 255 个字符可以、256 个拒绝；名称 128 个字符可以、129 个拒绝；权限码 64 位、operationId 128 位可以，各超出一位拒绝 +
+`ConsoleRequirementTests.FR09_renameAndDeleteUnboundResource`：FR-09 API 资源改名只改名称，方法、路径、权限码与 operationId 不变；没有绑定菜单或按钮的资源可以删除 +
+`ConsoleRequirementTests.FR09_renameBoundariesAndDeleteAfterLastUnbind`：FR-09 改名时名称 128 个字符可以、129 个或空白拒绝；绑定一个按钮时不能删除，解绑这最后一个后可以删除 +
+`ConsoleRequirementTests.FR09_renameOrDeleteMissingAndBuiltInResource`：FR-09 改名或删除不存在的资源返回 404；权限系统的内置管理接口不能删除，返回 409 且仍在列表中 +
 `ErrorCodeContractTests.FR09_resourceCodes`：FR-09 API 资源：路由重复 API_RESOURCE_EXISTS，operationId 重复 API_OPERATION_EXISTS，仍被绑定 API_RESOURCE_IN_USE +
 `FirstReviewWorkflowTests.FR09_resourceValidationRejectsDuplicatesAndBroadWildcards`：FR-09 API 资源拒绝重复路由和过宽的通配路径 +
 `frontend-access-registry/tests/records.test.cjs`：FR-09 登记 API 资源时权限码与 operationId 可选，列表按 operationId 检索 |浏览器（两条路线各跑一遍）、结构化 + DDD
@@ -434,15 +440,15 @@ python3 scripts/build-test-traceability.py   # 按测试源码重新生成本文
 |`API_OPERATION_NOT_FOUND` |404 |`ApplicationIdentityTests.FR34_apiPermissionByOperationId`
 |`API_RESOURCE_CODE_INVALID` |400 |`DddErrorCodeContractTests.FR26_domainObjectsGuardFormats`
 |`API_RESOURCE_EXISTS` |409 |`ErrorCodeContractTests.FR09_resourceCodes`
-|`API_RESOURCE_IN_USE` |409 |`ErrorCodeContractTests.FR09_resourceCodes`
-|`API_RESOURCE_NOT_FOUND` |404 |`ErrorCodeContractTests.NFR07_everyByIdEndpointRejectsMissingIds`
+|`API_RESOURCE_IN_USE` |409 |`ConsoleRequirementTests.FR09_renameBoundariesAndDeleteAfterLastUnbind`、`ErrorCodeContractTests.FR09_resourceCodes`
+|`API_RESOURCE_NOT_FOUND` |404 |`ConsoleRequirementTests.FR09_renameOrDeleteMissingAndBuiltInResource`、`ErrorCodeContractTests.NFR07_everyByIdEndpointRejectsMissingIds`
 |`API_RESOURCE_PATH_INVALID` |400 |`DddErrorCodeContractTests.FR26_domainObjectsGuardFormats`
 |`AUDIT_SNAPSHOT_TOO_LARGE` |400 |`ErrorCodeContractTests.FR29_auditSnapshotTooLarge`
 |`BAD_REQUEST` |400 |`DirectorySyncTests.FR24_invalidSheetsAreRejectedWithRowNumbers`、`ErrorCodeContractTests.NFR07_malformedRequestsReturnBadRequest`
 |`BINDING_SYSTEM_MISMATCH` |400 |`ErrorCodeContractTests.FR12_bindingAcrossSystems`
 |`BUTTON_PARENT_REQUIRED` |400 |`ErrorCodeContractTests.FR08_permissionTreeCodes`
 |`BUTTON_PATH_NOT_ALLOWED` |400 |`ErrorCodeContractTests.FR08_permissionTreeCodes`
-|`CONSOLE_BUILT_IN` |409 |`ErrorCodeContractTests.FR38_builtInConsoleObjectsCannotBeDisabledOrDeleted`
+|`CONSOLE_BUILT_IN` |409 |`ConsoleRequirementTests.FR09_renameOrDeleteMissingAndBuiltInResource`、`ErrorCodeContractTests.FR38_builtInConsoleObjectsCannotBeDisabledOrDeleted`
 |`DATA_CONFLICT` |409 |`DddErrorCodeContractTests.NFR03_adapterTranslatesUniqueViolation`、`ErrorCodeContractTests.NFR03_uniqueViolationFallsBackToDataConflict`
 |`DEPARTMENT_CODE_EXISTS` |409 |`ErrorCodeContractTests.FR05_departmentCodes`
 |`DEPARTMENT_CODE_INVALID` |400 |`DddErrorCodeContractTests.FR26_domainObjectsGuardFormats`

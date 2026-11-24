@@ -84,9 +84,9 @@ public class ApiResourceService implements ResourceUseCase {
   /** 只改显示名称：方法、路径、权限码和 operationId 登记后不可改；修改由 JPA 脏检查在事务提交时写回。 */
   @Transactional
   public ResourceData.View update(Long id, ResourceData.Update input) {
-<span class="nc" id="L87">    ApiResource value = require(id);</span>
-<span class="nc" id="L88">    value.setName(input.name());</span>
-<span class="nc" id="L89">    return view(value);</span>
+<span class="fc" id="L87">    ApiResource value = require(id);</span>
+<span class="fc" id="L88">    value.setName(input.name());</span>
+<span class="fc" id="L89">    return view(value);</span>
   }
 
   /**
@@ -105,9 +105,9 @@ public class ApiResourceService implements ResourceUseCase {
   public void delete(Long id) {
 <span class="fc" id="L106">    ApiResource value = require(id);</span>
 <span class="fc" id="L107">    protectBuiltIn(value);</span>
-<span class="pc bpc" id="L108" title="1 of 2 branches missed.">    if (bindings.existsByResource_Id(id)) throw new ConflictException(&quot;API_RESOURCE_IN_USE&quot;, &quot;API 资源仍绑定前端权限&quot;);</span>
-<span class="nc" id="L109">    resources.delete(value);</span>
-<span class="nc" id="L110">  }</span>
+<span class="fc bfc" id="L108" title="All 2 branches covered.">    if (bindings.existsByResource_Id(id)) throw new ConflictException(&quot;API_RESOURCE_IN_USE&quot;, &quot;API 资源仍绑定前端权限&quot;);</span>
+<span class="fc" id="L109">    resources.delete(value);</span>
+<span class="fc" id="L110">  }</span>
 
   /** 控制台的内置管理接口：停用或删除后所有人（包括管理员）都调用不了，抛 {@code CONSOLE_BUILT_IN}（409）。 */
   private static void protectBuiltIn(ApiResource value) {

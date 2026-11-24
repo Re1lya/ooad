@@ -68,6 +68,7 @@ class ConsoleRequirementTests {
   private static final String PERMISSION_RESOURCE_URL =
       "/api/permissions/{permissionId}/resources/{resourceId}";
   private static final String RESOURCES_URL = "/api/resources";
+  private static final String RESOURCE_URL = "/api/resources/{resourceId}";
   private static final String RESOURCE_STATUS_URL = "/api/resources/{resourceId}/status";
   private static final String ROLES_URL = "/api/roles";
   private static final String ROLE_URL = "/api/roles/{roleId}";
@@ -330,6 +331,55 @@ class ConsoleRequirementTests {
     createResource("权限码超长", "GET", "/code-over", "C".repeat(65), null, 400);
     createResource("操作上限", "GET", "/op-max", null, "o".repeat(128), 201);
     createResource("操作超长", "GET", "/op-over", null, "o".repeat(129), 400);
+  }
+
+  @Test
+  @Tag("等价类")
+  @DisplayName("FR-09 API 资源改名只改名称，方法、路径、权限码与 operationId 不变；没有绑定菜单或按钮的资源可以删除")
+  void FR09_renameAndDeleteUnboundResource() throws Exception {
+    long id = createResource("新建学期", "POST", "/api/terms", "TC", "TC", 201);
+    JsonNode renamed = result(call("PUT", url(RESOURCE_URL, id), admin, Map.of("name", "创建学期"), 200));
+    assertEquals("创建学期", renamed.get("name").asString());
+    JsonNode listed = find(result(call("GET", RESOURCES_URL, admin, null, 200)), id);
+    assertEquals("创建学期", listed.get("name").asString());
+    assertEquals("POST", listed.get("method").asString());
+    assertEquals("/api/terms", listed.get("path").asString());
+    assertEquals("TC", listed.get("code").asString());
+    assertEquals("TC", listed.get("operationId").asString());
+    call("DELETE", url(RESOURCE_URL, id), admin, null, 204);
+    assertNull(find(result(call("GET", RESOURCES_URL, admin, null, 200)), id));
+  }
+
+  @Test
+  @Tag("边界值")
+  @DisplayName("FR-09 改名时名称 128 个字符可以、129 个或空白拒绝；绑定一个按钮时不能删除，解绑这最后一个后可以删除")
+  void FR09_renameBoundariesAndDeleteAfterLastUnbind() throws Exception {
+    call("PUT", url(RESOURCE_URL, resource), admin, Map.of("name", "名".repeat(128)), 200);
+    call("PUT", url(RESOURCE_URL, resource), admin, Map.of("name", "名".repeat(129)), 400);
+    call("PUT", url(RESOURCE_URL, resource), admin, Map.of("name", " "), 400);
+    assertEquals("名".repeat(128), find(result(call("GET", RESOURCES_URL, admin, null, 200)), resource).get("name").asString());
+    call("PUT", url(PERMISSION_RESOURCE_URL, button, resource), admin, null, 204);
+    assertEquals("API_RESOURCE_IN_USE", result(call("DELETE", url(RESOURCE_URL, resource), admin, null, 409)).get("code").asString());
+    call("DELETE", url(PERMISSION_RESOURCE_URL, button, resource), admin, null, 204);
+    call("DELETE", url(RESOURCE_URL, resource), admin, null, 204);
+    assertNull(find(result(call("GET", RESOURCES_URL, admin, null, 200)), resource));
+  }
+
+  @Test
+  @Tag("异常")
+  @DisplayName("FR-09 改名或删除不存在的资源返回 404；权限系统的内置管理接口不能删除，返回 409 且仍在列表中")
+  void FR09_renameOrDeleteMissingAndBuiltInResource() throws Exception {
+    assertEquals(
+        "API_RESOURCE_NOT_FOUND",
+        result(call("PUT", url(RESOURCE_URL, 999_999L), admin, Map.of("name", "不存在"), 404)).get("code").asString());
+    assertEquals(
+        "API_RESOURCE_NOT_FOUND", result(call("DELETE", url(RESOURCE_URL, 999_999L), admin, null, 404)).get("code").asString());
+    long builtIn = 0;
+    for (JsonNode r : result(call("GET", RESOURCES_URL, admin, null, 200)))
+      if ("GET".equals(r.get("method").asString()) && RESOURCES_URL.equals(r.get("path").asString())) builtIn = r.get("id").asLong();
+    assertNotEquals(0, builtIn);
+    assertEquals("CONSOLE_BUILT_IN", result(call("DELETE", url(RESOURCE_URL, builtIn), admin, null, 409)).get("code").asString());
+    assertNotNull(find(result(call("GET", RESOURCES_URL, admin, null, 200)), builtIn));
   }
 
   // ---------- FR-10 ~ FR-12 三组关系 ----------
