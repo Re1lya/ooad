@@ -1,0 +1,10 @@
+$ prometheus /api/v1/targets（job、抓取地址、状态）
+"job":"course-project-backend"
+"job":"course-project-backend"
+"scrapeUrl":"http://10.0.1.55:8081/actuator/prometheus"
+"lastScrape":"2026-11-24T15:00:14.841861499Z"
+"health":"up"
+
+$ prometheus 查询 up 与课程后端 HTTP 请求总数
+{"status":"success","data":{"resultType":"vector","result":[{"metric":{"__name__":"up","instance":"10.0.1.55:8081","job":"course-project-backend"},"value":[1795532423.826,"1"]}]}}
+{"status":"success","data":{"resultType":"vector","result":[{"metric":{},"value":[1795532423.879,"285"]}]}}

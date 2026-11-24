@@ -12,7 +12,7 @@
 | 错误密码顺序图 | [PNG](images/sequence-password-failure.png) | [SVG](images/sequence-password-failure.svg) | 异常从实际抛出方到 MVC，再映射401 |
 | 建立继承顺序图 | [PNG](images/sequence-rbac1.png) | [SVG](images/sequence-rbac1.svg) | 图写锁、角色查询、防环与保存成功路径 |
 | 六类核心概念 ER | [PNG](images/er-core.png) | [SVG](images/er-core.svg) | 三组授权与角色继承自关联，不持久化 JWT |
-| 十一表物理 ER | [PNG](images/er-physical.png) | [SVG](images/er-physical.svg) | 四张关联表、sys_account 拆表与14外键；[Mermaid源](physical-er.mmd) |
+| 十一表物理 ER | [PNG](images/er-physical.png) | — | 2026-11-24 由组员重画（第二次检查版，见 [02-database-design.adoc](../second-review/02-database-design.adoc)）；[Mermaid源](physical-er.mmd) 为第一次检查时的版本 |
 
 顺序图按场景省略构造和代理，内部调用者为 MVC 分发器，HTTP 响应由 MVC 序列化。核心 ER、物理 ER 使用各自建模语义，不套用 Service 布局规则。
 

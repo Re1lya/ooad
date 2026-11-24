@@ -1,4 +1,10 @@
-cdwy_rbac-backend healthy
 cdwy_rbac-frontend healthy
-course-project_course-mgt-backend healthy
+cdwy_rbac-backend healthy
 course-project_course-mgt-frontend healthy
+course-project_prometheus running（老师 stack 未给 Prometheus 定义健康检查）
+course-project_course-mgt-backend healthy
+
+$ curl http://120.46.213.158:8080/healthz
+ok
+$ curl http://124.70.102.248/healthz
+ok

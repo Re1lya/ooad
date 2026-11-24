@@ -1,26 +1,36 @@
 $ docker stack ls
 NAME             SERVICES   ORCHESTRATOR
 cdwy             2          Swarm
-course-project   2          Swarm
+course-project   3          Swarm
 lab              4          Swarm
 lab4             3          Swarm
 
 $ docker stack services cdwy
-ID             NAME                 MODE         REPLICAS   IMAGE                        PORTS
-24a6bbknguag   cdwy_rbac-backend    replicated   1/1        cdwy/rbac-backend:39ba5ec    
-jfrem1e6fpvv   cdwy_rbac-frontend   replicated   1/1        cdwy/rbac-frontend:39ba5ec   
+ID             NAME                 MODE         REPLICAS   IMAGE                                 PORTS
+24a6bbknguag   cdwy_rbac-backend    replicated   1/1        cdwy/rbac-backend:39ba5ec             
+jfrem1e6fpvv   cdwy_rbac-frontend   replicated   1/1        cdwy/rbac-frontend:39ba5ec-port8080   
 
 $ docker stack services course-project
 ID             NAME                                 MODE         REPLICAS   IMAGE                                                                     PORTS
 kc0iol1smjvq   course-project_course-mgt-backend    replicated   1/1        swr.cn-north-4.myhuaweicloud.com/oomall-javaee/course-mgt-backend:0.0.1   
-1lzd1mbktz2k   course-project_course-mgt-frontend   replicated   1/1        course-mgt-frontend:990cea2                                               
+1lzd1mbktz2k   course-project_course-mgt-frontend   replicated   1/1        course-mgt-frontend:24a4d7d-rbac8080                                      *:80->80/tcp
+u94s43dt1s4u   course-project_prometheus            replicated   1/1        swr.cn-north-4.myhuaweicloud.com/oomall-javaee/prom/prometheus:latest     *:9090->9090/tcp
 
-$ docker stack ps cdwy --filter desired-state=running
-NAME                   IMAGE                        NODE            CURRENT STATE
-cdwy_rbac-backend.1    cdwy/rbac-backend:39ba5ec    hcss-ecs-a955   Running about a minute ago
-cdwy_rbac-frontend.1   cdwy/rbac-frontend:39ba5ec   hcss-ecs-a955   Running about a minute ago
+$ docker stack ps cdwy --filter desired-state=running --format "table {{.Name}}\t{{.Image}}\t{{.Node}}\t{{.CurrentState}}"
+NAME                   IMAGE                                 NODE            CURRENT STATE
+cdwy_rbac-backend.1    cdwy/rbac-backend:39ba5ec             hcss-ecs-a955   Running 2 days ago
+cdwy_rbac-frontend.1   cdwy/rbac-frontend:39ba5ec-port8080   hcss-ecs-a955   Running 35 minutes ago
 
-$ docker stack ps course-project --filter desired-state=running
+$ docker stack ps course-project --filter desired-state=running --format "table {{.Name}}\t{{.Image}}\t{{.Node}}\t{{.CurrentState}}"
 NAME                                   IMAGE                                                                     NODE            CURRENT STATE
-course-project_course-mgt-backend.1    swr.cn-north-4.myhuaweicloud.com/oomall-javaee/course-mgt-backend:0.0.1   hcss-ecs-1488   Running 10 hours ago
-course-project_course-mgt-frontend.1   course-mgt-frontend:990cea2                                               hcss-ecs-1488   Running 10 hours ago
+course-project_course-mgt-backend.1    swr.cn-north-4.myhuaweicloud.com/oomall-javaee/course-mgt-backend:0.0.1   hcss-ecs-1488   Running 7 hours ago
+course-project_course-mgt-frontend.1   course-mgt-frontend:24a4d7d-rbac8080                                      hcss-ecs-1488   Running 34 minutes ago
+course-project_prometheus.1            swr.cn-north-4.myhuaweicloud.com/oomall-javaee/prom/prometheus:latest     hcss-ecs-1488   Running 44 minutes ago
+
+$ docker service ls --filter label=com.docker.stack.namespace=lab --format "table {{.Name}}\t{{.Mode}}\t{{.Replicas}}\t{{.Ports}}"
+NAME                 MODE         REPLICAS   PORTS
+lab_mysql            replicated   1/1        *:3306->3306/tcp
+lab_node-exporter    global       5/5        
+lab_productdemoaop   replicated   0/0        
+lab_prometheus       replicated   0/0        
+

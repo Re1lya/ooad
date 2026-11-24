@@ -1,7 +1,7 @@
 # Docker Swarm 部署证据（2026-11-21 部署，2026-11-22、11-24 更新）
 
 当前部署的权限系统镜像为 `39ba5ec`：在 `b56e81c`（按课程代码规范整改，并保护内置应用、管理员角色、菜单按钮与管理接口不被停用或删除）之上，
-并入同组重构的前端“权限台账”并补齐缺失的功能。首页 http://120.46.213.158/ 进入权限台账，原管理控制台仍在 `/ui/`；后端代码与 `b56e81c` 相同。
+并入同组重构的前端“权限台账”并补齐缺失的功能。首页进入权限台账，原管理控制台仍在 `/ui/`；后端代码与 `b56e81c` 相同。11-24 晚课程前端改按老师的写法用 ingress 发布 80，权限系统改到 http://120.46.213.158:8080/ （前端镜像 `39ba5ec-port8080` 只换了 Nginx 配置），课程 stack 加上老师的 Prometheus。
 
 2026-11-22 按老师的部署通知更新了课程系统：
 
@@ -17,12 +17,13 @@
 
 | 文件 | 内容 |
 |---|---|
-| `swarm-services.txt` | `docker stack ls`、两个 stack 的服务，以及 4 个任务所在节点与状态 |
-| `health.txt` | 4 个容器的健康检查状态 |
+| `swarm-services.txt` | 11-24 晚重新采集：`docker stack ls`、两个 stack 的 5 个服务与端口、各任务所在节点与状态，以及 `lab` 栈的状态（`lab_prometheus`、`lab_productdemoaop` 已停用） |
+| `health.txt` | 11-24 晚重新采集：5 个容器的健康检查状态（Prometheus 在老师的 stack 里没有健康检查），以及两个系统公网 `/healthz` |
+| `prometheus-targets.txt` | 课程 stack 的 Prometheus 抓取目标 `course-project-backend` 为 up，并能查到课程后端的 HTTP 请求指标 |
 | `register-course-app.txt` | 11-21 首次登记课程系统、同步一万名员工（约 20 秒）、启用演示工号的输出 |
 | `register-course-app-20261122.txt` | 11-22 重跑登记脚本：应用、角色、部门和人员都沿用已有的，为尚未启用的 9996 名员工设置测试密码并启用（约 12 分钟） |
 | `test-accounts.txt` | 两个库的核对：一万名员工全部启用；总公司 190 人都有 `teacher`，分公司 9810 人都有 `student`；课程系统的教师、学生名单与之对应 |
-| `verify-public.txt` | 接口验收脚本（11-24 换新镜像并加入统一会话检查后），48/48 通过 |
+| `verify-public.txt` | 接口验收脚本（11-24 晚端口调整后，权限系统 `:8080`），48/48 通过 |
 | `course-identity-calls-log.txt` | 课程后端（老师镜像）调用统一身份的 DEBUG 日志：一次登录（经 `rbac-backend` 调 `/auth/login`、`/auth/me`），一次添加教师（先用当前令牌调 `/auth/me`，再调 `/auth/users/{userId}` 取姓名和工号）；日志里没有令牌 |
 | `menu-switch-log.txt` | 浏览器走查在权限台账依次进入“总览”（`overview`）、“权限来源”（`effective`）、“审计日志”（`audit`）时，`docker service logs cdwy_rbac-backend` 中带 `[menu=...]` 标记的请求日志，含 Controller、Service 两层（时间为 UTC） |
 | `01-course-admin-menu.png` | 课程管理员从课程系统教师入口登录后的“管理”菜单 |

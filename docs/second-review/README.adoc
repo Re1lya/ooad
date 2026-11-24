@@ -30,7 +30,7 @@ Cdwy 小组：温家正、姚景云、杜奕含、陈浩贤
 |两个系统权限由权限系统管理 |`/api/apps/course-project-management/**` 接口；`scripts/register-course-app.py`；`scripts/verify-course-integration.py`
 |菜单切换与 logback 日志 |前端请求头 `X-Client-Menu`；`RequestLoggingFilter`、`LayerLoggingAspect`；日志行 `[menu=…]`
 |需求与测试 |需求—测试追踪表（由测试源码生成）；`mvn clean verify` 在真实 MySQL 上 321 个测试全部通过；每条功能需求都有等价类、边界值、异常三类测试
-|包图、类图、顺序图、代码 |详细设计第 1、3、4 节；图源 `diagrams/*.puml`，PNG/SVG 在 `images/`
+|包图、类图、顺序图、代码 |详细设计第 1、3、4 节；图片在 `images/`。包图、模块结构图、两张类图、四张顺序图由组员按老师的 UML skill 重画（基于代码版本 `199f7d3`，与当前 `src/main` 相同），只提交了 PNG；DFD 与部署图的 PlantUML 源在 `diagrams/`
 |结构化与 DDD 区别、GRASP |详细设计第 5、6 节
 |JavaEE 技术 |详细设计第 9 节
 |===
