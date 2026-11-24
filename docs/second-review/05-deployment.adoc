@@ -14,13 +14,13 @@ Cdwy 小组
 
 2026-11-22 晚并入同组重构的前端“权限台账”并补齐缺失的功能，权限系统滚动更新到 `39ba5ec`：首页 http://120.46.213.158/ 进入权限台账，原管理控制台仍在 `/ui/`。后端代码与 `b56e81c` 相同，镜像只是多带了权限台账的页面；数据库不变。更新后公网接口验收 45/45、浏览器走查 13 步（控制台部分在权限台账上操作）重新通过。
 
-2026-11-24 跟进老师 11-23 的更新：老师用同一标签 `0.0.1` 重新发布了课程后端（对应老师仓库 master `24a4d7d`），新版在 14 个管理接口（课程、学期、教师、操作日志）前，以权限码（老师代码中的 `AuthorityCodes`，如 `TC`、`TV`、`TEC`）作为 operationId 调 `/auth/api-permissions/{operationId}`。我们把课程系统 API 资源的 operationId 改为对应的权限码（`CTM`、`TCM` 各对应两个接口，operationId 在应用内唯一，只给其中一个；两个接口绑在同一个按钮上，授权结果相同），课程后端改用新镜像；前端在 `990cea2` 之后只多了控制台日志，未重新编译。更新后公网接口验收 46/46 通过，权限系统日志中可见课程后端按权限码查询。
+2026-11-24 跟进老师 11-23 的更新：老师用同一标签 `0.0.1` 重新发布了课程后端（对应老师仓库 master `24a4d7d`），新版在 14 个管理接口（课程、学期、教师、操作日志）前，以权限码（老师代码中的 `AuthorityCodes`，如 `TC`、`TV`、`TEC`）作为 operationId 调 `/auth/api-permissions/{operationId}`。我们把课程系统 API 资源的 operationId 改为对应的权限码（`CTM`、`TCM` 各对应两个接口，operationId 在应用内唯一，只给其中一个；两个接口绑在同一个按钮上，授权结果相同），课程后端改用新镜像，前端也按老师仓库 `24a4d7d` 重新编译（相对 `990cea2` 只多了查询当前用户时的控制台日志）。更新后公网接口验收 46/46、浏览器走查 13 步通过，权限系统日志中可见课程后端按权限码查询。
 
 [cols="2,3,2,3",options="header"]
 |===
 |系统 |访问地址 |stack |位置与镜像
 |统一权限管理系统 |http://120.46.213.158/ （权限台账；原管理控制台 http://120.46.213.158/ui/index.html） |`cdwy` |CDWY3（`hcss-ecs-a955`）；`cdwy/rbac-backend:39ba5ec`、`cdwy/rbac-frontend:39ba5ec`；结构化路线
-|课程项目管理系统 |http://124.70.102.248/ |`course-project` |CDWY4（`hcss-ecs-1488`）；后端为老师发布的 `oomall-javaee/course-mgt-backend:0.0.1`（11-23 重新发布版，按摘要 `sha256:88a476df…` 固定），前端 `course-mgt-frontend:990cea2` 由我们按老师仓库编译；未改老师代码；DDD 路线
+|课程项目管理系统 |http://124.70.102.248/ |`course-project` |CDWY4（`hcss-ecs-1488`）；后端为老师发布的 `oomall-javaee/course-mgt-backend:0.0.1`（11-23 重新发布版，按摘要 `sha256:88a476df…` 固定），前端 `course-mgt-frontend:24a4d7d` 由我们按老师仓库编译；未改老师代码；DDD 路线
 |数据库 |集群内 `mysql:3306` |`lab`（已有） |CDWY2 的 `lab_mysql`（MySQL 9.2），新建库 `cdwy_rbac`、`course_project`
 |===
 
@@ -142,7 +142,7 @@ deploy/course/package-frontend.sh ../course-project-mgt http://120.46.213.158  #
 [source,bash]
 ----
 cd /root/ooad-deploy && tar xzf rbac-images-39ba5ec.tar.gz && rbac-images-39ba5ec/build-images.sh        # CDWY3
-cd /root/ooad-deploy && tar xzf course-frontend-990cea2.tar.gz && course-frontend-990cea2/build-image.sh  # CDWY4
+cd /root/ooad-deploy && tar xzf course-frontend-24a4d7d.tar.gz && course-frontend-24a4d7d/build-image.sh  # CDWY4
 docker pull swr.cn-north-4.myhuaweicloud.com/oomall-javaee/course-mgt-backend:0.0.1                       # CDWY4
 ----
 
